@@ -1,0 +1,23 @@
+{
+  "name": "dealo-platform",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@12.16.1",
+  "scripts": {
+    "dev": "pnpm -r --parallel --filter @dealo/web --filter @dealo/api run dev",
+    "dev:web": "pnpm --filter @dealo/web dev",
+    "dev:api": "pnpm --filter @dealo/api dev",
+    "build": "pnpm -r --filter @dealo/shared --filter @dealo/api --filter @dealo/web run build",
+    "lint": "pnpm -r --filter @dealo/shared --filter @dealo/api --filter @dealo/web run lint",
+    "typecheck": "pnpm -r --filter @dealo/shared --filter @dealo/api --filter @dealo/web run typecheck",
+    "test": "pnpm -r --filter @dealo/api run test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

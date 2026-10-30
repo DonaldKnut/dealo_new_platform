@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  RECRUITER
+  FINANCE
+  OPERATIONS
+  EMPLOYER
+  TALENT
+}
+
+enum HireInquiryStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  CLOSED
+}
+
+enum ServiceType {
+  DIRECT_RECRUITMENT
+  MANAGED_STAFFING
+}
+
+enum WorkArrangement {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+model User {
+  id                   String    @id @default(auto()) @map("_id") @db.ObjectId
+  email                String    @unique
+  passwordHash         String?
+  firstName            String
+  lastName             String
+  googleId             String?   @unique
+  avatarUrl            String?
+  authProvider         String    @default("local")
+  isEmailVerified      Boolean   @default(false)
+  isActive             Boolean   @default(true)
+  emailVerifyToken     String?
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  lastLoginAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  roles                   UserRoleAssignment[]
+  refreshTokens           RefreshToken[]
+  organizationMemberships OrganizationMember[]
+  auditLogs               AuditLog[]
+}
+
+model Role {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  code        UserRole @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       UserRoleAssignment[]
+}
+
+model Permission {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  code        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  roleId       String   @db.ObjectId
+  permissionId String   @db.ObjectId
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  roleId    String   @db.ObjectId
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  role Role @relation(fields: [roleId], references: [id])
+
+  @@unique([userId, roleId])
+}
+
+model RefreshToken {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String    @db.ObjectId
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Organization {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String   @unique
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     OrganizationMember[]
+  hireInquiries HireInquiry[]
+}
+
+model OrganizationMember {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String   @db.ObjectId
+  userId         String   @db.ObjectId
+  title          String?
+  isOwner        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model HireInquiry {
+  id                      String            @id @default(auto()) @map("_id") @db.ObjectId
+  companyName             String
+  contactName             String
+  email                   String
+  phone                   String
+  serviceType             ServiceType
+  roleTitle               String
+  numberOfProfessionals   Int
+  location                String
+  workArrangement         WorkArrangement
+  expectedStartDate       String?
+  compensationMinMinor    Int?
+  compensationMaxMinor    Int?
+  currency                String            @default("NGN")
+  durationNotes           String?
+  requirements            String
+  additionalNotes         String?
+  status                  HireInquiryStatus @default(NEW)
+  organizationId          String?           @db.ObjectId
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  actorId    String?  @db.ObjectId
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique
+  value     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
