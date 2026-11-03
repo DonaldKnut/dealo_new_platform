@@ -58,12 +58,17 @@ Vercel installed the workspace link, but `@dealo/shared` publishes compiled file
 
 Create a **separate** service from the same GitHub repo.
 
-### Build / start
+### Build / start (Render)
 
-- **Root directory:** repo root (or `apps/api` if the host supports monorepos)
-- **Install:** `pnpm install`
-- **Build:** `pnpm --filter @dealo/shared build && pnpm --filter @dealo/api prisma:generate && pnpm --filter @dealo/api build`
-- **Start:** `pnpm --filter @dealo/api start:prod`
+- **Root directory:** leave blank (repo root)
+- **Build Command:**
+
+```bash
+npm install -g pnpm@12.16.1 && pnpm install --frozen-lockfile && pnpm --filter @dealo/shared build && pnpm --filter @dealo/api prisma:generate && pnpm --filter @dealo/api build
+```
+
+- **Start Command:** `pnpm --filter @dealo/api start:prod`
+- **Node version:** set env `NODE_VERSION=20` (do not use `corepack enable` on Render — it fails on a read-only filesystem)
 
 ### Environment variables (API)
 
