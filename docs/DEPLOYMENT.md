@@ -67,7 +67,7 @@ Create a **separate** service from the same GitHub repo.
 npm install -g pnpm@12.16.1 && pnpm install --frozen-lockfile && pnpm --filter @dealo/shared build && pnpm --filter @dealo/api prisma:generate && pnpm --filter @dealo/api build
 ```
 
-- **Start Command:** `pnpm --filter @dealo/api start:prod`
+- **Start Command:** `node apps/api/dist/main.js`
 - **Node version:** set env `NODE_VERSION=20` (do not use `corepack enable` on Render — it fails on a read-only filesystem)
 
 ### Environment variables (API)
