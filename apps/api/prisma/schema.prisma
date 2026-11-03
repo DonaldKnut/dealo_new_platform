@@ -123,6 +123,7 @@ model User {
   supportTickets          SupportTicket[]      @relation("TicketRequester")
   assignedTickets         SupportTicket[]      @relation("TicketAssignee")
   ticketMessages          SupportTicketMessage[]
+  apiKeysCreated          ApiKey[]             @relation("ApiKeyCreator")
 }
 
 model Role {
@@ -193,10 +194,10 @@ model Organization {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members     OrganizationMember[]
   members       OrganizationMember[]
   hireInquiries HireInquiry[]
   apiKeys       ApiKey[]
+}
 
 model OrganizationMember {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -429,4 +430,44 @@ model SupportTicketMessage {
   author User          @relation(fields: [authorId], references: [id])
 
   @@index([ticketId])
+}
+
+model ApiKey {
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  keyPrefix       String
+  keyHash         String            @unique
+  environment     ApiKeyEnvironment @default(TEST)
+  plan            ApiKeyPlan        @default(SANDBOX)
+  scopes          String[]
+  rateLimitPerMin Int               @default(60)
+  isActive        Boolean           @default(true)
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  createdByUserId String            @db.ObjectId
+  organizationId  String?           @db.ObjectId
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  createdBy    User          @relation("ApiKeyCreator", fields: [createdByUserId], references: [id])
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  usageLogs    ApiUsageLog[]
+
+  @@index([keyPrefix])
+  @@index([createdByUserId])
+  @@index([isActive])
+}
+
+model ApiUsageLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  apiKeyId   String   @db.ObjectId
+  method     String
+  path       String
+  statusCode Int
+  latencyMs  Int
+  createdAt  DateTime @default(now())
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id])
+
+  @@index([apiKeyId, createdAt])
 }
