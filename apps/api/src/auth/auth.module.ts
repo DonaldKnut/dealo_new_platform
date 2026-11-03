@@ -7,6 +7,7 @@ import { PassportModule } from '@nestjs/passport';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { CandidatesModule } from '../candidates/candidates.module';
 import type { AppEnv } from '../config/env.validation';
+import { OAuthModule } from '../oauth/oauth.module';
 import { UsersModule } from '../users/users.module';
 import { ApiKeyOrJwtGuard } from './api-key-or-jwt.guard';
 import { AuthController } from './auth.controller';
@@ -22,6 +23,7 @@ import { ScopesGuard } from './scopes.guard';
     UsersModule,
     CandidatesModule,
     ApiKeysModule,
+    OAuthModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

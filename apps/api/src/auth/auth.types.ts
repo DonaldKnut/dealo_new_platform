@@ -17,6 +17,8 @@ export interface AuthUser {
   apiKeyEnvironment?: 'LIVE' | 'TEST';
   rateLimitPerMin?: number;
   organizationId?: string | null;
+  /** Set when an API-key principal was obtained via an OAuth2 client-credentials token. */
+  oauthClientId?: string;
 }
 
 export interface JwtPayload {

@@ -9,6 +9,7 @@ import { AuthGuard } from '@nestjs/passport';
 
 import { ApiKeysService } from '../api-keys/api-keys.service';
 import { IS_PUBLIC_KEY } from '../common/public.decorator';
+import { OAuthService } from '../oauth/oauth.service';
 import type { AuthUser } from './auth.types';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class ApiKeyOrJwtGuard extends AuthGuard('jwt') implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly apiKeysService: ApiKeysService,
+    private readonly oauthService: OAuthService,
   ) {
     super();
   }
@@ -67,11 +69,15 @@ export class ApiKeyOrJwtGuard extends AuthGuard('jwt') implements CanActivate {
     }
 
     const token = header.slice('Bearer '.length).trim();
-    if (!token.startsWith('dk_live_') && !token.startsWith('dk_test_')) {
+    let principal: AuthUser;
+    if (token.startsWith('dk_live_') || token.startsWith('dk_test_')) {
+      principal = await this.apiKeysService.authenticateBearer(token);
+    } else if (this.oauthService.isOAuthToken(token)) {
+      principal = await this.oauthService.authenticateAccessToken(token);
+    } else {
       return false;
     }
 
-    const principal = await this.apiKeysService.authenticateBearer(token);
     this.apiKeysService.enforceRateLimit(
       principal,
       request.method,

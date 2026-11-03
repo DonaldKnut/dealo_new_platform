@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiCookieAuth, ApiOAuth2, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import {
   ApiScope,
@@ -34,6 +34,7 @@ export class HireInquiryController {
       'Public web form endpoint. Partners may also call with a Bearer API key that includes hire-inquiries:write.',
   })
   @ApiBearerAuth('api_key')
+  @ApiOAuth2([ApiScope.HIRE_INQUIRIES_WRITE], 'oauth2')
   @RequireScopes(ApiScope.HIRE_INQUIRIES_WRITE)
   create(
     @Body(new ZodValidationPipe(hireInquirySchema)) body: HireInquiryInput,
@@ -45,6 +46,7 @@ export class HireInquiryController {
   @Get()
   @ApiCookieAuth()
   @ApiBearerAuth('api_key')
+  @ApiOAuth2([ApiScope.HIRE_INQUIRIES_READ], 'oauth2')
   @ApiOperation({ summary: 'List hire inquiries (staff JWT or API key with hire-inquiries:read)' })
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.RECRUITER, UserRole.OPERATIONS)
   @Permissions(PermissionCode.HIRE_INQUIRY_MANAGE)

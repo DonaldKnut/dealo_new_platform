@@ -4,6 +4,7 @@ import { ApiScope } from '@dealo/shared';
 import { useEffect, useState } from 'react';
 
 import { DashboardApiKeyUsage } from '@/components/dashboard/dashboard-api-key-usage';
+import { DashboardOAuthClients } from '@/components/dashboard/dashboard-oauth-clients';
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useToast } from '@/components/ui/toast';
@@ -33,6 +34,7 @@ export function DashboardApiKeysPanel() {
   const [creating, setCreating] = useState(false);
   const [revealed, setRevealed] = useState<CreatedApiKey | null>(null);
   const [usageKeyId, setUsageKeyId] = useState<string | null>(null);
+  const [oauthKey, setOauthKey] = useState<ApiKeyRow | null>(null);
 
   const load = async () => {
     const data = await fetchApiKeys();
@@ -252,6 +254,13 @@ export function DashboardApiKeysPanel() {
                       </button>
                       <button
                         type="button"
+                        className="mr-3 text-xs font-semibold text-brand underline"
+                        onClick={() => setOauthKey(row)}
+                      >
+                        OAuth
+                      </button>
+                      <button
+                        type="button"
                         className="text-xs font-semibold text-brand underline"
                         onClick={() => onToggleActive(row)}
                       >
@@ -275,6 +284,14 @@ export function DashboardApiKeysPanel() {
 
       {usageKeyId ? (
         <DashboardApiKeyUsage keyId={usageKeyId} onClose={() => setUsageKeyId(null)} />
+      ) : null}
+
+      {oauthKey ? (
+        <DashboardOAuthClients
+          apiKeyId={oauthKey.id}
+          keyName={oauthKey.name}
+          onClose={() => setOauthKey(null)}
+        />
       ) : null}
     </div>
   );

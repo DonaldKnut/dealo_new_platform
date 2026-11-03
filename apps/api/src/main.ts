@@ -6,6 +6,8 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 
+import { API_SCOPES } from '@dealo/shared';
+
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
@@ -50,6 +52,8 @@ async function bootstrap(): Promise<void> {
         '## Authentication',
         '- **Dashboard / staff:** HTTP-only cookie `access_token` (login via `/api/v1/auth/login`).',
         '- **Partners:** `Authorization: Bearer dk_live_…` or `dk_test_…` API key.',
+        '- **Partners (OAuth2):** client-credentials at `POST /api/v1/oauth/token`, then `Authorization: Bearer <access_token>` (1 hour).',
+        '- **Self-serve sandbox:** employers create `dk_test_` keys in Dashboard → Developer API.',
         '',
         '## Scopes (API keys)',
         '- `hire-inquiries:read` / `hire-inquiries:write`',
@@ -74,7 +78,21 @@ async function bootstrap(): Promise<void> {
       },
       'api_key',
     )
+    .addOAuth2(
+      {
+        type: 'oauth2',
+        description: 'OAuth2 client credentials; tokens carry the backing API key scopes.',
+        flows: {
+          clientCredentials: {
+            tokenUrl: `${apiUrl}/api/v1/oauth/token`,
+            scopes: Object.fromEntries(API_SCOPES.map((scope) => [scope, scope])),
+          },
+        },
+      },
+      'oauth2',
+    )
     .addTag('health', 'Liveness and dependency checks')
+    .addTag('oauth', 'OAuth2 client credentials')
     .addTag('auth', 'User authentication')
     .addTag('hire-inquiries', 'Hiring intake and pipeline')
     .addTag('api-keys', 'Partner API key administration')

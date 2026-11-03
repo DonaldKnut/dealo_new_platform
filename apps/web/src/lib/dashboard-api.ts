@@ -565,6 +565,31 @@ export function revokeMyApiKey(id: string) {
   return apiFetch<{ id: string; revoked: boolean }>(`/api-keys/mine/${id}`, { method: 'DELETE' });
 }
 
+export type OAuthClientRow = {
+  id: string;
+  name: string;
+  clientId: string;
+  apiKeyId: string;
+  isActive: boolean;
+  lastUsedAt?: string | null;
+  createdAt: string;
+};
+
+export function fetchOAuthClients(apiKeyId: string) {
+  return apiFetch<OAuthClientRow[]>(`/api-keys/${apiKeyId}/oauth-clients`);
+}
+
+export function createOAuthClient(apiKeyId: string, name: string) {
+  return apiFetch<OAuthClientRow & { clientSecret: string }>(`/api-keys/${apiKeyId}/oauth-clients`, {
+    method: 'POST',
+    json: { name },
+  });
+}
+
+export function revokeOAuthClient(id: string) {
+  return apiFetch<{ id: string; revoked: boolean }>(`/oauth-clients/${id}`, { method: 'DELETE' });
+}
+
 export type WebhookEndpointRow = {
   id: string;
   url: string;

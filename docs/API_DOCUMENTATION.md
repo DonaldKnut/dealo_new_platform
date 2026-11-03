@@ -32,6 +32,24 @@ Employers can create their own test keys in **Dashboard → Developer API** (`PO
 - Hire inquiries created with a test key are flagged `isTest: true` and **no confirmation email is sent**
 - Live (`dk_live_`) keys are issued by Dealo admins only
 
+### OAuth2 client credentials
+For server-to-server integrations that prefer short-lived tokens, an admin can create an OAuth client on any API key (**Dashboard → API keys → OAuth**). The client inherits that key's scopes, plan, rate limit, data visibility and usage metering.
+
+```bash
+curl -s -X POST "$DEALO_API/api/v1/oauth/token" \
+  -u "$CLIENT_ID:$CLIENT_SECRET" \
+  -d grant_type=client_credentials \
+  -d scope="hire-inquiries:read"
+# => { "access_token": "eyJ…", "token_type": "Bearer", "expires_in": 3600, "scope": "hire-inquiries:read" }
+
+curl -s "$DEALO_API/api/v1/hire-inquiries" -H "Authorization: Bearer $ACCESS_TOKEN"
+```
+
+- Client auth via HTTP Basic (preferred) or `client_id` / `client_secret` in the form/JSON body
+- `scope` is optional (space-separated); it can only narrow the key's scopes
+- Errors follow RFC 6749: `400 unsupported_grant_type | invalid_scope`, `401 invalid_client`
+- Revoking the client or deactivating the key invalidates outstanding tokens immediately
+
 ### Data visibility
 Requests made with an API key only see hire inquiries created by that key (or by the key's organization). Staff JWTs see everything.
 
@@ -159,6 +177,9 @@ Respond with any `2xx` within 10 seconds. Otherwise Dealo retries after 30s, 2m,
 | POST | `/api/v1/api-keys/sandbox` | Employer/staff JWT | Self-serve sandbox key |
 | GET | `/api/v1/api-keys/mine` | Employer/staff JWT | Keys you created |
 | DELETE | `/api/v1/api-keys/mine/:id` | Employer/staff JWT | Revoke your key |
+| POST | `/api/v1/oauth/token` | Client credentials | OAuth2 access token (1h) |
+| GET/POST | `/api/v1/api-keys/:id/oauth-clients` | Admin JWT | List / create OAuth clients |
+| DELETE | `/api/v1/oauth-clients/:id` | Admin JWT | Revoke OAuth client |
 | GET/POST | `/api/v1/webhooks` | Employer/staff JWT | List / register endpoints |
 | PATCH/DELETE | `/api/v1/webhooks/:id` | Owner or admin | Update / delete endpoint |
 | POST | `/api/v1/webhooks/:id/test` | Owner or admin | Send signed ping |

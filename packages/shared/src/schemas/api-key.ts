@@ -54,3 +54,9 @@ export const createSandboxApiKeySchema = z.object({
 });
 
 export type CreateSandboxApiKeyInput = z.infer<typeof createSandboxApiKeySchema>;
+
+export const createOAuthClientSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+});
+
+export type CreateOAuthClientInput = z.infer<typeof createOAuthClientSchema>;

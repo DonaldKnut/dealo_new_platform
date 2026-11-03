@@ -12,7 +12,7 @@ import {
   type CreateSandboxApiKeyInput,
   type UpdateApiKeyInput,
 } from '@dealo/shared';
-import { ApiKeyEnvironment, ApiKeyPlan } from '@prisma/client';
+import { ApiKeyEnvironment, ApiKeyPlan, type ApiKey } from '@prisma/client';
 
 import type { AuthUser } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
@@ -321,6 +321,19 @@ export class ApiKeysService {
       throw new UnauthorizedException('Invalid or inactive API key');
     }
 
+    return this.toPrincipal(record);
+  }
+
+  /** Resolves an active, unexpired key by id (used by OAuth tokens). */
+  async principalForKeyId(apiKeyId: string): Promise<AuthUser> {
+    const record = await this.prisma.apiKey.findUnique({ where: { id: apiKeyId } });
+    if (!record || !record.isActive) {
+      throw new UnauthorizedException('Invalid or inactive API key');
+    }
+    return this.toPrincipal(record);
+  }
+
+  private toPrincipal(record: ApiKey): AuthUser {
     if (record.expiresAt && record.expiresAt.getTime() < Date.now()) {
       throw new ForbiddenException('API key expired');
     }

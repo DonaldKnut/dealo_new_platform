@@ -456,6 +456,7 @@ model ApiKey {
   createdBy    User          @relation("ApiKeyCreator", fields: [createdByUserId], references: [id])
   organization Organization? @relation(fields: [organizationId], references: [id])
   usageLogs    ApiUsageLog[]
+  oauthClients OAuthClient[]
 
   @@index([keyPrefix])
   @@index([createdByUserId])
@@ -474,6 +475,24 @@ model ApiUsageLog {
   apiKey ApiKey @relation(fields: [apiKeyId], references: [id])
 
   @@index([apiKeyId, createdAt])
+}
+
+/// OAuth2 client-credentials client; tokens act with the backing API key's plan, limits and (narrowed) scopes.
+model OAuthClient {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  clientId         String    @unique
+  clientSecretHash String
+  apiKeyId         String    @db.ObjectId
+  isActive         Boolean   @default(true)
+  lastUsedAt       DateTime?
+  createdByUserId  String    @db.ObjectId
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id])
+
+  @@index([apiKeyId])
 }
 
 enum WebhookDeliveryStatus {
