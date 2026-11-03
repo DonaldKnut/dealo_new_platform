@@ -23,6 +23,7 @@ import { RootModule } from './root/root.module';
 import { SupportModule } from './support/support.module';
 import { TalentModule } from './talent/talent.module';
 import { UsersModule } from './users/users.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -64,6 +65,7 @@ import { UsersModule } from './users/users.module';
     SupportModule,
     MailModule,
     ApiKeysModule,
+    WebhooksModule,
   ],
   providers: [
     {

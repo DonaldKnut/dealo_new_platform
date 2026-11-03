@@ -10,3 +10,4 @@ export * from './mail';
 export * from './newsletter';
 export * from './support';
 export * from './talent';
+export * from './webhook';

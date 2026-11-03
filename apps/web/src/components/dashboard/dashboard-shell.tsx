@@ -20,6 +20,7 @@ import {
   Settings,
   UserRound,
   Users,
+  Webhook,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -112,6 +113,13 @@ const adminNav: NavItem[] = [
     labelKey: 'dash.nav.apiKeys',
     icon: KeyRound,
     help: 'Create and revoke partner API keys for the commercial Dealo API.',
+    tour: 'admin',
+  },
+  {
+    href: '/dashboard/developer',
+    labelKey: 'dash.nav.developer',
+    icon: Webhook,
+    help: 'Sandbox keys and signed webhooks (admins can add global webhooks).',
     tour: 'admin',
   },
   {

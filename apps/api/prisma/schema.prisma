@@ -124,6 +124,7 @@ model User {
   assignedTickets         SupportTicket[]      @relation("TicketAssignee")
   ticketMessages          SupportTicketMessage[]
   apiKeysCreated          ApiKey[]             @relation("ApiKeyCreator")
+  webhookEndpoints        WebhookEndpoint[]    @relation("WebhookOwner")
 }
 
 model Role {
@@ -473,4 +474,55 @@ model ApiUsageLog {
   apiKey ApiKey @relation(fields: [apiKeyId], references: [id])
 
   @@index([apiKeyId, createdAt])
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model WebhookEndpoint {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  url            String
+  description    String?
+  /// Signing secret; needed in plaintext to compute HMAC signatures.
+  secret         String
+  events         String[]
+  isActive       Boolean   @default(true)
+  isGlobal       Boolean   @default(false)
+  ownerUserId    String    @db.ObjectId
+  organizationId String?   @db.ObjectId
+  failureCount   Int       @default(0)
+  lastDeliveryAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  owner      User              @relation("WebhookOwner", fields: [ownerUserId], references: [id])
+  deliveries WebhookDelivery[]
+
+  @@index([ownerUserId])
+  @@index([organizationId])
+  @@index([isActive, isGlobal])
+}
+
+model WebhookDelivery {
+  id            String                @id @default(auto()) @map("_id") @db.ObjectId
+  endpointId    String                @db.ObjectId
+  event         String
+  payload       Json
+  status        WebhookDeliveryStatus @default(PENDING)
+  attempts      Int                   @default(0)
+  responseCode  Int?
+  responseBody  String?
+  error         String?
+  nextAttemptAt DateTime?
+  deliveredAt   DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id])
+
+  @@index([endpointId, createdAt])
+  @@index([status, nextAttemptAt])
 }

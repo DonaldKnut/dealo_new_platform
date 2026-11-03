@@ -565,6 +565,66 @@ export function revokeMyApiKey(id: string) {
   return apiFetch<{ id: string; revoked: boolean }>(`/api-keys/mine/${id}`, { method: 'DELETE' });
 }
 
+export type WebhookEndpointRow = {
+  id: string;
+  url: string;
+  description: string | null;
+  events: string[];
+  isActive: boolean;
+  isGlobal: boolean;
+  ownerUserId: string;
+  failureCount: number;
+  lastDeliveryAt: string | null;
+  createdAt: string;
+};
+
+export type WebhookDeliveryRow = {
+  id: string;
+  event: string;
+  status: 'PENDING' | 'SUCCEEDED' | 'FAILED';
+  attempts: number;
+  responseCode: number | null;
+  error: string | null;
+  nextAttemptAt: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  payload: unknown;
+};
+
+type DeliveryResult = Pick<WebhookDeliveryRow, 'id' | 'status' | 'responseCode' | 'error' | 'attempts'>;
+
+export function fetchWebhooks() {
+  return apiFetch<WebhookEndpointRow[]>('/webhooks');
+}
+
+export function createWebhook(payload: Record<string, unknown>) {
+  return apiFetch<WebhookEndpointRow & { secret: string }>('/webhooks', { method: 'POST', json: payload });
+}
+
+export function updateWebhook(id: string, payload: Record<string, unknown>) {
+  return apiFetch<WebhookEndpointRow>(`/webhooks/${id}`, { method: 'PATCH', json: payload });
+}
+
+export function deleteWebhook(id: string) {
+  return apiFetch<{ id: string; deleted: boolean }>(`/webhooks/${id}`, { method: 'DELETE' });
+}
+
+export function rotateWebhookSecret(id: string) {
+  return apiFetch<{ id: string; secret: string }>(`/webhooks/${id}/rotate-secret`, { method: 'POST' });
+}
+
+export function testWebhook(id: string) {
+  return apiFetch<DeliveryResult>(`/webhooks/${id}/test`, { method: 'POST' });
+}
+
+export function fetchWebhookDeliveries(id: string) {
+  return apiFetch<WebhookDeliveryRow[]>(`/webhooks/${id}/deliveries`);
+}
+
+export function redeliverWebhook(deliveryId: string) {
+  return apiFetch<DeliveryResult>(`/webhooks/deliveries/${deliveryId}/redeliver`, { method: 'POST' });
+}
+
 export function fetchApiKeyUsage(id: string, days = 7) {
   return apiFetch<ApiKeyUsage>(`/api-keys/${id}/usage?days=${days}`);
 }

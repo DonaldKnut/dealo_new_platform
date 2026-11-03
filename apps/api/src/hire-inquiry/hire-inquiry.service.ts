@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { HireInquiryInput, HireInquiryStatusUpdate } from '@dealo/shared';
-import { PermissionCode } from '@dealo/shared';
+import { PermissionCode, WebhookEvent } from '@dealo/shared';
 import type { HireInquiryStatus } from '@prisma/client';
 
 import type { AuthUser } from '../auth/auth.types';
@@ -9,6 +9,7 @@ import { normalizeEmail } from '../common/normalize-email';
 import { EmailService } from '../email/email.service';
 import { hireInquiryAckEmail } from '../email/email.templates';
 import { PrismaService } from '../prisma/prisma.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 
 @Injectable()
 export class HireInquiryService {
@@ -16,6 +17,7 @@ export class HireInquiryService {
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly emailService: EmailService,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   async create(input: HireInquiryInput, principal?: AuthUser) {
@@ -61,6 +63,8 @@ export class HireInquiryService {
         isTest,
       },
     });
+
+    this.webhooks.dispatchHireInquiryEvent(WebhookEvent.HIRE_INQUIRY_CREATED, inquiry);
 
     // Sandbox submissions must never email real addresses.
     if (!isTest) {
@@ -119,6 +123,12 @@ export class HireInquiryService {
       actorId,
       metadata: { from: existing.status, to: inquiry.status },
     });
+
+    if (existing.status !== inquiry.status) {
+      this.webhooks.dispatchHireInquiryEvent(WebhookEvent.HIRE_INQUIRY_STATUS_UPDATED, inquiry, {
+        previousStatus: existing.status,
+      });
+    }
 
     return inquiry;
   }

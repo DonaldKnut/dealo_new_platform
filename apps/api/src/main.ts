@@ -78,6 +78,7 @@ async function bootstrap(): Promise<void> {
     .addTag('auth', 'User authentication')
     .addTag('hire-inquiries', 'Hiring intake and pipeline')
     .addTag('api-keys', 'Partner API key administration')
+    .addTag('webhooks', 'Signed outbound event delivery')
     .addTag('blog', 'Public content')
     .build();
 

@@ -5,10 +5,12 @@ import { ExternalLink } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
+import { DashboardWebhooksPanel } from '@/components/dashboard/dashboard-webhooks-panel';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import {
   createSandboxApiKey,
+  fetchAuthMe,
   fetchMyApiKeys,
   revokeMyApiKey,
   type ApiKeyRow,
@@ -27,7 +29,14 @@ export function DashboardDeveloperPanel() {
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [revealed, setRevealed] = useState<CreatedApiKey | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const origin = apiOrigin();
+
+  useEffect(() => {
+    fetchAuthMe()
+      .then((me) => setIsAdmin(me.roles.some((role) => role === 'SUPER_ADMIN' || role === 'ADMIN')))
+      .catch(() => undefined);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -169,6 +178,8 @@ export function DashboardDeveloperPanel() {
           </ul>
         )}
       </DashPanel>
+
+      <DashboardWebhooksPanel canCreateGlobal={isAdmin} />
     </div>
   );
 }

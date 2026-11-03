@@ -93,8 +93,8 @@ export default function DevelopersPage() {
           },
           {
             icon: Webhook,
-            title: 'Status webhooks',
-            body: 'Coming in Phase 2 — get notified when shortlists are ready or placements change.',
+            title: 'Signed webhooks',
+            body: 'Get HMAC-signed events when hiring requests are created or change status, with automatic retries.',
           },
           {
             icon: ShieldCheck,
