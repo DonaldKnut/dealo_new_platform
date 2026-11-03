@@ -18,7 +18,7 @@ import { ApiError, apiFetch } from '@/lib/api';
 type RegisterFormValues = RegisterInput;
 
 const ROLE_HELP =
-  'Choose Employer if you’re hiring for a company. Choose Professional if you want job matches.';
+  'Pick Employer if you want to hire people. Pick Professional if you want a job.';
 
 export function RegisterForm({
   onSuccess,
@@ -64,9 +64,9 @@ export function RegisterForm({
       toast.success('Account created', result.message);
       onSuccess?.();
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : 'Unable to create account.';
+      const message = error instanceof ApiError ? error.message : 'We could not create your account.';
       setServerError(message);
-      toast.error('Registration failed', message);
+      toast.error('Sign up failed', message);
     }
   });
 
@@ -111,7 +111,7 @@ export function RegisterForm({
         type="password"
         revealable
         autoComplete="new-password"
-        placeholder="Min. 8 chars, letter + number"
+        placeholder="8 or more, with a letter and a number"
         error={errors.password?.message}
         {...register('password')}
       />
@@ -124,7 +124,7 @@ export function RegisterForm({
       />
 
       <p className="text-xs leading-relaxed text-muted">
-        By creating an account, you agree to Dealo&apos;s{' '}
+        When you make an account, you agree to Dealo&apos;s{' '}
         <Link href="/privacy" className="font-semibold text-brand underline-offset-2 hover:underline">
           Privacy Policy
         </Link>{' '}

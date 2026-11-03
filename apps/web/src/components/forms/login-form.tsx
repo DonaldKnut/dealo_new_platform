@@ -96,7 +96,7 @@ export function LoginForm({
       router.push(getDashboardHome(result.user?.roles ?? []));
       router.refresh();
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : 'Unable to sign in.';
+      const message = error instanceof ApiError ? error.message : 'We could not sign you in.';
       setServerError(message);
       toast.error('Sign in failed', message);
     }
@@ -147,7 +147,7 @@ export function LoginForm({
           <input type="checkbox" className="h-4 w-4 rounded border-border" {...register('rememberMe')} />
           <span>Remember me</span>
         </label>
-        <p className="text-[11px] text-muted">Keeps you signed in longer on this device.</p>
+        <p className="text-[11px] text-muted">Stay signed in on this device.</p>
       </div>
 
       <FormStatus error={serverError} message={serverMessage} />

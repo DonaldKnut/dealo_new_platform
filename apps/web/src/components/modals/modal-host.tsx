@@ -23,7 +23,7 @@ export function ModalHost() {
         open={openModal === 'hire'}
         onClose={close}
         title="Tell us who you need"
-        subtitle="Tell us about the role. Dealo finds people and helps you hire."
+        subtitle="Tell us about the job. Dealo finds people and helps you hire."
         promoFill
         illustration={<HireIllustration />}
       >
@@ -34,7 +34,7 @@ export function ModalHost() {
         open={openModal === 'login'}
         onClose={close}
         title="Welcome back"
-        subtitle="Sign in as a company or a professional."
+        subtitle="Sign in as a company or a worker."
         promoFill
         illustration={<AuthIllustration />}
       >
@@ -45,7 +45,7 @@ export function ModalHost() {
         open={openModal === 'register'}
         onClose={close}
         title="Create your account"
-        subtitle="Join as a company or a professional. We verify accounts to keep Dealo trusted."
+        subtitle="Join as a company or a worker. We check every account to keep Dealo safe."
         promoFill
         illustration={<AuthIllustration />}
       >
@@ -56,7 +56,7 @@ export function ModalHost() {
         open={openModal === 'forgot-password'}
         onClose={close}
         title="Reset your password"
-        subtitle="We'll email you a secure link if an account exists for that address."
+        subtitle="If we have an account with that email, we will send you a safe link."
         promoFill
         illustration={<AuthIllustration />}
       >
@@ -67,7 +67,7 @@ export function ModalHost() {
         open={openModal === 'contact'}
         onClose={close}
         title="Talk to Dealo"
-        subtitle="Questions about hiring, staffing, or working with us? Send a short message."
+        subtitle="Have a question about hiring or working with us? Send a short message."
         illustration={<ContactIllustration />}
       >
         <ContactForm />

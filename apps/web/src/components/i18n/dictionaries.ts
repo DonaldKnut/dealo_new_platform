@@ -1,3 +1,4 @@
+import { agentsEn, agentsFr, agentsKo, agentsZh } from './agents-copy';
 import { homeEn, homeFr, homeKo, homeZh } from './home-copy';
 import { pagesEn, pagesFr, pagesKo, pagesZh } from './pages-copy';
 
@@ -24,49 +25,49 @@ const enCore = {
   'nav.dashboard': 'Dashboard',
   'nav.settings': 'Settings',
   'nav.language': 'Language',
-  'nav.hireTalent': 'Hire talent',
+  'nav.hireTalent': 'Hire workers',
   'nav.account': 'Account',
 
-  'mega.direct.title': 'Direct recruitment',
-  'mega.direct.desc': 'We find, check, and help you hire people onto your team.',
-  'mega.managed.title': 'Managed staffing',
-  'mega.managed.desc': 'Dealo runs hiring for you, with clear pricing and terms.',
+  'mega.direct.title': 'Direct hiring',
+  'mega.direct.desc': 'We find and check people. You hire them as your staff.',
+  'mega.managed.title': 'Managed staff',
+  'mega.managed.desc': 'We find and manage the workers for you.',
   'mega.how.title': 'How it works',
-  'mega.how.desc': 'See every step from request to hire.',
-  'mega.employers.title': 'For employers',
-  'mega.employers.desc': 'Hire office talent or skilled trades from a checked shortlist.',
-  'mega.professionals.title': 'For professionals',
-  'mega.professionals.desc': 'Build a profile and get matched to jobs in our scope.',
+  'mega.how.desc': 'See every step, from asking to hiring.',
+  'mega.employers.title': 'For companies',
+  'mega.employers.desc': 'Hire office workers or skilled trades from a checked short list.',
+  'mega.professionals.title': 'For job seekers',
+  'mega.professionals.desc': 'Make a profile and get matched to jobs.',
   'mega.developers.title': 'Developers & API',
-  'mega.developers.desc': 'API access for sale, partner integrations, and developer support.',
+  'mega.developers.desc': 'Buy API access, connect your app, and get help.',
   'mega.blog.title': 'Blog',
-  'mega.blog.desc': 'Hiring guides for Nigeria, Africa, and global teams.',
-  'mega.employerInsights.title': 'Employer insights',
-  'mega.employerInsights.desc': 'How Nigerian businesses hire office talent and trades.',
-  'mega.careerInsights.title': 'Career insights',
-  'mega.careerInsights.desc': 'Tips for professionals joining checked roles.',
+  'mega.blog.desc': 'Hiring tips for Nigeria, Africa, and the world.',
+  'mega.employerInsights.title': 'Tips for companies',
+  'mega.employerInsights.desc': 'How Nigerian companies hire office workers and trades.',
+  'mega.careerInsights.title': 'Job tips',
+  'mega.careerInsights.desc': 'Tips for workers looking for a good job.',
 
-  'cta.hire': 'Request talent',
-  'cta.join': 'Join as a professional',
+  'cta.hire': 'Ask for workers',
+  'cta.join': 'Join as a worker',
   'cta.contact': 'Contact',
   'cta.signInAccount': 'Sign in to your account',
 
-  'hero.badge': 'Office roles & skilled trades',
-  'hero.titleBefore': 'Hire great people for your business — and',
+  'hero.badge': 'Office jobs & skilled trades',
+  'hero.titleBefore': 'Hire great people for your business, and',
   'hero.titleAccent': 'keep them',
   'hero.titleAfter': '.',
   'hero.subtitle':
-    'Dealo helps Nigerian businesses hire checked office talent and skilled trades — like bricklayers and electricians — in under 48 hours.',
+    'Dealo helps Nigerian companies hire checked office workers and skilled trades, like bricklayers and electricians. Get them in under 48 hours.',
 
   'footer.blurb':
-    'Dealo helps Nigerian businesses hire checked office talent and skilled trades — with clear steps and hires we stand behind.',
+    'Dealo helps Nigerian companies hire checked office workers and skilled trades. Our steps are clear, and we stand behind every hire.',
   'footer.hireWith': 'Hire with Dealo',
   'footer.services': 'Services',
   'footer.how': 'How it works',
-  'footer.requestHire': 'Request a hire',
+  'footer.requestHire': 'Ask for a hire',
   'footer.whoFor': 'Who it’s for',
-  'footer.employers': 'Employers',
-  'footer.professionals': 'Professionals',
+  'footer.employers': 'Companies',
+  'footer.professionals': 'Job seekers',
   'footer.createAccount': 'Create account',
   'footer.company': 'Company',
   'footer.about': 'About',
@@ -76,40 +77,40 @@ const enCore = {
   'footer.rights': 'All rights reserved.',
 
   'support.open': 'Get help',
-  'support.title': 'Support ticket',
+  'support.title': 'Ask for help',
   'support.subject': 'Subject',
-  'support.body': 'Describe the issue',
-  'support.category': 'Category',
-  'support.priority': 'Priority',
-  'support.submit': 'Send ticket',
-  'support.success': 'Ticket sent — our team was notified.',
+  'support.body': 'Tell us the problem',
+  'support.category': 'Type',
+  'support.priority': 'How urgent',
+  'support.submit': 'Send',
+  'support.success': 'Sent. Our team has been told.',
   'support.stepAbout': 'What is this about?',
-  'support.stepAboutHint': 'Give your issue a short, clear subject.',
-  'support.stepDescribe': 'Describe the issue',
-  'support.stepDescribeHint': 'Share enough detail for our team to help quickly.',
-  'support.stepPriority': 'Set priority',
-  'support.stepPriorityHint': 'How urgent is this for you or your client?',
+  'support.stepAboutHint': 'Give your problem a short, clear title.',
+  'support.stepDescribe': 'Tell us the problem',
+  'support.stepDescribeHint': 'Give enough detail so we can help fast.',
+  'support.stepPriority': 'How urgent is it?',
+  'support.stepPriorityHint': 'How soon do you or your client need help?',
   'support.review': 'Review',
   'support.next': 'Next',
   'support.back': 'Back',
   'support.cancel': 'Cancel',
   'support.sending': 'Sending…',
   'support.cat.general': 'General',
-  'support.cat.hiring': 'Hiring / requests',
-  'support.cat.talent': 'Talent / profile',
-  'support.cat.billing': 'Billing',
-  'support.cat.technical': 'Technical',
-  'support.pri.low': 'Low — can wait',
-  'support.pri.normal': 'Normal — standard help',
-  'support.pri.high': 'High — blocking work',
-  'support.pri.urgent': 'Urgent — needs attention now',
+  'support.cat.hiring': 'Hiring',
+  'support.cat.talent': 'Worker profile',
+  'support.cat.billing': 'Bills and payment',
+  'support.cat.technical': 'Site problem',
+  'support.pri.low': 'Low: it can wait',
+  'support.pri.normal': 'Normal',
+  'support.pri.high': 'High: it stops my work',
+  'support.pri.urgent': 'Urgent: I need help now',
 
   'toast.saved': 'Saved',
   'toast.error': 'Something went wrong',
 
   'dash.tour': 'Start tour',
-  'dash.collapse': 'Collapse sidebar',
-  'dash.expand': 'Expand sidebar',
+  'dash.collapse': 'Hide menu',
+  'dash.expand': 'Show menu',
   'dash.workspace': 'Workspace',
   'dash.signOut': 'Sign out',
   'dash.admin': 'Admin',
@@ -132,6 +133,7 @@ const enCore = {
   'dash.nav.audit': 'Audit logs',
   'dash.nav.apiKeys': 'API keys',
   'dash.nav.developer': 'Developer API',
+  'dash.more': 'More',
   'dash.nav.users': 'Users',
   'dash.nav.settings': 'Settings',
   'dash.nav.organization': 'Organization',
@@ -140,32 +142,32 @@ const enCore = {
   'dash.nav.documents': 'Documents',
 
   'tour.1.accent': 'Home base',
-  'tour.1.title': 'Your workspace home',
+  'tour.1.title': 'Your home page',
   'tour.1.body':
-    'This is your dashboard. The left menu is how you move around. Each link opens one area of work — requests, talent, settings, and more.',
+    'This is your dashboard. Use the menu on the left to move around. Each link opens one part, like requests, workers, or settings.',
   'tour.2.accent': 'Find your way',
-  'tour.2.title': 'Sidebar & tooltips',
+  'tour.2.title': 'Menu & help icons',
   'tour.2.body':
-    'Use the collapse button to shrink the sidebar on large screens. Question-mark icons explain what a label means — click or hover them anytime you feel unsure.',
+    'On big screens, you can hide the menu to make more room. The question mark icons tell you what things mean. Tap or point at them any time.',
   'tour.3.accent': 'Live counts',
-  'tour.3.title': 'Overview numbers',
+  'tour.3.title': 'Your numbers',
   'tour.3.body':
-    'KPI cards show counts that matter for your role (open requests, candidates, shortlists). They update as the team works — they are not ads or promotions.',
-  'tour.4.accent': 'Match people to roles',
-  'tour.4.title': 'Requests & talent',
+    'These cards show the numbers that matter to you, like open requests, people, and short lists. They change as the team works. They are not ads.',
+  'tour.4.accent': 'Match people to jobs',
+  'tour.4.title': 'Requests & workers',
   'tour.4.body':
-    'Hiring requests are intake forms from employers. Talent / shortlists are vetted people matched to those requests. Admins can change statuses; employers mainly track their own.',
-  'tour.5.accent': 'Support & languages',
+    'Hiring requests are forms sent by companies. Short lists are checked people who fit those requests. Admins can change the status. Companies mostly follow their own.',
+  'tour.5.accent': 'Help & languages',
   'tour.5.title': 'Help & language',
   'tour.5.body':
-    'Need help? Use the headphones button (bottom-right) to open a support ticket — admins get an email. Switch language with the control in the header.',
-  'tour.6.accent': 'Staff controls',
-  'tour.6.title': 'Admin-only powers',
+    'Need help? Tap the headphones button at the bottom right to ask for help. Admins get an email. You can change the language at the top of the page.',
+  'tour.6.accent': 'Staff tools',
+  'tour.6.title': 'Only for admins',
   'tour.6.body':
-    'If you are Admin or Super Admin you also see Audit logs, Mail users, and Support queues. Regular employers and talent cannot mail everyone or view platform-wide logs.',
+    'Admins and Super Admins also see Audit logs, Mail users, and Support. Companies and workers cannot email everyone or see the full site logs.',
 } as const;
 
-const en = { ...enCore, ...homeEn, ...pagesEn };
+const en = { ...enCore, ...homeEn, ...pagesEn, ...agentsEn };
 export type TranslationKey = keyof typeof en;
 
 type Dictionary = Record<TranslationKey, string>;
@@ -288,6 +290,7 @@ const frCore: Record<keyof typeof enCore, string> = {
   'dash.nav.audit': 'Journaux d’audit',
   'dash.nav.apiKeys': 'Clés API',
   'dash.nav.developer': 'API développeur',
+  'dash.more': 'Plus',
   'dash.nav.users': 'Utilisateurs',
   'dash.nav.settings': 'Paramètres',
   'dash.nav.organization': 'Organisation',
@@ -321,7 +324,7 @@ const frCore: Record<keyof typeof enCore, string> = {
     'Admin / Super Admin voient aussi Audit, Mail et Support. Les employeurs et talents n’ont pas ces accès.',
 };
 
-const fr: Dictionary = { ...frCore, ...homeFr, ...pagesFr };
+const fr: Dictionary = { ...frCore, ...homeFr, ...pagesFr, ...agentsFr };
 
 const zhCore: Record<keyof typeof enCore, string> = {
   'nav.offer': '我们提供',
@@ -441,6 +444,7 @@ const zhCore: Record<keyof typeof enCore, string> = {
   'dash.nav.audit': '审计日志',
   'dash.nav.apiKeys': 'API 密钥',
   'dash.nav.developer': '开发者 API',
+  'dash.more': '更多',
   'dash.nav.users': '用户',
   'dash.nav.settings': '设置',
   'dash.nav.organization': '组织',
@@ -468,7 +472,7 @@ const zhCore: Record<keyof typeof enCore, string> = {
   'tour.6.body': '管理员还可看到审计、群发邮件与支持队列。普通用户没有这些权限。',
 };
 
-const zh: Dictionary = { ...zhCore, ...homeZh, ...pagesZh };
+const zh: Dictionary = { ...zhCore, ...homeZh, ...pagesZh, ...agentsZh };
 
 const koCore: Record<keyof typeof enCore, string> = {
   'nav.offer': '제공 서비스',
@@ -588,6 +592,7 @@ const koCore: Record<keyof typeof enCore, string> = {
   'dash.nav.audit': '감사 로그',
   'dash.nav.apiKeys': 'API 키',
   'dash.nav.developer': '개발자 API',
+  'dash.more': '더보기',
   'dash.nav.users': '사용자',
   'dash.nav.settings': '설정',
   'dash.nav.organization': '조직',
@@ -621,7 +626,7 @@ const koCore: Record<keyof typeof enCore, string> = {
     '관리자/슈퍼관리자는 감사 로그, 메일, 지원 대기열도 봅니다. 일반 사용자는 이 권한이 없습니다.',
 };
 
-const ko: Dictionary = { ...koCore, ...homeKo, ...pagesKo };
+const ko: Dictionary = { ...koCore, ...homeKo, ...pagesKo, ...agentsKo };
 
 export const dictionaries: Record<Locale, Dictionary> = {
   en: en as Dictionary,

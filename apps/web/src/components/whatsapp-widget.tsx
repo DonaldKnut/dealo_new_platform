@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { MessageCircle, X } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
 import { useLocale } from '@/components/i18n/locale-context';
@@ -16,13 +17,14 @@ export function WhatsAppWidget() {
   const number = normalizeWhatsAppNumber(raw);
   const reduceMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
 
-  if (!number) return null;
+  if (!number || pathname.startsWith('/dashboard')) return null;
 
   const href = `https://wa.me/${number}?text=${encodeURIComponent(t('wa.prefill'))}`;
 
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+    <div className="pointer-events-none fixed bottom-[max(0.75rem,var(--safe-bottom))] right-2 z-50 flex flex-col items-end gap-3 min-[340px]:right-4 sm:bottom-6 sm:right-6">
       <AnimatePresence>
         {open ? (
           <motion.div
@@ -60,7 +62,7 @@ export function WhatsAppWidget() {
       <motion.button
         type="button"
         aria-label={t('wa.title')}
-        className="pointer-events-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_12px_28px_rgba(37,211,102,0.35)]"
+        className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_12px_28px_rgba(37,211,102,0.35)] min-[340px]:h-14 min-[340px]:w-14"
         onClick={() => setOpen((value) => !value)}
         animate={
           reduceMotion || open

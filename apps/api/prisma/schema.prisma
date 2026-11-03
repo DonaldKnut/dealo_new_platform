@@ -281,6 +281,17 @@ model Candidate {
   notes        String?
   screenStatus CandidateScreenStatus @default(NEW)
   userId       String?               @unique @db.ObjectId
+  headline         String?
+  bio              String?
+  skills           String[]
+  yearsExperience  Int?
+  roleFamily       RoleFamily?
+  availability     String?
+  expectedPayMinor Int?
+  linkedinUrl      String?
+  portfolioUrl     String?
+  openToWork       Boolean               @default(true)
+  profileUpdatedAt DateTime?
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
 
@@ -301,12 +312,24 @@ model CandidateDocument {
   byteSize    Int
   url         String
   publicId    String
+  /// "cloudinary" or "database" (fallback when Cloudinary is not configured).
+  storage     String                @default("cloudinary")
   createdAt   DateTime              @default(now())
   updatedAt   DateTime              @updatedAt
 
-  candidate Candidate @relation(fields: [candidateId], references: [id])
+  candidate Candidate              @relation(fields: [candidateId], references: [id])
+  blob      CandidateDocumentBlob?
 
   @@index([candidateId])
+}
+
+model CandidateDocumentBlob {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  documentId String   @unique @db.ObjectId
+  data       Bytes
+  createdAt  DateTime @default(now())
+
+  document CandidateDocument @relation(fields: [documentId], references: [id])
 }
 
 model Shortlist {

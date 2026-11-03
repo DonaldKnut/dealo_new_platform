@@ -65,15 +65,15 @@ export function IllustrativeOptionPicker({
             : 'border-border hover:border-brand/40',
         )}
       >
-        <span className="flex w-10 shrink-0 items-center justify-center border-r border-border bg-surface text-brand min-[340px]:w-11">
+        <span className="flex w-8 shrink-0 items-center justify-center border-r border-border bg-surface text-brand min-[260px]:w-10 min-[340px]:w-11">
           {SelectedIcon ? (
             <SelectedIcon className="h-4 w-4" strokeWidth={1.75} />
           ) : (
             <span className="h-1.5 w-1.5 rounded-full bg-muted" />
           )}
         </span>
-        <span className="min-w-0 flex-1 px-2.5 py-2 min-[340px]:px-3.5 min-[340px]:py-2.5">
-          <span className="block truncate text-[13px] font-semibold text-foreground min-[340px]:text-[0.95rem]">
+        <span className="min-w-0 flex-1 px-2 py-2 min-[260px]:px-2.5 min-[340px]:px-3.5 min-[340px]:py-2.5">
+          <span className="block truncate text-[12px] font-semibold text-foreground min-[260px]:text-[13px] min-[340px]:text-[0.95rem]">
             {selected?.label ?? placeholder}
           </span>
           {selected ? (
@@ -82,7 +82,7 @@ export function IllustrativeOptionPicker({
             </span>
           ) : null}
         </span>
-        <span className="flex w-9 shrink-0 items-center justify-center border-l border-border bg-surface text-muted min-[340px]:w-11">
+        <span className="flex w-7 shrink-0 items-center justify-center border-l border-border bg-surface text-muted min-[260px]:w-9 min-[340px]:w-11">
           <ChevronDown
             className={cn('h-4 w-4 transition-transform', open && 'rotate-180')}
             strokeWidth={1.75}
@@ -109,7 +109,7 @@ export function IllustrativeOptionPicker({
                   <button
                     type="button"
                     className={cn(
-                      'flex w-full min-w-0 items-start gap-2.5 rounded-lg px-2.5 py-2.5 text-left transition min-[340px]:gap-3 min-[340px]:px-3',
+                      'flex w-full min-w-0 items-start gap-2 rounded-lg px-2 py-2 text-left transition min-[260px]:gap-2.5 min-[260px]:px-2.5 min-[260px]:py-2.5 min-[340px]:gap-3 min-[340px]:px-3',
                       isActive
                         ? 'bg-brand-soft text-foreground'
                         : 'text-foreground hover:bg-surface',
@@ -121,7 +121,7 @@ export function IllustrativeOptionPicker({
                   >
                     <span
                       className={cn(
-                        'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border min-[340px]:h-9 min-[340px]:w-9',
+                        'mt-0.5 hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg border min-[260px]:flex min-[340px]:h-9 min-[340px]:w-9',
                         isActive
                           ? 'border-brand/30 bg-surface-elevated text-brand'
                           : 'border-border bg-surface text-muted',

@@ -33,8 +33,8 @@ export function TalentOverview({
         subtitle={workspace.subcopy}
         actions={
           <>
-            <Link href="/dashboard/documents" className="btn-primary">
-              Upload documents
+            <Link href="/dashboard/profile" className="btn-primary">
+              Complete my profile
               <ArrowUpRight className="h-4 w-4" />
             </Link>
             <Link href="/dashboard/matches" className="btn-secondary">
@@ -106,8 +106,8 @@ export function TalentOverview({
             ))}
           </ul>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Link href="/dashboard/documents" className="btn-primary">
-              Manage documents
+            <Link href="/dashboard/profile" className="btn-primary">
+              Edit profile and CV
             </Link>
             <Link href="/dashboard/settings" className="btn-secondary">
               Settings

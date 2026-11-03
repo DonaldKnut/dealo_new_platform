@@ -1,3 +1,4 @@
+import { AiAgentsShowcase } from '@/components/marketing/ai-agents-showcase';
 import { AudienceSplit } from '@/components/marketing/audience-split';
 import { CoverageScope } from '@/components/marketing/coverage-scope';
 import { CtaBanner } from '@/components/marketing/cta-banner';
@@ -16,6 +17,7 @@ export default function HomePage() {
       <HeroSection />
       <MarqueeStrip />
       <HomeStats />
+      <AiAgentsShowcase />
       <CoverageScope />
       <ServiceSpotlight />
       <TalentShowcaseGrid />

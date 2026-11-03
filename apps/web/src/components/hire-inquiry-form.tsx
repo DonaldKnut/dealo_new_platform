@@ -42,17 +42,17 @@ import { logClientAudit } from '@/lib/client-audit';
 const hireFormObjectSchema = z.object({
   companyName: z.string().trim().min(2, 'Enter your company name').max(200),
   contactName: z.string().trim().min(2, 'Enter a contact name').max(150),
-  email: z.string().email('Enter a valid work email').max(255),
-  phone: z.string().trim().min(7, 'Enter a valid phone number').max(30),
+  email: z.string().email('Enter a real work email').max(255),
+  phone: z.string().trim().min(7, 'Enter a real phone number').max(30),
   roleFamily: z.enum([RoleFamily.OFFICE_PROFESSIONAL, RoleFamily.SKILLED_TRADE]),
   serviceType: z.enum([ServiceType.DIRECT_RECRUITMENT, ServiceType.MANAGED_STAFFING]),
   roleTitle: z
     .string()
     .trim()
-    .min(2, 'Enter a role title')
+    .min(2, 'Enter a job title')
     .max(200)
     .refine((value) => !/\d/.test(value), {
-      message: 'Role title should not include numbers',
+      message: 'Job title should not have numbers',
     }),
   numberOfProfessionals: z.coerce.number().int().min(1).max(500),
   location: z.string().trim().min(2, 'Enter a location').max(200),
@@ -75,7 +75,7 @@ const hireFormObjectSchema = z.object({
   requirements: z
     .string()
     .trim()
-    .min(8, 'One short sentence is enough (at least 8 characters)')
+    .min(8, 'Write one short sentence (8 letters or more)')
     .max(5000),
   additionalNotes: z.string().trim().max(2000).optional(),
 });
@@ -89,7 +89,7 @@ const hireFormSchema = hireFormObjectSchema.superRefine((data, ctx) => {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['compensationMaxNgn'],
-      message: 'Maximum compensation must be greater than or equal to minimum',
+      message: 'Highest pay must be the same as or more than lowest pay',
     });
   }
 
@@ -103,8 +103,8 @@ const hireFormSchema = hireFormObjectSchema.superRefine((data, ctx) => {
       path: ['durationNotes'],
       message:
         data.roleFamily === RoleFamily.SKILLED_TRADE
-          ? 'Contract length or site duration is required for skilled trades'
-          : 'Expected duration or engagement notes are required for managed staffing',
+          ? 'Tell us how long the job will last'
+          : 'Tell us how long you need the workers',
     });
   }
 });
@@ -138,41 +138,41 @@ const step3Schema = hireFormObjectSchema.pick({
 });
 
 const STEPS = [
-  { id: 1, label: 'Contact', title: 'Who should we reach?' },
-  { id: 2, label: 'Role', title: 'What do you need?' },
-  { id: 3, label: 'Details', title: 'Anything else we should know?' },
+  { id: 1, label: 'Contact', title: 'How do we reach you?' },
+  { id: 2, label: 'Job', title: 'Who do you need?' },
+  { id: 3, label: 'Details', title: 'Anything else?' },
 ] as const;
 
 const FIELD_HELP = {
-  companyName: 'The company name you use publicly.',
+  companyName: 'The name of your company.',
   contactName: 'Who should we talk to about this hire?',
-  email: 'Work email for updates and shortlists.',
-  phone: 'Phone number for quick questions.',
+  email: 'We send updates and short lists here.',
+  phone: 'We call this number for quick questions.',
   roleFamily:
-    'Office & professional: admin, finance, tech, and similar. Skilled trades: bricklaying, electrical, plumbing, welding, carpentry, site supervision — usually contract or project-based.',
+    'Office jobs: admin, money, tech, and more. Skilled trades: bricklaying, electrical, plumbing, welding, carpentry, and site leads. Trade jobs are often short contracts.',
   serviceType:
-    'Direct recruitment: hire onto your company payroll. Managed staffing: Dealo finds and manages people under agreed contract terms — strong fit for trade crews and project work.',
-  roleTitle: 'Job title in words only — e.g. Executive Assistant or Bricklayer. No numbers.',
+    'Direct hiring: they join your company as your staff. Managed staff: Dealo finds and manages the workers for you. This works well for trade teams and projects.',
+  roleTitle: 'The job name in words only, like Executive Assistant or Bricklayer. No numbers.',
   numberOfProfessionals: 'How many people do you need?',
-  location: 'Where will they work? e.g. Lagos, Nigeria. Trades are usually site-based.',
+  location: 'Where will they work? For example, Lagos, Nigeria. Trades often work on site.',
   workArrangement:
-    'Office roles can be onsite, hybrid, or remote. Skilled trades are usually onsite (or hybrid for site + workshop).',
-  expectedStartDate: 'Optional. Rough timing helps us prioritize — leave blank if unsure.',
+    'Office jobs can be in the office, mixed, or from home. Skilled trades often work on site, or on site and in a workshop.',
+  expectedStartDate: 'Optional. A rough date helps us plan. Leave it blank if you are not sure.',
   durationNotes:
-    'Contract or engagement length — e.g. 3 months on site, project until completion, or ongoing managed staffing.',
+    'How long is the job? For example: 3 months on site, until the project ends, or no end date.',
   compensationMinNgn:
-    'Optional. Lowest pay you can offer (NGN). Monthly for office; daily/weekly/project for trades.',
-  compensationMaxNgn: 'Optional. Highest pay on the same basis as the minimum.',
+    'Optional. The lowest pay you can give (NGN). Monthly for office jobs. Daily, weekly, or per project for trades.',
+  compensationMaxNgn: 'Optional. The highest pay, counted the same way as the lowest.',
   requirements:
-    'A short note is enough for now — skills, experience, or site needs. We will deepen this with you after.',
-  additionalNotes: 'Optional. Shifts, PPE, lodging, tools, or reporting structure.',
+    'A short note is fine for now. Skills, years of work, or site needs. We will talk more with you later.',
+  additionalNotes: 'Optional. Work hours, safety gear, a place to stay, tools, or who they report to.',
 } as const;
 
 const ROLE_FAMILY_OPTIONS: IllustrativeOption[] = [
   {
     value: RoleFamily.OFFICE_PROFESSIONAL,
-    label: 'Office & professional',
-    description: 'Admin, finance, engineering, HR, and similar desk roles',
+    label: 'Office job',
+    description: 'Admin, money, tech, HR, and other desk jobs',
     icon: BriefcaseBusiness,
   },
   {
@@ -186,14 +186,14 @@ const ROLE_FAMILY_OPTIONS: IllustrativeOption[] = [
 const SERVICE_TYPE_OPTIONS: IllustrativeOption[] = [
   {
     value: ServiceType.DIRECT_RECRUITMENT,
-    label: 'Hire onto my company',
-    description: 'Checked shortlist → interview → place on your payroll',
+    label: 'I will hire them',
+    description: 'We send checked people. You interview and hire them.',
     icon: Building2,
   },
   {
     value: ServiceType.MANAGED_STAFFING,
-    label: 'Dealo manages staffing',
-    description: 'Contract cover with Dealo handling hiring admin',
+    label: 'Dealo manages them',
+    description: 'We find and manage the workers for you.',
     icon: Handshake,
   },
 ];
@@ -201,20 +201,20 @@ const SERVICE_TYPE_OPTIONS: IllustrativeOption[] = [
 const WORK_ARRANGEMENT_OFFICE: IllustrativeOption[] = [
   {
     value: WorkArrangement.ONSITE,
-    label: 'Onsite',
-    description: 'Work from your office or assigned location',
+    label: 'In the office',
+    description: 'Work at your office or a set place',
     icon: MapPin,
   },
   {
     value: WorkArrangement.HYBRID,
-    label: 'Hybrid',
-    description: 'Mix of office days and remote days',
+    label: 'Mixed',
+    description: 'Some days in the office, some days at home',
     icon: Home,
   },
   {
     value: WorkArrangement.REMOTE,
-    label: 'Remote',
-    description: 'Fully remote within agreed locations',
+    label: 'From home',
+    description: 'Work from home all the time',
     icon: Wifi,
   },
 ];
@@ -222,14 +222,14 @@ const WORK_ARRANGEMENT_OFFICE: IllustrativeOption[] = [
 const WORK_ARRANGEMENT_TRADE: IllustrativeOption[] = [
   {
     value: WorkArrangement.ONSITE,
-    label: 'Onsite / on location',
-    description: 'Primary work happens on site',
+    label: 'On site',
+    description: 'Most of the work is on site',
     icon: MapPin,
   },
   {
     value: WorkArrangement.HYBRID,
-    label: 'Hybrid (site + workshop)',
-    description: 'Site days plus workshop or yard time',
+    label: 'Site + workshop',
+    description: 'Some days on site, some in a workshop or yard',
     icon: Home,
   },
 ];
@@ -387,15 +387,15 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
         setServerError(error.message);
         toast.error('Request failed', error.message);
       } else {
-        setServerError('Unable to submit your request right now. Please try again.');
-        toast.error('Request failed', 'Unable to submit your request right now.');
+        setServerError('We could not send your request. Please try again.');
+        toast.error('Request failed', 'We could not send your request.');
       }
     }
   });
 
   const roleTip = isTrade
-    ? 'Skilled trades usually need a contract length, a site location, and onsite (or site + workshop) work.'
-    : 'Office & professional roles can be permanent hire or managed staffing — onsite, hybrid, or remote.';
+    ? 'For trade jobs, tell us how long the job is and where the site is.'
+    : 'Office jobs can be in the office, mixed, or from home. You can hire them or let us manage them.';
 
   const arrangementOptions = isTrade ? WORK_ARRANGEMENT_TRADE : WORK_ARRANGEMENT_OFFICE;
 
@@ -477,7 +477,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
           {step === 2 ? (
             <div className="grid gap-3 min-[230px]:gap-4 min-[480px]:grid-cols-2 min-[480px]:gap-5">
               <FormField
-                label="Role type"
+                label="Job type"
                 help={FIELD_HELP.roleFamily}
                 error={errors.roleFamily?.message}
               >
@@ -493,7 +493,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
                 />
               </FormField>
               <FormField
-                label="Service type"
+                label="How do you want to hire?"
                 help={FIELD_HELP.serviceType}
                 error={errors.serviceType?.message}
               >
@@ -514,7 +514,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
               </div>
 
               <FormField
-                label="Role title"
+                label="Job title"
                 help={FIELD_HELP.roleTitle}
                 error={errors.roleTitle?.message}
                 className="min-[480px]:col-span-2"
@@ -535,7 +535,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
               </FormField>
 
               <FormField
-                label={isTrade ? 'Headcount needed' : 'Number of professionals'}
+                label={isTrade ? 'How many workers?' : 'How many people?'}
                 help={FIELD_HELP.numberOfProfessionals}
                 error={errors.numberOfProfessionals?.message}
               >
@@ -547,7 +547,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
                 />
               </FormField>
               <FormField
-                label={isTrade ? 'Site / work location' : 'Preferred location'}
+                label={isTrade ? 'Where is the site?' : 'Where is the job?'}
                 help={FIELD_HELP.location}
                 error={errors.location?.message}
               >
@@ -559,7 +559,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
               </FormField>
 
               <FormField
-                label="Work arrangement"
+                label="Where will they work?"
                 help={FIELD_HELP.workArrangement}
                 error={errors.workArrangement?.message}
                 className="min-[480px]:col-span-2"
@@ -579,7 +579,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
               {needsDuration ? (
                 <div className="min-[480px]:col-span-2">
                   <FormField
-                    label={isTrade ? 'Contract / site duration' : 'How long do you need them?'}
+                    label={isTrade ? 'How long is the job?' : 'How long do you need them?'}
                     help={FIELD_HELP.durationNotes}
                     error={errors.durationNotes?.message}
                   >
@@ -588,8 +588,8 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
                       className="input-field min-h-[4.5rem] resize-y"
                       placeholder={
                         isTrade
-                          ? 'e.g. 8-week blockwork contract, or until foundation phase completes'
-                          : 'e.g. 6-month managed cover, renewable'
+                          ? 'e.g. 8 weeks, or until the base of the building is done'
+                          : 'e.g. 6 months, and we may add more'
                       }
                       {...register('durationNotes')}
                     />
@@ -602,15 +602,15 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
           {step === 3 ? (
             <div className="space-y-4">
               <p className="rounded-xl border border-border/70 bg-surface/70 px-3 py-2.5 text-[11px] leading-relaxed text-muted min-[340px]:text-xs">
-                Only the short note below is required to submit. Start date, pay, and extra notes
-                help — but you can skip them and we&apos;ll follow up.
+                Only the short note below is needed. Start date, pay, and extra notes help. But you
+                can skip them, and we&apos;ll ask you later.
               </p>
 
               <FormField
                 label="What do you need?"
                 help={FIELD_HELP.requirements}
                 error={errors.requirements?.message}
-                hint="One sentence is enough. Example: “Need 2 electricians for an estate install in Lekki.”"
+                hint="One sentence is enough. Example: “Need 2 electricians for houses in Lekki.”"
               >
                 <textarea
                   rows={3}
@@ -618,7 +618,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
                   placeholder={
                     isTrade
                       ? 'e.g. Need bricklayers for an 8-week site contract in Lagos…'
-                      : 'e.g. Need a finance manager with ERP experience…'
+                      : 'e.g. Need a finance manager who knows ERP…'
                   }
                   {...register('requirements')}
                 />
@@ -626,7 +626,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
 
               <div className="grid gap-4 min-[480px]:grid-cols-2 min-[480px]:gap-5">
                 <FormField
-                  label="Expected start date"
+                  label="Start date"
                   optional
                   help={FIELD_HELP.expectedStartDate}
                   error={errors.expectedStartDate?.message}
@@ -644,8 +644,8 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
                 <FormField
                   label={
                     isTrade
-                      ? 'Pay min (NGN — daily / weekly / project)'
-                      : 'Compensation min (NGN / month)'
+                      ? 'Lowest pay (NGN per day, week, or project)'
+                      : 'Lowest pay (NGN per month)'
                   }
                   optional
                   help={FIELD_HELP.compensationMinNgn}
@@ -660,7 +660,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
                   />
                 </FormField>
                 <FormField
-                  label={isTrade ? 'Pay max (NGN — same basis)' : 'Compensation max (NGN / month)'}
+                  label={isTrade ? 'Highest pay (NGN, same as above)' : 'Highest pay (NGN per month)'}
                   optional
                   help={FIELD_HELP.compensationMaxNgn}
                   error={errors.compensationMaxNgn?.message}
@@ -676,7 +676,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
               </div>
 
               <FormField
-                label="Additional notes"
+                label="Other notes"
                 optional
                 help={FIELD_HELP.additionalNotes}
                 error={errors.additionalNotes?.message}
@@ -684,7 +684,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
                 <textarea
                   rows={3}
                   className="input-field min-h-[4.75rem] resize-y"
-                  placeholder="Shifts, PPE, lodging, tools, reporting line — anything useful."
+                  placeholder="Work hours, safety gear, a place to stay, tools, or anything else."
                   {...register('additionalNotes')}
                 />
               </FormField>
@@ -716,7 +716,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
           </button>
         ) : (
           <button type="submit" className="btn-primary" disabled={!stepValid || isSubmitting}>
-            {isSubmitting ? 'Submitting…' : 'Submit hiring request'}
+            {isSubmitting ? 'Sending…' : 'Send request'}
           </button>
         )}
       </div>

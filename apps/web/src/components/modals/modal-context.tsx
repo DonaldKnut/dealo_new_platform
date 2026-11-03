@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 
-export type ModalType = 'hire' | 'login' | 'register' | 'contact' | 'forgot-password' | null;
+export type ModalType = 'hire' | 'login' | 'register' | 'contact' | 'forgot-password' | 'faq' | null;
 
 interface ModalContextValue {
   openModal: ModalType;

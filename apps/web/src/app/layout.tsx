@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Fraunces, Manrope } from 'next/font/google';
 
 import { Providers } from '@/components/providers';
@@ -56,8 +56,25 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: FAVICON_LOGO, type: 'image/png' }],
     shortcut: FAVICON_LOGO,
-    apple: FAVICON_LOGO,
+    apple: [{ url: '/pwa-icon/192', sizes: '192x192', type: 'image/png' }],
   },
+  applicationName: 'Dealo',
+  appleWebApp: {
+    capable: true,
+    title: 'Dealo',
+    statusBarStyle: 'black-translucent',
+  },
+  formatDetection: { telephone: false },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#071f14' },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

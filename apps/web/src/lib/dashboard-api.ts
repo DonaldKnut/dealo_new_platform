@@ -357,19 +357,71 @@ export function sendNewsletterCampaign(id: string) {
   }>(`/newsletter/campaigns/${id}/send`, { method: 'POST' });
 }
 
+export type TalentProfile = {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  roleTitle: string | null;
+  roleFamily: 'OFFICE_PROFESSIONAL' | 'SKILLED_TRADE' | null;
+  location: string | null;
+  headline: string | null;
+  bio: string | null;
+  skills: string[];
+  yearsExperience: number | null;
+  availability: 'NOW' | 'TWO_WEEKS' | 'ONE_MONTH' | 'LATER' | null;
+  expectedPayMinor: number | null;
+  linkedinUrl: string | null;
+  portfolioUrl: string | null;
+  openToWork: boolean;
+  screenStatus: string;
+  profileUpdatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ProfileCompleteness = { score: number; missing: string[] };
+
 export type TalentMe = {
-  candidate: {
-    id: string;
-    fullName: string;
-    email: string;
-    phone: string | null;
-    roleTitle: string | null;
-    location: string | null;
-    screenStatus: string;
-  };
+  candidate: TalentProfile;
   documentCount: number;
+  hasCv: boolean;
+  completeness: ProfileCompleteness;
   uploadsConfigured: boolean;
 };
+
+export function updateTalentProfile(payload: Record<string, unknown>) {
+  return apiFetch<{ candidate: TalentProfile; hasCv: boolean; completeness: ProfileCompleteness }>(
+    '/talent/me/profile',
+    { method: 'PATCH', json: payload },
+  );
+}
+
+export type StaffTalentRow = TalentProfile & {
+  cv: TalentDocument | null;
+  documentCount: number;
+  completeness: ProfileCompleteness;
+};
+
+export type StaffTalentDetail = TalentProfile & {
+  notes: string | null;
+  documents: TalentDocument[];
+  completeness: ProfileCompleteness;
+  shortlistEntries: {
+    id: string;
+    rank: number;
+    shortlist: { title: string; hireInquiry: { companyName: string; roleTitle: string } };
+  }[];
+};
+
+export function fetchStaffTalentProfiles(filters: Record<string, string>) {
+  const params = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
+  return apiFetch<StaffTalentRow[]>(`/talent-admin/profiles?${params.toString()}`);
+}
+
+export function fetchStaffTalentProfile(id: string) {
+  return apiFetch<StaffTalentDetail>(`/talent-admin/profiles/${id}`);
+}
 
 export type TalentMatch = {
   id: string;
@@ -395,6 +447,7 @@ export type TalentDocument = {
   mimeType: string;
   byteSize: number;
   url: string;
+  storage?: 'cloudinary' | 'database';
   createdAt: string;
 };
 

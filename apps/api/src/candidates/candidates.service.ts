@@ -18,9 +18,23 @@ export class CandidatesService {
   ) {}
 
   listCandidates() {
+    // Explicit fields: employers can call this, so private profile details stay out.
     return this.prisma.candidate.findMany({
       orderBy: { updatedAt: 'desc' },
       take: 200,
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        roleTitle: true,
+        location: true,
+        notes: true,
+        screenStatus: true,
+        userId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 

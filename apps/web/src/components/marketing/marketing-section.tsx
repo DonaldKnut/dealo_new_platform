@@ -15,7 +15,9 @@ export function MarketingSection({
   className,
   containerClassName,
   withContainer = true,
+  id,
 }: {
+  id?: string;
   children: ReactNode;
   bordered?: boolean;
   pad?: keyof typeof pads;
@@ -31,7 +33,9 @@ export function MarketingSection({
 
   return (
     <section
+      id={id}
       className={cn(
+        'scroll-mt-20',
         'relative overflow-hidden',
         bordered && 'border-t border-border/80',
         pads[pad],

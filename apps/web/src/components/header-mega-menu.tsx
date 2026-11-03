@@ -2,15 +2,23 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  ArrowUpRight,
   BookOpen,
+  Bot,
   Building2,
   ChevronDown,
   Code2,
+  CreditCard,
+  FileJson,
   Handshake,
+  Kanban,
+  KeyRound,
   Newspaper,
   Route,
+  ShieldCheck,
   UserRound,
   Users,
+  Webhook,
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -33,7 +41,47 @@ type MegaItemDef = {
   titleKey: TranslationKey;
   descKey: TranslationKey;
   icon: LucideIcon;
+  external?: boolean;
+  badge?: string;
 };
+
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1').replace(
+  /\/api\/v1\/?$/,
+  '',
+);
+
+const aiDefs: MegaItemDef[] = [
+  { href: '/#ai-agents', titleKey: 'mega.ai.agents.title', descKey: 'mega.ai.agents.desc', icon: Bot },
+  { href: '/ats', titleKey: 'mega.ai.ats.title', descKey: 'mega.ai.ats.desc', icon: Kanban, badge: 'New' },
+  { href: '/ats#trust', titleKey: 'mega.ai.trust.title', descKey: 'mega.ai.trust.desc', icon: ShieldCheck },
+];
+
+const apiDefs: MegaItemDef[] = [
+  { href: '/developers', titleKey: 'mega.api.portal.title', descKey: 'mega.api.portal.desc', icon: Code2 },
+  {
+    href: `${API_ORIGIN}/api/docs`,
+    titleKey: 'mega.api.docs.title',
+    descKey: 'mega.api.docs.desc',
+    icon: BookOpen,
+    external: true,
+  },
+  {
+    href: '/dashboard/developer',
+    titleKey: 'mega.api.sandbox.title',
+    descKey: 'mega.api.sandbox.desc',
+    icon: KeyRound,
+    badge: 'Free',
+  },
+  { href: '/developers#plans', titleKey: 'mega.api.plans.title', descKey: 'mega.api.plans.desc', icon: CreditCard },
+  { href: '/developers#webhooks', titleKey: 'mega.api.webhooks.title', descKey: 'mega.api.webhooks.desc', icon: Webhook },
+  {
+    href: `${API_ORIGIN}/api/openapi.json`,
+    titleKey: 'mega.api.spec.title',
+    descKey: 'mega.api.spec.desc',
+    icon: FileJson,
+    external: true,
+  },
+];
 
 const offerDefs: MegaItemDef[] = [
   {
@@ -100,10 +148,13 @@ type MegaItem = {
   title: string;
   description: string;
   icon: LucideIcon;
+  external?: boolean;
+  badge?: string;
 };
 
 function MegaMenu({ label, items }: { label: string; items: MegaItem[] }) {
   const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
   const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
   const rootRef = useRef<HTMLDivElement>(null);
@@ -206,46 +257,67 @@ function MegaMenu({ label, items }: { label: string; items: MegaItem[] }) {
             <motion.div
               key={`mega-${label}`}
               ref={panelRef}
-              initial={{ opacity: 0, y: 10, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 6, scale: 0.98 }}
-              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-              style={panelStyle}
-              className="overflow-y-auto overscroll-contain rounded-2xl border border-border bg-surface-elevated/98 p-2 shadow-[0_24px_60px_rgba(4,47,46,0.18)] backdrop-blur-md sm:p-3"
+              initial={{ opacity: 0, y: 12, scale: 0.97, clipPath: 'inset(0% 0% 100% 0% round 1rem)' }}
+              animate={{ opacity: 1, y: 0, scale: 1, clipPath: 'inset(0% 0% 0% 0% round 1rem)' }}
+              exit={{ opacity: 0, y: 6, scale: 0.98, clipPath: 'inset(0% 0% 100% 0% round 1rem)' }}
+              transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+              style={{ ...panelStyle, transformOrigin: 'top center' }}
+              className="relative overflow-y-auto overscroll-contain rounded-2xl border border-border bg-surface-elevated/98 p-2 shadow-[0_24px_60px_rgba(4,47,46,0.18)] backdrop-blur-md sm:p-3"
               onMouseEnter={openMenu}
               onMouseLeave={scheduleClose}
               role="menu"
               aria-label={label}
             >
+              <motion.span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-brand to-transparent"
+                initial={{ scaleX: 0, opacity: 0 }}
+                animate={{ scaleX: 1, opacity: 1 }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              />
               <div
                 className={`grid gap-1 ${columns === 2 ? 'min-[720px]:grid-cols-2' : 'grid-cols-1'}`}
+                onMouseLeave={() => setHovered(null)}
               >
                 {items.map((item, index) => {
                   const Icon = item.icon;
+                  const isHovered = hovered === index;
                   return (
                     <motion.div
                       key={item.href + item.title}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.04, duration: 0.22 }}
+                      initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
+                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                      transition={{ delay: 0.03 + index * 0.045, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
                     >
                       <Link
                         href={item.href}
                         role="menuitem"
-                        className="group flex gap-3 rounded-xl p-2.5 transition hover:bg-surface sm:p-3"
+                        target={item.external ? '_blank' : undefined}
+                        rel={item.external ? 'noopener noreferrer' : undefined}
+                        className="group relative flex gap-3 rounded-xl p-2.5 sm:p-3"
                         onClick={() => setOpen(false)}
+                        onMouseEnter={() => setHovered(index)}
+                        onFocus={() => setHovered(index)}
                       >
-                        <motion.span
-                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand sm:h-10 sm:w-10"
-                          whileHover={{ scale: 1.12, rotate: -6 }}
-                          whileTap={{ scale: 0.95 }}
-                          transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-                        >
+                        {isHovered ? (
+                          <motion.span
+                            layoutId={`mega-hover-${label}`}
+                            className="absolute inset-0 rounded-xl border border-brand/15 bg-surface"
+                            transition={{ type: 'spring', stiffness: 480, damping: 38 }}
+                          />
+                        ) : null}
+                        <span className="relative z-10 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110 sm:h-10 sm:w-10">
                           <Icon className="h-4 w-4" />
-                        </motion.span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-foreground transition group-hover:text-brand">
+                        </span>
+                        <span className="relative z-10 min-w-0 flex-1">
+                          <span className="flex items-center gap-1 text-sm font-semibold text-foreground transition-colors duration-200 group-hover:text-brand">
                             {item.title}
+                            {item.badge ? (
+                              <span className="rounded-full bg-brand px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-white dark:text-[#071f14]">
+                                {item.badge}
+                              </span>
+                            ) : null}
+                            <ArrowUpRight className="h-3.5 w-3.5 -translate-x-1 translate-y-0.5 opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:translate-y-0 group-hover:opacity-100" />
                           </span>
                           <span className="mt-0.5 block text-xs leading-relaxed text-muted">
                             {item.description}
@@ -268,7 +340,7 @@ function MegaMenu({ label, items }: { label: string; items: MegaItem[] }) {
       <button
         ref={triggerRef}
         type="button"
-        className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap transition hover:text-foreground"
+        className="link-anim cursor-pointer whitespace-nowrap py-1"
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((value) => !value)}
@@ -290,6 +362,8 @@ function useTranslatedItems(defs: MegaItemDef[]): MegaItem[] {
       defs.map((item) => ({
         href: item.href,
         icon: item.icon,
+        external: item.external,
+        badge: item.badge,
         title: t(item.titleKey),
         description: t(item.descKey),
       })),
@@ -307,6 +381,26 @@ export function ResourcesMegaMenu({ label }: { label?: string }) {
   const { t } = useLocale();
   const items = useTranslatedItems(resourceDefs);
   return <MegaMenu label={label ?? t('nav.resources')} items={items} />;
+}
+
+export function AiMegaMenu({ label }: { label?: string }) {
+  const { t } = useLocale();
+  const items = useTranslatedItems(aiDefs);
+  return <MegaMenu label={label ?? t('nav.ai')} items={items} />;
+}
+
+export function ApiMegaMenu({ label }: { label?: string }) {
+  const { t } = useLocale();
+  const items = useTranslatedItems(apiDefs);
+  return <MegaMenu label={label ?? t('nav.api')} items={items} />;
+}
+
+export function useAiItems() {
+  return useTranslatedItems(aiDefs);
+}
+
+export function useApiItems() {
+  return useTranslatedItems(apiDefs);
 }
 
 export function useOfferItems() {

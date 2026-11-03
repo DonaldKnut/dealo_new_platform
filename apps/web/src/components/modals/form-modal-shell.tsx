@@ -68,7 +68,7 @@ export function FormModalShell({
             role="dialog"
             aria-modal="true"
             aria-labelledby="dealo-modal-title"
-            className="relative z-[81] grid max-h-[96vh] w-full max-w-5xl overflow-hidden rounded-t-[1.25rem] border border-border bg-surface-elevated shadow-[0_40px_120px_rgba(4,47,46,0.35)] min-[340px]:rounded-t-[1.5rem] sm:max-h-[94vh] sm:rounded-[1.75rem] lg:grid-cols-[0.9fr_1.1fr]"
+            className="relative z-[81] grid max-h-[96dvh] w-full max-w-5xl overflow-hidden rounded-t-[1.25rem] border border-border bg-surface-elevated shadow-[0_40px_120px_rgba(4,47,46,0.35)] min-[340px]:rounded-t-[1.5rem] sm:max-h-[94dvh] sm:rounded-[1.75rem] lg:grid-cols-[0.9fr_1.1fr]"
             initial={{ y: 40, opacity: 0, scale: 0.98 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 28, opacity: 0, scale: 0.98 }}
@@ -98,17 +98,17 @@ export function FormModalShell({
               )}
             </div>
 
-            <div className="flex max-h-[96vh] flex-col sm:max-h-[94vh]">
-              <div className="flex items-start justify-between gap-2 border-b border-border px-3 py-3 min-[340px]:gap-3 min-[340px]:px-4 min-[340px]:py-4 sm:gap-4 sm:px-7">
+            <div className="flex max-h-[96dvh] min-w-0 flex-col sm:max-h-[94dvh]">
+              <div className="flex items-start justify-between gap-2 border-b border-border px-2.5 py-2.5 min-[340px]:gap-3 min-[340px]:px-4 min-[340px]:py-4 sm:gap-4 sm:px-7">
                 <div className="min-w-0 pr-1 min-[340px]:pr-2">
-                  <p className="eyebrow">Dealo</p>
+                  <p className="eyebrow hidden min-[340px]:block">Dealo</p>
                   <h2
                     id="dealo-modal-title"
-                    className="mt-1 font-display text-[1.2rem] leading-tight text-foreground min-[340px]:text-2xl sm:text-3xl"
+                    className="font-display text-[1.05rem] leading-tight text-foreground min-[340px]:mt-1 min-[340px]:text-2xl sm:text-3xl"
                   >
                     {title}
                   </h2>
-                  <p className="mt-1.5 text-[11px] leading-relaxed text-muted min-[340px]:mt-2 min-[340px]:text-xs lg:hidden">
+                  <p className="mt-1.5 hidden text-[11px] leading-relaxed text-muted min-[340px]:mt-2 min-[340px]:block min-[340px]:text-xs lg:hidden">
                     {subtitle}
                   </p>
                 </div>
@@ -116,12 +116,12 @@ export function FormModalShell({
                   type="button"
                   aria-label="Close"
                   onClick={onClose}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition hover:border-brand hover:text-brand sm:h-10 sm:w-10"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border transition hover:border-brand hover:text-brand min-[340px]:h-9 min-[340px]:w-9 sm:h-10 sm:w-10"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-3.5 min-[340px]:px-4 min-[340px]:py-5 sm:px-7 sm:py-6">
+              <div className="safe-bottom min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-2.5 py-3 min-[340px]:px-4 min-[340px]:py-5 sm:px-7 sm:py-6">
                 {children}
               </div>
             </div>

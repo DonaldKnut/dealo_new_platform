@@ -40,7 +40,7 @@ export function ContactForm({ onSuccess }: { onSuccess?: () => void }) {
       reset();
       onSuccess?.();
     } catch (error) {
-      const message = error instanceof ApiError ? error.message : 'Unable to send message.';
+      const message = error instanceof ApiError ? error.message : 'We could not send your message.';
       setServerError(message);
       toast.error('Message failed', message);
     }
@@ -49,7 +49,7 @@ export function ContactForm({ onSuccess }: { onSuccess?: () => void }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField label="Name" error={errors.name?.message}>
+        <FormField label="Your name" error={errors.name?.message}>
           <input className="input-field" {...register('name')} />
         </FormField>
         <FormField label="Email" error={errors.email?.message}>
@@ -59,7 +59,7 @@ export function ContactForm({ onSuccess }: { onSuccess?: () => void }) {
       <FormField label="Company (optional)">
         <input className="input-field" {...register('company')} />
       </FormField>
-      <FormField label="Subject" error={errors.subject?.message}>
+      <FormField label="What is it about?" error={errors.subject?.message}>
         <input className="input-field" {...register('subject')} />
       </FormField>
       <FormField label="Message" error={errors.message?.message}>

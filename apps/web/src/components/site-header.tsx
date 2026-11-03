@@ -15,8 +15,12 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatedHamburger } from '@/components/animated-hamburger';
 import { BrandLogo } from '@/components/brand-logo';
 import {
+  AiMegaMenu,
+  ApiMegaMenu,
   HeaderMegaMenu,
   ResourcesMegaMenu,
+  useAiItems,
+  useApiItems,
   useOfferItems,
   useResourceItems,
 } from '@/components/header-mega-menu';
@@ -37,10 +41,11 @@ export function SiteHeader() {
   const { t } = useLocale();
   const offerItems = useOfferItems();
   const resourceItems = useResourceItems();
+  const aiItems = useAiItems();
+  const apiItems = useApiItems();
   const { user, loading, refresh } = useAuthSession();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [offerOpen, setOfferOpen] = useState(false);
-  const [resourcesOpen, setResourcesOpen] = useState(false);
+  const [mobileSection, setMobileSection] = useState<string | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const accountRef = useRef<HTMLDivElement>(null);
@@ -60,11 +65,15 @@ export function SiteHeader() {
   }, [mobileOpen]);
 
   useEffect(() => {
-    if (!mobileOpen) {
-      setOfferOpen(false);
-      setResourcesOpen(false);
-    }
+    if (!mobileOpen) setMobileSection(null);
   }, [mobileOpen]);
+
+  const mobileSections = [
+    { id: 'offer', label: t('nav.offer'), items: offerItems },
+    { id: 'ai', label: t('nav.ai'), items: aiItems },
+    { id: 'api', label: t('nav.api'), items: apiItems },
+    { id: 'resources', label: t('nav.resources'), items: resourceItems },
+  ];
 
   useEffect(() => {
     if (!accountOpen) return;
@@ -95,7 +104,7 @@ export function SiteHeader() {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-40 transition-[background,border-color,box-shadow,backdrop-filter] duration-300 ${
+      className={`fixed inset-x-0 top-0 z-40 pt-[var(--safe-top)] transition-[background,border-color,box-shadow,backdrop-filter] duration-300 ${
         scrolled || mobileOpen
           ? 'border-b border-border backdrop-blur-md'
           : 'border-b border-transparent bg-transparent'
@@ -114,8 +123,13 @@ export function SiteHeader() {
 
           <nav className="hidden items-center gap-4 text-sm text-muted xl:gap-6 lg:flex">
             <HeaderMegaMenu label={t('nav.offer')} />
+            <AiMegaMenu label={t('nav.ai')} />
+            <ApiMegaMenu label={t('nav.api')} />
             <ResourcesMegaMenu label={t('nav.resources')} />
-            <Link href="/contact" className="whitespace-nowrap transition hover:text-foreground">
+            <button type="button" className="link-anim whitespace-nowrap py-1" onClick={() => open('faq')}>
+              {t('nav.faq')}
+            </button>
+            <Link href="/contact" className="link-anim whitespace-nowrap py-1">
               {t('nav.contact')}
             </Link>
           </nav>
@@ -189,7 +203,7 @@ export function SiteHeader() {
             <>
               <Link
                 href="/auth/login"
-                className="hidden text-sm font-medium text-muted transition hover:text-foreground sm:inline"
+                className="link-anim hidden py-1 text-sm font-medium text-muted sm:inline-flex"
               >
                 {t('nav.signIn')}
               </Link>
@@ -218,23 +232,29 @@ export function SiteHeader() {
             className="overflow-hidden border-t border-border bg-surface-elevated/95 backdrop-blur-md lg:hidden"
           >
             <div className="flex max-h-[calc(100svh-3.5rem)] flex-col gap-1 overflow-y-auto px-3 py-3 min-[340px]:px-4 min-[340px]:py-4">
-              <div className="mb-1 px-1">
-                <LanguageSwitcher />
-              </div>
-              <MobileSection
-                label={t('nav.offer')}
-                open={offerOpen}
-                onToggle={() => setOfferOpen((value) => !value)}
-                items={offerItems}
-                onNavigate={() => setMobileOpen(false)}
-              />
-              <MobileSection
-                label={t('nav.resources')}
-                open={resourcesOpen}
-                onToggle={() => setResourcesOpen((value) => !value)}
-                items={resourceItems}
-                onNavigate={() => setMobileOpen(false)}
-              />
+              <LanguageSwitcher variant="row" />
+              {mobileSections.map((section) => (
+                <MobileSection
+                  key={section.id}
+                  label={section.label}
+                  open={mobileSection === section.id}
+                  onToggle={() =>
+                    setMobileSection((current) => (current === section.id ? null : section.id))
+                  }
+                  items={section.items}
+                  onNavigate={() => setMobileOpen(false)}
+                />
+              ))}
+              <button
+                type="button"
+                className="rounded-xl px-2.5 py-2.5 text-left text-sm font-medium text-foreground transition hover:bg-surface min-[340px]:px-3 min-[340px]:py-3"
+                onClick={() => {
+                  setMobileOpen(false);
+                  open('faq');
+                }}
+              >
+                {t('nav.faq')}
+              </button>
               <Link
                 href="/contact"
                 className="rounded-xl px-2.5 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface min-[340px]:px-3 min-[340px]:py-3"
@@ -305,7 +325,7 @@ function MobileSection({
   label: string;
   open: boolean;
   onToggle: () => void;
-  items: Array<{ href: string; title: string; icon: typeof UserRound }>;
+  items: Array<{ href: string; title: string; icon: typeof UserRound; external?: boolean; badge?: string }>;
   onNavigate: () => void;
 }) {
   return (
@@ -339,13 +359,22 @@ function MobileSection({
                   <Link
                     key={item.href + item.title}
                     href={item.href}
-                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-sm text-muted transition hover:bg-surface hover:text-foreground min-[340px]:gap-3 min-[340px]:px-3 min-[340px]:py-3"
+                    target={item.external ? '_blank' : undefined}
+                    rel={item.external ? 'noopener noreferrer' : undefined}
+                    className="group flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-sm text-muted transition-colors hover:bg-surface hover:text-foreground min-[340px]:gap-3 min-[340px]:px-3 min-[340px]:py-3"
                     onClick={onNavigate}
                   >
-                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand">
+                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110">
                       <Icon className="h-4 w-4" />
                     </span>
-                    <span className="min-w-0 break-words">{item.title}</span>
+                    <span className="min-w-0 break-words transition-transform duration-300 ease-out group-hover:translate-x-1">
+                      {item.title}
+                    </span>
+                    {item.badge ? (
+                      <span className="ml-auto shrink-0 rounded-full bg-brand px-1.5 py-px text-[9px] font-bold uppercase text-white dark:text-[#071f14]">
+                        {item.badge}
+                      </span>
+                    ) : null}
                   </Link>
                 );
               })}

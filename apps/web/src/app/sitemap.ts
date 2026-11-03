@@ -14,6 +14,8 @@ const STATIC_PATHS = [
   '/for-employers',
   '/for-professionals',
   '/developers',
+  '/ats',
+  '/faq',
   '/hire',
   '/contact',
   '/blog',

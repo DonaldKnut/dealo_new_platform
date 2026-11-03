@@ -21,21 +21,6 @@ export function HeroSection() {
 
       <div className="container-page relative grid min-h-[calc(100svh-3.5rem)] items-center gap-8 py-8 min-[230px]:gap-10 min-[230px]:py-10 min-[340px]:py-14 sm:py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
         <div className="max-w-2xl min-w-0">
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55 }}
-            className="mb-4 inline-flex max-w-full items-center gap-1.5 rounded-full border border-brand/30 bg-surface-elevated/80 px-2.5 py-1 text-[10px] font-medium text-foreground shadow-sm backdrop-blur-md min-[340px]:mb-5 min-[340px]:gap-2 min-[340px]:px-3.5 min-[340px]:py-1.5 min-[340px]:text-xs"
-          >
-            <span className="relative flex h-1.5 w-1.5 shrink-0 min-[340px]:h-2 min-[340px]:w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-full w-full rounded-full bg-emerald-500" />
-            </span>
-            <span className="shrink-0 font-semibold text-brand">Dealo 2.0</span>
-            <span className="hidden text-muted min-[280px]:inline">•</span>
-            <span className="min-w-0 truncate text-muted">{t('hero.badge')}</span>
-          </motion.div>
-
           <motion.h1
             className="display-title text-[1.55rem] leading-[1.1] text-foreground min-[230px]:text-[1.75rem] min-[340px]:text-4xl sm:text-5xl lg:text-[3.75rem]"
             initial={{ opacity: 0, y: 22 }}

@@ -5,6 +5,7 @@ import { Code2, ExternalLink, KeyRound, LifeBuoy, PlugZap, ShieldCheck, Webhook 
 import Link from 'next/link';
 
 import { useLocale } from '@/components/i18n/locale-context';
+import { ApiPlansSection } from '@/components/marketing/api-plans-section';
 import { CtaBanner } from '@/components/marketing/cta-banner';
 import { FeatureAdGrid } from '@/components/marketing/feature-ad-grid';
 import { PageHero } from '@/components/marketing/page-hero';
@@ -83,55 +84,84 @@ export default function DevelopersPage() {
 
       <FeatureAdGrid
         eyebrow="What you can build"
-        title="API surface for office hiring and skilled trades"
-        description="Designed for product teams, staffing platforms, and enterprise HR tools that need checked talent flows — not a public job board dump."
+        title="Plug Dealo hiring into your own app"
+        description="For HR tools, staffing platforms and product teams. Send hiring requests in, get updates back."
         items={[
           {
             icon: PlugZap,
-            title: 'Hiring request intake',
-            body: 'Create and track hire inquiries with role family, service type, and site or office details.',
+            title: 'Send hiring requests',
+            body: 'Create a request with the role, location and how many people you need.',
           },
           {
             icon: Webhook,
-            title: 'Signed webhooks',
-            body: 'Get HMAC-signed events when hiring requests are created or change status, with automatic retries.',
+            title: 'Get live updates',
+            body: 'We call your URL when a request is created or its status changes. Signed and retried.',
           },
           {
             icon: ShieldCheck,
-            title: 'Scoped credentials',
-            body: `API keys with scopes such as ${ApiScope.HIRE_INQUIRIES_READ} and ${ApiScope.HIRE_INQUIRIES_WRITE}.`,
+            title: 'Keys with limits',
+            body: `Each key only does what you allow, like ${ApiScope.HIRE_INQUIRIES_READ}.`,
           },
           {
             icon: KeyRound,
-            title: 'Bearer API keys',
-            body: 'Use Authorization: Bearer dk_live_… or dk_test_…. Keys are hashed at rest.',
+            title: 'Simple sign-in',
+            body: 'Send Authorization: Bearer dk_test_… with each call. We never store keys in plain text.',
           },
           {
             icon: Code2,
-            title: 'Partner integrations',
-            body: 'Connect Dealo into ATS, payroll, or ops tools under a commercial API plan.',
+            title: 'Works with your tools',
+            body: 'Connect Dealo to your ATS, payroll or operations tools.',
           },
           {
             icon: LifeBuoy,
-            title: 'Developer support',
-            body: 'Implementation help, sandbox guidance, and a clear path from pilot to production.',
+            title: 'Real people to help',
+            body: 'We help you test in the sandbox and go live safely.',
           },
         ]}
       />
+
+      <section id="webhooks" className="container-page scroll-mt-24 py-10 min-[340px]:py-14">
+        <div className="grid grid-cols-1 gap-4 rounded-[1.25rem] border border-border bg-surface-elevated/80 p-4 min-[340px]:rounded-[1.5rem] min-[340px]:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div>
+            <p className="eyebrow">Webhooks</p>
+            <h2 className="display-title mt-2 text-[1.45rem] text-foreground min-[340px]:text-3xl">
+              We tell you when things change
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              Add your URL in Dashboard → Developer API. We send a signed message each time a
+              hiring request is created or moves to a new status. If your server is down, we try
+              again for about an hour.
+            </p>
+          </div>
+          <ul className="grid gap-2 text-sm">
+            {[
+              ['hire_inquiry.created', 'A new hiring request came in'],
+              ['hire_inquiry.status_updated', 'A request moved to a new status'],
+              ['ping', 'A test you sent from the dashboard'],
+            ].map(([event, meaning]) => (
+              <li key={event} className="rounded-xl border border-border bg-surface px-3 py-2.5">
+                <code className="break-all text-xs font-semibold text-brand">{event}</code>
+                <p className="mt-0.5 text-xs text-muted">{meaning}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <ApiPlansSection />
 
       <section className="container-page py-10 min-[340px]:py-14">
         <div className="rounded-[1.25rem] border border-border bg-surface-elevated/80 p-4 min-[340px]:rounded-[1.5rem] min-[340px]:p-7">
           <p className="eyebrow">Quickstart</p>
           <h2 className="display-title mt-2 text-[1.45rem] text-foreground min-[340px]:text-3xl">
-            Call the API with a partner key
+            Make your first call
           </h2>
           <pre className="mt-4 overflow-x-auto rounded-xl border border-border bg-surface p-4 text-xs text-foreground">
             {curl}
           </pre>
           <p className="mt-3 text-sm text-muted">
-            Sign in as an employer to create a free sandbox key ({SANDBOX_KEY_POLICY.rateLimitPerMin}{' '}
-            requests/min, test data only). Live keys are issued by Dealo. Available scopes:{' '}
-            {Object.values(ApiScope).join(', ')}.
+            Sign in as a company to get a free test key ({SANDBOX_KEY_POLICY.rateLimitPerMin} calls a
+            minute, test data only). Pick a paid plan when you are ready to go live.
           </p>
           <div className="mt-5 flex flex-col gap-2 min-[400px]:flex-row">
             <Link href="/dashboard/developer" className="btn-primary">

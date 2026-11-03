@@ -12,6 +12,7 @@ import {
   MessageSquareText,
   X,
 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
@@ -46,6 +47,7 @@ const STEPS = [
 
 export function SupportTicketWidget() {
   const { user } = useAuthSession();
+  const pathname = usePathname();
   const { t } = useLocale();
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -346,7 +348,12 @@ export function SupportTicketWidget() {
       <button
         type="button"
         data-tour="support-help"
-        className="fixed bottom-20 right-4 z-[90] inline-flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-white/30 bg-[linear-gradient(145deg,rgba(15,118,110,0.92),rgba(4,47,46,0.88))] text-white shadow-[0_16px_40px_rgba(4,47,46,0.35)] backdrop-blur-md transition hover:scale-105 sm:bottom-24 sm:right-6"
+        className={cn(
+          'fixed right-2 z-[90] inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/30 bg-[linear-gradient(145deg,rgba(15,118,110,0.92),rgba(4,47,46,0.88))] text-white shadow-[0_16px_40px_rgba(4,47,46,0.35)] backdrop-blur-md transition hover:scale-105 min-[340px]:right-4 min-[340px]:h-12 min-[340px]:w-12 sm:right-6',
+          pathname.startsWith('/dashboard')
+            ? 'bottom-[calc(4.75rem+var(--safe-bottom))] lg:bottom-6'
+            : 'bottom-[calc(4rem+var(--safe-bottom))] min-[340px]:bottom-20 sm:bottom-24',
+        )}
         aria-label={t('support.open')}
         onClick={() => {
           setStep(0);

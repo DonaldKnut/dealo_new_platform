@@ -4,6 +4,7 @@ import { HelpCircle } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { BottomSheet, useCompactViewport } from '@/components/ui/bottom-sheet';
 import { cn } from '@/lib/utils';
 
 interface InfoTooltipProps {
@@ -27,6 +28,7 @@ export function InfoTooltip({ label, content, className, align = 'left' }: InfoT
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLSpanElement>(null);
   const canHoverRef = useRef(false);
+  const compact = useCompactViewport('(max-width: 479px), (hover: none)');
 
   useEffect(() => {
     setMounted(true);
@@ -34,7 +36,7 @@ export function InfoTooltip({ label, content, className, align = 'left' }: InfoT
   }, []);
 
   useLayoutEffect(() => {
-    if (!open || !triggerRef.current) {
+    if (!open || compact || !triggerRef.current) {
       return;
     }
 
@@ -83,10 +85,10 @@ export function InfoTooltip({ label, content, className, align = 'left' }: InfoT
       window.removeEventListener('scroll', updatePosition, true);
       window.removeEventListener('resize', updatePosition);
     };
-  }, [open, align, content]);
+  }, [open, align, content, compact]);
 
   useEffect(() => {
-    if (!open) {
+    if (!open || compact) {
       return;
     }
 
@@ -112,7 +114,7 @@ export function InfoTooltip({ label, content, className, align = 'left' }: InfoT
       document.removeEventListener('touchstart', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open]);
+  }, [open, compact]);
 
   return (
     <span className={cn('relative inline-flex shrink-0 items-center', className)}>
@@ -129,18 +131,39 @@ export function InfoTooltip({ label, content, className, align = 'left' }: InfoT
           setOpen((value) => !value);
         }}
         onMouseEnter={() => {
-          if (canHoverRef.current) setOpen(true);
+          if (canHoverRef.current && !compact) setOpen(true);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          if (!compact) setOpen(true);
+        }}
         onMouseLeave={() => {
-          if (canHoverRef.current) setOpen(false);
+          if (canHoverRef.current && !compact) setOpen(false);
         }}
-        onBlur={() => setOpen(false)}
+        onBlur={() => {
+          if (!compact) setOpen(false);
+        }}
       >
         <HelpCircle className="h-3.5 w-3.5" />
       </button>
 
-      {mounted && open && coords
+      {compact ? (
+        <BottomSheet
+          open={open}
+          onClose={() => setOpen(false)}
+          title={
+            <span className="flex items-center gap-2">
+              <HelpCircle className="h-4 w-4 shrink-0 text-brand" />
+              <span className="truncate">{label}</span>
+            </span>
+          }
+        >
+          <p id={tooltipId} className="pb-2 text-sm leading-relaxed text-muted">
+            {content}
+          </p>
+        </BottomSheet>
+      ) : null}
+
+      {!compact && mounted && open && coords
         ? createPortal(
             <span
               ref={panelRef}

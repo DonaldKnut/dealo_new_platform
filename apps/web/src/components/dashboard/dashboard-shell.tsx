@@ -8,6 +8,7 @@ import {
   ChevronRight,
   FileText,
   Headphones,
+  IdCard,
   KeyRound,
   LayoutDashboard,
   LogOut,
@@ -19,6 +20,7 @@ import {
   ScrollText,
   Settings,
   UserRound,
+  UserSearch,
   Users,
   Webhook,
   X,
@@ -73,6 +75,13 @@ const adminNav: NavItem[] = [
     labelKey: 'dash.nav.candidates',
     icon: Users,
     help: 'Screen candidates and build shortlists for open roles.',
+    tour: 'hiring',
+  },
+  {
+    href: '/dashboard/professionals',
+    labelKey: 'dash.nav.professionals',
+    icon: UserSearch,
+    help: 'Everyone who signed up as a professional, with their profile and CV.',
     tour: 'hiring',
   },
   {
@@ -191,6 +200,12 @@ const talentNav: NavItem[] = [
     help: 'Your talent home — profile health and next steps.',
   },
   {
+    href: '/dashboard/profile',
+    labelKey: 'dash.nav.profile',
+    icon: IdCard,
+    help: 'Your details, skills and CV. Recruiters use this to match you.',
+  },
+  {
     href: '/dashboard/matches',
     labelKey: 'dash.nav.matches',
     icon: Briefcase,
@@ -305,55 +320,73 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         ? t('dash.talent')
         : t('dash.employer');
 
+  const isActive = (href: string) =>
+    pathname === href ||
+    (href !== '/dashboard' && href !== '/dashboard/talent-home' && pathname.startsWith(href));
+
   const renderNavLink = (
     item: NavItem,
-    opts: { onNavigate?: () => void; compact?: boolean },
+    opts: { onNavigate?: () => void; compact?: boolean; scope: string; index: number },
   ) => {
     const Icon = item.icon;
     const label = t(item.labelKey);
-    const active =
-      pathname === item.href ||
-      (item.href !== '/dashboard' &&
-        item.href !== '/dashboard/talent-home' &&
-        pathname.startsWith(item.href));
+    const active = isActive(item.href);
     return (
-      <Link
+      <motion.div
         key={item.href}
-        href={item.href}
-        onClick={opts.onNavigate}
-        title={opts.compact ? label : undefined}
-        className={cn(
-          'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
-          opts.compact && 'justify-center px-2',
-          active
-            ? 'bg-brand text-white dark:text-[#071f14]'
-            : 'text-muted hover:bg-surface hover:text-foreground',
-        )}
+        initial={opts.scope === 'drawer' ? { opacity: 0, x: -12 } : false}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: opts.scope === 'drawer' ? 0.04 + opts.index * 0.03 : 0, duration: 0.24 }}
       >
-        <motion.span
-          className="inline-flex shrink-0"
-          whileHover={{ scale: 1.15, rotate: -8 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 16 }}
+        <Link
+          href={item.href}
+          onClick={opts.onNavigate}
+          title={opts.compact ? label : undefined}
+          aria-current={active ? 'page' : undefined}
+          className={cn(
+            'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-200',
+            opts.compact && 'justify-center px-2',
+            active ? 'text-white dark:text-[#071f14]' : 'text-muted hover:text-foreground',
+          )}
         >
-          <Icon className="h-4 w-4" />
-        </motion.span>
-        {!opts.compact ? (
-          <>
-            <span className="min-w-0 flex-1 truncate">{label}</span>
-            <InfoTooltip label={label} content={item.help} className="opacity-70" />
-          </>
-        ) : null}
-      </Link>
+          {active ? (
+            <motion.span
+              layoutId={`dash-nav-active-${opts.scope}`}
+              className="absolute inset-0 rounded-xl bg-brand shadow-[0_10px_24px_-12px_color-mix(in_srgb,var(--brand)_90%,transparent)]"
+              transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+            />
+          ) : (
+            <>
+              <span className="absolute inset-0 rounded-xl bg-surface opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+              <span className="absolute left-0 top-1/2 h-0 w-[3px] -translate-y-1/2 rounded-full bg-brand transition-all duration-300 ease-out group-hover:h-5" />
+            </>
+          )}
+          <span className="relative z-10 inline-flex shrink-0 transition-transform duration-300 ease-out group-hover:scale-110 group-hover:-rotate-6">
+            <Icon className="h-4 w-4" />
+          </span>
+          {!opts.compact ? (
+            <>
+              <span className="relative z-10 min-w-0 flex-1 truncate transition-transform duration-300 ease-out group-hover:translate-x-0.5">
+                {label}
+              </span>
+              <InfoTooltip label={label} content={item.help} className="relative z-10 opacity-70" />
+            </>
+          ) : null}
+        </Link>
+      </motion.div>
     );
   };
 
   const NavItems = ({
     onNavigate,
     compact,
+    scope,
   }: {
     onNavigate?: () => void;
     compact?: boolean;
+    scope: string;
   }) => {
+    let index = 0;
     const groups: Array<{ tour?: NavItem['tour']; items: NavItem[] }> = [];
     for (const item of nav) {
       const last = groups[groups.length - 1];
@@ -374,7 +407,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 ? 'nav-admin'
                 : undefined;
           const content = group.items.map((item) =>
-            renderNavLink(item, { onNavigate, compact }),
+            renderNavLink(item, { onNavigate, compact, scope, index: index++ }),
           );
           if (!wrapperTour) {
             return <div key={`nav-group-${index}`}>{content}</div>;
@@ -432,7 +465,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="mt-6 flex-1 overflow-y-auto">
-            <NavItems compact={collapsed} />
+            <NavItems compact={collapsed} scope="sidebar" />
           </div>
 
           <button
@@ -451,7 +484,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </motion.aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur-md">
+          <header className="sticky top-0 z-30 border-b border-border bg-background/90 pt-[var(--safe-top)] backdrop-blur-md">
             <div className="flex h-14 items-center justify-between gap-2 px-2.5 min-[230px]:px-3 min-[340px]:h-16 min-[340px]:gap-3 min-[340px]:px-5 sm:px-6">
               <div className="flex min-w-0 items-center gap-2 min-[340px]:gap-3">
                 <button
@@ -506,8 +539,54 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           >
             {children}
           </motion.main>
+          <div className="h-[calc(4.25rem+var(--safe-bottom))] lg:hidden" aria-hidden />
         </div>
       </div>
+
+      <nav
+        aria-label="Primary"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 pb-[var(--safe-bottom)] backdrop-blur-md lg:hidden"
+      >
+        <div className="mx-auto flex max-w-lg items-stretch px-0.5 min-[340px]:px-2">
+          {nav.slice(0, 4).map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
+                  active ? 'text-brand' : 'text-muted hover:text-foreground',
+                )}
+              >
+                {active ? (
+                  <motion.span
+                    layoutId="dash-tab-active"
+                    className="absolute inset-x-2 top-0 h-[3px] rounded-b-full bg-brand"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  />
+                ) : null}
+                <motion.span whileTap={{ scale: 0.85 }} className="inline-flex">
+                  <Icon className="h-[18px] w-[18px]" />
+                </motion.span>
+                <span className="hidden max-w-full truncate px-0.5 min-[300px]:block">{t(item.labelKey)}</span>
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium text-muted transition-colors hover:text-foreground"
+          >
+            <motion.span whileTap={{ scale: 0.85 }} className="inline-flex">
+              <Menu className="h-[18px] w-[18px]" />
+            </motion.span>
+            <span className="hidden min-[300px]:block">{t('dash.more')}</span>
+          </button>
+        </div>
+      </nav>
 
       <AnimatePresence>
         {mobileOpen ? (
@@ -524,31 +603,43 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               onClick={() => setMobileOpen(false)}
             />
             <motion.aside
-              initial={{ x: -280 }}
+              initial={{ x: '-100%' }}
               animate={{ x: 0 }}
-              exit={{ x: -280 }}
+              exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-              className="absolute inset-y-0 left-0 flex w-[min(18rem,92vw)] flex-col border-r border-border bg-background p-4"
+              className="safe-bottom absolute inset-y-0 left-0 flex w-[min(18rem,88vw)] flex-col border-r border-border bg-background p-3 pt-[max(0.75rem,var(--safe-top))] min-[340px]:p-4"
             >
-              <div className="mb-6 flex items-center justify-between gap-2">
-                <BrandLogo href={homeHref} />
+              <div className="mb-4 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <BrandLogo href={homeHref} />
+                </div>
                 <button
                   type="button"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border"
+                  aria-label="Close navigation"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition hover:border-brand hover:text-brand"
                   onClick={() => setMobileOpen(false)}
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <NavItems onNavigate={() => setMobileOpen(false)} />
-              <button
-                type="button"
-                onClick={logout}
-                className="mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted"
-              >
-                <LogOut className="h-4 w-4" />
-                {t('dash.signOut')}
-              </button>
+              <div className="mb-3 rounded-xl border border-border bg-surface-elevated/80 px-3 py-2">
+                <p className="truncate text-sm font-medium text-foreground">{userName}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand">{roleLabel}</p>
+              </div>
+              <div className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1">
+                <NavItems scope="drawer" onNavigate={() => setMobileOpen(false)} />
+              </div>
+              <div className="mt-3 space-y-1 border-t border-border pt-3">
+                <LanguageSwitcher variant="row" />
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground"
+                >
+                  <LogOut className="h-4 w-4" />
+                  {t('dash.signOut')}
+                </button>
+              </div>
             </motion.aside>
           </motion.div>
         ) : null}
