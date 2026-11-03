@@ -82,7 +82,7 @@ export function DatePickerField({
 
   useEffect(() => {
     if (selected) setView(startOfMonth(selected));
-  }, [value]);
+  }, [selected]);
 
   const days = useMemo(() => {
     const first = startOfMonth(view);
