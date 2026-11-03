@@ -3,6 +3,7 @@ import type { HireInquiryInput, HireInquiryStatusUpdate } from '@dealo/shared';
 import { PermissionCode } from '@dealo/shared';
 import type { HireInquiryStatus } from '@prisma/client';
 
+import type { AuthUser } from '../auth/auth.types';
 import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
 import { EmailService } from '../email/email.service';
@@ -17,8 +18,10 @@ export class HireInquiryService {
     private readonly emailService: EmailService,
   ) {}
 
-  async create(input: HireInquiryInput) {
+  async create(input: HireInquiryInput, principal?: AuthUser) {
     const email = normalizeEmail(input.email);
+    const viaApiKey = principal?.authType === 'api_key' ? principal : undefined;
+    const isTest = viaApiKey?.apiKeyEnvironment === 'TEST';
 
     const inquiry = await this.prisma.hireInquiry.create({
       data: {
@@ -39,6 +42,9 @@ export class HireInquiryService {
         durationNotes: input.durationNotes,
         requirements: input.requirements,
         additionalNotes: input.additionalNotes,
+        apiKeyId: viaApiKey?.apiKeyId ?? null,
+        organizationId: viaApiKey?.organizationId ?? null,
+        isTest,
       },
     });
 
@@ -51,25 +57,46 @@ export class HireInquiryService {
         roleFamily: inquiry.roleFamily,
         serviceType: inquiry.serviceType,
         roleTitle: inquiry.roleTitle,
+        apiKeyId: inquiry.apiKeyId,
+        isTest,
       },
     });
 
-    await this.emailService.send(
-      hireInquiryAckEmail({
-        to: inquiry.email,
-        contactName: inquiry.contactName,
-        roleTitle: inquiry.roleTitle,
-      }),
-    );
+    // Sandbox submissions must never email real addresses.
+    if (!isTest) {
+      await this.emailService.send(
+        hireInquiryAckEmail({
+          to: inquiry.email,
+          contactName: inquiry.contactName,
+          roleTitle: inquiry.roleTitle,
+        }),
+      );
+    }
 
     return {
       id: inquiry.id,
       status: inquiry.status,
-      message: 'Your hiring request has been submitted successfully.',
+      isTest,
+      message: isTest
+        ? 'Sandbox hiring request recorded (test data, no email sent).'
+        : 'Your hiring request has been submitted successfully.',
     };
   }
 
-  async list() {
+  async list(principal?: AuthUser) {
+    if (principal?.authType === 'api_key') {
+      return this.prisma.hireInquiry.findMany({
+        where: {
+          OR: [
+            { apiKeyId: principal.apiKeyId },
+            ...(principal.organizationId ? [{ organizationId: principal.organizationId }] : []),
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      });
+    }
+
     return this.prisma.hireInquiry.findMany({
       orderBy: { createdAt: 'desc' },
       take: 100,

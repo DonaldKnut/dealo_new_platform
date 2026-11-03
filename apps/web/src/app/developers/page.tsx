@@ -1,6 +1,6 @@
 'use client';
 
-import { ApiScope } from '@dealo/shared';
+import { ApiScope, SANDBOX_KEY_POLICY } from '@dealo/shared';
 import { Code2, ExternalLink, KeyRound, LifeBuoy, PlugZap, ShieldCheck, Webhook } from 'lucide-react';
 import Link from 'next/link';
 
@@ -129,16 +129,17 @@ export default function DevelopersPage() {
             {curl}
           </pre>
           <p className="mt-3 text-sm text-muted">
-            Admins issue keys from the dashboard. Available scopes:{' '}
+            Sign in as an employer to create a free sandbox key ({SANDBOX_KEY_POLICY.rateLimitPerMin}{' '}
+            requests/min, test data only). Live keys are issued by Dealo. Available scopes:{' '}
             {Object.values(ApiScope).join(', ')}.
           </p>
           <div className="mt-5 flex flex-col gap-2 min-[400px]:flex-row">
-            <a href={docsUrl} target="_blank" rel="noopener noreferrer" className="btn-primary">
+            <Link href="/dashboard/developer" className="btn-primary">
+              Get a sandbox key
+            </Link>
+            <a href={docsUrl} target="_blank" rel="noopener noreferrer" className="btn-secondary">
               Explore in Swagger
             </a>
-            <Link href="/dashboard/api-keys" className="btn-secondary">
-              Manage keys (admin)
-            </Link>
             <button type="button" className="btn-secondary" onClick={() => open('contact')}>
               Ask about API pricing
             </button>

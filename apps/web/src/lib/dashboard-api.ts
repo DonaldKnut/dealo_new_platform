@@ -17,6 +17,7 @@ export type DashboardRequestSummary = {
   numberOfProfessionals: number;
   createdAt: string;
   location?: string;
+  isTest?: boolean;
 };
 
 export type AdminWorkspace = {
@@ -192,6 +193,7 @@ export type DashboardRequest = {
   numberOfProfessionals: number;
   location: string;
   createdAt: string;
+  isTest?: boolean;
 };
 
 export type DashboardUser = {
@@ -550,6 +552,18 @@ export type ApiKeyUsage = {
     createdAt: string;
   }[];
 };
+
+export function fetchMyApiKeys() {
+  return apiFetch<ApiKeyRow[]>('/api-keys/mine');
+}
+
+export function createSandboxApiKey(name: string) {
+  return apiFetch<CreatedApiKey>('/api-keys/sandbox', { method: 'POST', json: { name } });
+}
+
+export function revokeMyApiKey(id: string) {
+  return apiFetch<{ id: string; revoked: boolean }>(`/api-keys/mine/${id}`, { method: 'DELETE' });
+}
 
 export function fetchApiKeyUsage(id: string, days = 7) {
   return apiFetch<ApiKeyUsage>(`/api-keys/${id}/usage?days=${days}`);

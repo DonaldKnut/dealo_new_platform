@@ -6,8 +6,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
-import type { CreateApiKeyInput, UpdateApiKeyInput } from '@dealo/shared';
-import { ApiKeyEnvironment } from '@prisma/client';
+import {
+  SANDBOX_KEY_POLICY,
+  type CreateApiKeyInput,
+  type CreateSandboxApiKeyInput,
+  type UpdateApiKeyInput,
+} from '@dealo/shared';
+import { ApiKeyEnvironment, ApiKeyPlan } from '@prisma/client';
 
 import type { AuthUser } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
@@ -34,25 +39,88 @@ export class ApiKeysService {
     private readonly rateLimiter: ApiKeyRateLimiter,
   ) {}
 
-  async create(input: CreateApiKeyInput, actor: AuthUser) {
-    const { plaintext, prefix } = generatePlaintextKey(
-      input.environment as ApiKeyEnvironment,
-    );
-    const keyHash = hashApiKey(plaintext);
+  create(input: CreateApiKeyInput, actor: AuthUser) {
+    return this.issue({
+      name: input.name,
+      environment: input.environment as ApiKeyEnvironment,
+      plan: input.plan as ApiKeyPlan,
+      scopes: input.scopes,
+      rateLimitPerMin: input.rateLimitPerMin,
+      expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+      organizationId: input.organizationId ?? null,
+      createdByUserId: actor.id,
+    });
+  }
 
-    const record = await this.prisma.apiKey.create({
-      data: {
-        name: input.name,
-        keyPrefix: prefix,
-        keyHash,
-        environment: input.environment as ApiKeyEnvironment,
-        plan: input.plan,
-        scopes: input.scopes,
-        rateLimitPerMin: input.rateLimitPerMin,
-        expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
-        organizationId: input.organizationId ?? null,
-        createdByUserId: actor.id,
+  async createSandbox(input: CreateSandboxApiKeyInput, actor: AuthUser) {
+    const activeSandboxKeys = await this.prisma.apiKey.count({
+      where: { createdByUserId: actor.id, plan: ApiKeyPlan.SANDBOX, isActive: true },
+    });
+    if (activeSandboxKeys >= SANDBOX_KEY_POLICY.maxActiveKeys) {
+      throw new ForbiddenException(
+        `You can have at most ${SANDBOX_KEY_POLICY.maxActiveKeys} active sandbox keys. Revoke one first.`,
+      );
+    }
+
+    const membership = await this.prisma.organizationMember.findFirst({
+      where: { userId: actor.id },
+      select: { organizationId: true },
+    });
+
+    return this.issue({
+      name: input.name,
+      environment: ApiKeyEnvironment.TEST,
+      plan: ApiKeyPlan.SANDBOX,
+      scopes: [...SANDBOX_KEY_POLICY.scopes],
+      rateLimitPerMin: SANDBOX_KEY_POLICY.rateLimitPerMin,
+      expiresAt: null,
+      organizationId: membership?.organizationId ?? null,
+      createdByUserId: actor.id,
+    });
+  }
+
+  listMine(actor: AuthUser) {
+    return this.prisma.apiKey.findMany({
+      where: { createdByUserId: actor.id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        keyPrefix: true,
+        environment: true,
+        plan: true,
+        scopes: true,
+        rateLimitPerMin: true,
+        isActive: true,
+        expiresAt: true,
+        lastUsedAt: true,
+        createdAt: true,
+        updatedAt: true,
       },
+    });
+  }
+
+  async revokeMine(id: string, actor: AuthUser) {
+    const existing = await this.prisma.apiKey.findUnique({ where: { id } });
+    if (!existing || existing.createdByUserId !== actor.id) {
+      throw new NotFoundException('API key not found');
+    }
+    return this.revoke(id);
+  }
+
+  private async issue(data: {
+    name: string;
+    environment: ApiKeyEnvironment;
+    plan: ApiKeyPlan;
+    scopes: string[];
+    rateLimitPerMin: number;
+    expiresAt: Date | null;
+    organizationId: string | null;
+    createdByUserId: string;
+  }) {
+    const { plaintext, prefix } = generatePlaintextKey(data.environment);
+    const record = await this.prisma.apiKey.create({
+      data: { ...data, keyPrefix: prefix, keyHash: hashApiKey(plaintext) },
     });
 
     return {
@@ -272,7 +340,9 @@ export class ApiKeysService {
       scopes: record.scopes,
       apiKeyId: record.id,
       apiKeyPlan: record.plan,
+      apiKeyEnvironment: record.environment,
       rateLimitPerMin: record.rateLimitPerMin,
+      organizationId: record.organizationId,
     };
   }
 

@@ -35,8 +35,11 @@ export class HireInquiryController {
   })
   @ApiBearerAuth('api_key')
   @RequireScopes(ApiScope.HIRE_INQUIRIES_WRITE)
-  create(@Body(new ZodValidationPipe(hireInquirySchema)) body: HireInquiryInput) {
-    return this.hireInquiryService.create(body);
+  create(
+    @Body(new ZodValidationPipe(hireInquirySchema)) body: HireInquiryInput,
+    @CurrentUser() user?: AuthUser,
+  ) {
+    return this.hireInquiryService.create(body, user);
   }
 
   @Get()
@@ -46,8 +49,8 @@ export class HireInquiryController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.RECRUITER, UserRole.OPERATIONS)
   @Permissions(PermissionCode.HIRE_INQUIRY_MANAGE)
   @RequireScopes(ApiScope.HIRE_INQUIRIES_READ)
-  list() {
-    return this.hireInquiryService.list();
+  list(@CurrentUser() user: AuthUser) {
+    return this.hireInquiryService.list(user);
   }
 
   @Patch(':id/status')

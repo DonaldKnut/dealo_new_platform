@@ -14,7 +14,9 @@ export interface AuthUser {
   scopes?: string[];
   apiKeyId?: string;
   apiKeyPlan?: string;
+  apiKeyEnvironment?: 'LIVE' | 'TEST';
   rateLimitPerMin?: number;
+  organizationId?: string | null;
 }
 
 export interface JwtPayload {

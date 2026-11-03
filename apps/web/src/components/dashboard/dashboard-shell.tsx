@@ -156,6 +156,12 @@ const employerNav: NavItem[] = [
     help: 'Company profile and team membership.',
   },
   {
+    href: '/dashboard/developer',
+    labelKey: 'dash.nav.developer',
+    icon: KeyRound,
+    help: 'Sandbox API keys to connect Dealo to your own tools.',
+  },
+  {
     href: '/dashboard/support',
     labelKey: 'dash.nav.support',
     icon: Headphones,

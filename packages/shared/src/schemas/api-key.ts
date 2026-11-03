@@ -36,3 +36,21 @@ export const updateApiKeySchema = z.object({
 });
 
 export type UpdateApiKeyInput = z.infer<typeof updateApiKeySchema>;
+
+/** Fixed policy for self-serve sandbox keys (TEST environment only). */
+export const SANDBOX_KEY_POLICY = {
+  maxActiveKeys: 2,
+  rateLimitPerMin: 30,
+  scopes: [
+    ApiScope.HIRE_INQUIRIES_WRITE,
+    ApiScope.HIRE_INQUIRIES_READ,
+    ApiScope.BLOG_READ,
+    ApiScope.HEALTH_READ,
+  ],
+} as const;
+
+export const createSandboxApiKeySchema = z.object({
+  name: z.string().trim().min(2).max(120),
+});
+
+export type CreateSandboxApiKeyInput = z.infer<typeof createSandboxApiKeySchema>;

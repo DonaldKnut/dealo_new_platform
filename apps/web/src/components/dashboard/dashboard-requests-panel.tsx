@@ -122,6 +122,11 @@ export function DashboardRequestsPanel() {
                   <tr key={row.id} className="border-t border-border">
                     <td className="px-3 py-3.5 text-foreground min-[340px]:px-4">
                       {row.companyName}
+                      {row.isTest ? (
+                        <span className="ml-2 rounded-full border border-amber-500/50 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-600">
+                          Sandbox
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-3 py-3.5 text-foreground min-[340px]:px-4">
                       {row.roleTitle}

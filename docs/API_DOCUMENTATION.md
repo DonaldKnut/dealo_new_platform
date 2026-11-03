@@ -24,6 +24,17 @@ Authorization: Bearer dk_test_xxxxxxxx
 
 Keys are stored hashed (SHA-256). Revoked or inactive keys are rejected.
 
+### Self-serve sandbox keys
+Employers can create their own test keys in **Dashboard → Developer API** (`POST /api/v1/api-keys/sandbox`).
+
+- Always `dk_test_…`, plan `SANDBOX`, 30 requests/min, max 2 active keys per user
+- Scopes: `hire-inquiries:write`, `hire-inquiries:read`, `blog:read`, `health:read`
+- Hire inquiries created with a test key are flagged `isTest: true` and **no confirmation email is sent**
+- Live (`dk_live_`) keys are issued by Dealo admins only
+
+### Data visibility
+Requests made with an API key only see hire inquiries created by that key (or by the key's organization). Staff JWTs see everything.
+
 ## Scopes
 
 | Scope | Access |
@@ -108,6 +119,9 @@ Per-key rate limit exceeded:
 | GET | `/api/v1/hire-inquiries` | Staff JWT or `hire-inquiries:read` | List inquiries |
 | GET | `/api/v1/blog` | Public / `blog:read` | Published posts |
 | POST | `/api/v1/api-keys` | Admin JWT | Create API key |
+| POST | `/api/v1/api-keys/sandbox` | Employer/staff JWT | Self-serve sandbox key |
+| GET | `/api/v1/api-keys/mine` | Employer/staff JWT | Keys you created |
+| DELETE | `/api/v1/api-keys/mine/:id` | Employer/staff JWT | Revoke your key |
 | GET | `/api/v1/api-keys` | Admin JWT | List keys (masked) |
 | GET | `/api/v1/api-keys/:id/usage` | Admin JWT | Usage metrics (`days` 1–90) |
 | PATCH | `/api/v1/api-keys/:id` | Admin JWT | Update key |

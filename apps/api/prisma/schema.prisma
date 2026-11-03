@@ -236,6 +236,8 @@ model HireInquiry {
   additionalNotes         String?
   status                  HireInquiryStatus @default(NEW)
   organizationId          String?           @db.ObjectId
+  apiKeyId                String?           @db.ObjectId
+  isTest                  Boolean           @default(false)
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
 
@@ -245,6 +247,7 @@ model HireInquiry {
   @@index([email])
   @@index([status])
   @@index([createdAt])
+  @@index([apiKeyId])
 }
 
 model BlogPost {
