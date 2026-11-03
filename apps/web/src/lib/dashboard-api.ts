@@ -529,9 +529,31 @@ export type ApiKeyRow = {
   lastUsedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  requests24h?: number;
 };
 
 export type CreatedApiKey = ApiKeyRow & { apiKey: string };
+
+export type ApiKeyUsage = {
+  key: { id: string; name: string; keyPrefix: string; rateLimitPerMin: number; plan: string };
+  from: string;
+  days: number;
+  truncated: boolean;
+  totals: { requests: number; errors: number; rateLimited: number; avgLatencyMs: number };
+  daily: { date: string; requests: number; errors: number }[];
+  topEndpoints: { endpoint: string; requests: number }[];
+  recent: {
+    method: string;
+    path: string;
+    statusCode: number;
+    latencyMs: number;
+    createdAt: string;
+  }[];
+};
+
+export function fetchApiKeyUsage(id: string, days = 7) {
+  return apiFetch<ApiKeyUsage>(`/api-keys/${id}/usage?days=${days}`);
+}
 
 export function fetchApiKeys() {
   return apiFetch<ApiKeyRow[]>('/api-keys');

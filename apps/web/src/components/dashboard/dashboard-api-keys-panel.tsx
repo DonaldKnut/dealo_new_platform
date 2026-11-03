@@ -3,6 +3,7 @@
 import { ApiScope } from '@dealo/shared';
 import { useEffect, useState } from 'react';
 
+import { DashboardApiKeyUsage } from '@/components/dashboard/dashboard-api-key-usage';
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useToast } from '@/components/ui/toast';
@@ -31,6 +32,7 @@ export function DashboardApiKeysPanel() {
   ]);
   const [creating, setCreating] = useState(false);
   const [revealed, setRevealed] = useState<CreatedApiKey | null>(null);
+  const [usageKeyId, setUsageKeyId] = useState<string | null>(null);
 
   const load = async () => {
     const data = await fetchApiKeys();
@@ -222,6 +224,7 @@ export function DashboardApiKeysPanel() {
                   <th className="px-3 py-2">Plan</th>
                   <th className="px-3 py-2">Scopes</th>
                   <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">24h calls</th>
                   <th className="px-3 py-2">Actions</th>
                 </tr>
               </thead>
@@ -235,7 +238,18 @@ export function DashboardApiKeysPanel() {
                     </td>
                     <td className="px-3 py-2 text-xs text-muted">{row.scopes.join(', ')}</td>
                     <td className="px-3 py-2">{row.isActive ? 'Active' : 'Inactive'}</td>
+                    <td className="px-3 py-2 tabular-nums text-muted">
+                      {(row.requests24h ?? 0).toLocaleString()}
+                      <span className="block text-[11px]">limit {row.rateLimitPerMin}/min</span>
+                    </td>
                     <td className="px-3 py-2">
+                      <button
+                        type="button"
+                        className="mr-3 text-xs font-semibold text-brand underline"
+                        onClick={() => setUsageKeyId(row.id)}
+                      >
+                        Usage
+                      </button>
                       <button
                         type="button"
                         className="text-xs font-semibold text-brand underline"
@@ -258,6 +272,10 @@ export function DashboardApiKeysPanel() {
           </div>
         )}
       </DashPanel>
+
+      {usageKeyId ? (
+        <DashboardApiKeyUsage keyId={usageKeyId} onClose={() => setUsageKeyId(null)} />
+      ) : null}
     </div>
   );
 }

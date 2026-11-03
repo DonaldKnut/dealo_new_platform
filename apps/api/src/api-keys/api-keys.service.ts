@@ -1,5 +1,6 @@
 import {
   ForbiddenException,
+  HttpException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -10,6 +11,10 @@ import { ApiKeyEnvironment } from '@prisma/client';
 
 import type { AuthUser } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { ApiKeyRateLimiter } from './api-key-rate-limiter';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MAX_USAGE_ROWS = 20_000;
 
 function hashApiKey(plaintext: string): string {
   return createHash('sha256').update(plaintext).digest('hex');
@@ -24,7 +29,10 @@ function generatePlaintextKey(environment: ApiKeyEnvironment): { plaintext: stri
 
 @Injectable()
 export class ApiKeysService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rateLimiter: ApiKeyRateLimiter,
+  ) {}
 
   async create(input: CreateApiKeyInput, actor: AuthUser) {
     const { plaintext, prefix } = generatePlaintextKey(
@@ -63,26 +71,122 @@ export class ApiKeysService {
     };
   }
 
-  list() {
-    return this.prisma.apiKey.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        keyPrefix: true,
-        environment: true,
-        plan: true,
-        scopes: true,
-        rateLimitPerMin: true,
-        isActive: true,
-        expiresAt: true,
-        lastUsedAt: true,
-        organizationId: true,
-        createdByUserId: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+  async list() {
+    const [keys, counts] = await Promise.all([
+      this.prisma.apiKey.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          keyPrefix: true,
+          environment: true,
+          plan: true,
+          scopes: true,
+          rateLimitPerMin: true,
+          isActive: true,
+          expiresAt: true,
+          lastUsedAt: true,
+          organizationId: true,
+          createdByUserId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      this.prisma.apiUsageLog.groupBy({
+        by: ['apiKeyId'],
+        where: { createdAt: { gte: new Date(Date.now() - DAY_MS) } },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const byKey = new Map(counts.map((row) => [row.apiKeyId, row._count._all]));
+    return keys.map((key) => ({ ...key, requests24h: byKey.get(key.id) ?? 0 }));
+  }
+
+  async usage(id: string, days: number) {
+    const key = await this.prisma.apiKey.findUnique({
+      where: { id },
+      select: { id: true, name: true, keyPrefix: true, rateLimitPerMin: true, plan: true },
     });
+    if (!key) {
+      throw new NotFoundException('API key not found');
+    }
+
+    const windowDays = Math.min(Math.max(Math.trunc(days) || 7, 1), 90);
+    const from = new Date(Date.now() - windowDays * DAY_MS);
+    const logs = await this.prisma.apiUsageLog.findMany({
+      where: { apiKeyId: id, createdAt: { gte: from } },
+      orderBy: { createdAt: 'desc' },
+      take: MAX_USAGE_ROWS,
+      select: { method: true, path: true, statusCode: true, latencyMs: true, createdAt: true },
+    });
+
+    const daily = new Map<string, { requests: number; errors: number }>();
+    for (let i = windowDays - 1; i >= 0; i -= 1) {
+      daily.set(new Date(Date.now() - i * DAY_MS).toISOString().slice(0, 10), {
+        requests: 0,
+        errors: 0,
+      });
+    }
+
+    const endpoints = new Map<string, number>();
+    let errors = 0;
+    let rateLimited = 0;
+    let latencyTotal = 0;
+
+    for (const log of logs) {
+      const bucket = daily.get(log.createdAt.toISOString().slice(0, 10));
+      const isError = log.statusCode >= 400;
+      if (bucket) {
+        bucket.requests += 1;
+        if (isError) bucket.errors += 1;
+      }
+      if (isError) errors += 1;
+      if (log.statusCode === 429) rateLimited += 1;
+      latencyTotal += log.latencyMs;
+      const endpoint = `${log.method} ${log.path}`;
+      endpoints.set(endpoint, (endpoints.get(endpoint) ?? 0) + 1);
+    }
+
+    return {
+      key,
+      from: from.toISOString(),
+      days: windowDays,
+      truncated: logs.length >= MAX_USAGE_ROWS,
+      totals: {
+        requests: logs.length,
+        errors,
+        rateLimited,
+        avgLatencyMs: logs.length ? Math.round(latencyTotal / logs.length) : 0,
+      },
+      daily: [...daily.entries()].map(([date, value]) => ({ date, ...value })),
+      topEndpoints: [...endpoints.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([endpoint, requests]) => ({ endpoint, requests })),
+      recent: logs.slice(0, 25),
+    };
+  }
+
+  /** Applies the per-key sliding window; rejected calls are still metered. */
+  enforceRateLimit(principal: AuthUser, method: string, path: string) {
+    if (!principal.apiKeyId || !principal.rateLimitPerMin) {
+      return;
+    }
+    try {
+      this.rateLimiter.consume(principal.apiKeyId, principal.rateLimitPerMin);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        void this.logUsage({
+          apiKeyId: principal.apiKeyId,
+          method,
+          path,
+          statusCode: error.getStatus(),
+          latencyMs: 0,
+        }).catch(() => undefined);
+      }
+      throw error;
+    }
   }
 
   async update(id: string, input: UpdateApiKeyInput) {

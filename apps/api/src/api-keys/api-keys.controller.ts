@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   ApiCookieAuth,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import {
@@ -47,6 +48,16 @@ export class ApiKeysController {
   @ApiOkResponse({ description: 'API key list' })
   list() {
     return this.apiKeysService.list();
+  }
+
+  @Get(':id/usage')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Permissions(PermissionCode.API_KEYS_MANAGE)
+  @ApiOperation({ summary: 'Usage metrics for an API key (daily, endpoints, recent calls)' })
+  @ApiQuery({ name: 'days', required: false, description: 'Lookback window in days (1-90, default 7)' })
+  @ApiOkResponse({ description: 'API key usage summary' })
+  usage(@Param('id') id: string, @Query('days') days?: string) {
+    return this.apiKeysService.usage(id, Number(days ?? 7));
   }
 
   @Patch(':id')

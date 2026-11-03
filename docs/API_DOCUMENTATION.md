@@ -81,6 +81,18 @@ Missing scopes:
 { "statusCode": 403, "message": "Missing API scopes: hire-inquiries:read", "error": "Forbidden" }
 ```
 
+Per-key rate limit exceeded:
+
+```json
+{ "statusCode": 429, "message": "API key rate limit exceeded (60/min). Retry in 12s.", "error": "Too Many Requests" }
+```
+
+## Rate limits and metering
+
+- Every API key has a `rateLimitPerMin` (sliding 60-second window). Exceeding it returns `429`.
+- Every call made with an API key is recorded (method, path, status, latency) for usage reporting and billing.
+- Admins see 24h call counts per key and a usage breakdown (`GET /api/v1/api-keys/:id/usage?days=7`).
+
 ## Phase 1 endpoint map
 
 | Method | Path | Auth | Description |
@@ -97,6 +109,7 @@ Missing scopes:
 | GET | `/api/v1/blog` | Public / `blog:read` | Published posts |
 | POST | `/api/v1/api-keys` | Admin JWT | Create API key |
 | GET | `/api/v1/api-keys` | Admin JWT | List keys (masked) |
+| GET | `/api/v1/api-keys/:id/usage` | Admin JWT | Usage metrics (`days` 1–90) |
 | PATCH | `/api/v1/api-keys/:id` | Admin JWT | Update key |
 | DELETE | `/api/v1/api-keys/:id` | Admin JWT | Revoke key |
 

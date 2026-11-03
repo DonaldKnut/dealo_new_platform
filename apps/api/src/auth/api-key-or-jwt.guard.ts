@@ -55,6 +55,9 @@ export class ApiKeyOrJwtGuard extends AuthGuard('jwt') implements CanActivate {
   private async tryAttachPrincipal(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<{
       headers: { authorization?: string };
+      method: string;
+      originalUrl?: string;
+      url: string;
       user?: AuthUser;
     }>();
 
@@ -68,7 +71,13 @@ export class ApiKeyOrJwtGuard extends AuthGuard('jwt') implements CanActivate {
       return false;
     }
 
-    request.user = await this.apiKeysService.authenticateBearer(token);
+    const principal = await this.apiKeysService.authenticateBearer(token);
+    this.apiKeysService.enforceRateLimit(
+      principal,
+      request.method,
+      (request.originalUrl ?? request.url).split('?')[0],
+    );
+    request.user = principal;
     return true;
   }
 }
