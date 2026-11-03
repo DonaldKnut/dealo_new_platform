@@ -18,6 +18,7 @@ import { HireInquiryModule } from './hire-inquiry/hire-inquiry.module';
 import { MailModule } from './mail/mail.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RootModule } from './root/root.module';
 import { SupportModule } from './support/support.module';
 import { TalentModule } from './talent/talent.module';
 import { UsersModule } from './users/users.module';
@@ -47,6 +48,7 @@ import { UsersModule } from './users/users.module';
     PrismaModule,
     CommonModule,
     EmailModule,
+    RootModule,
     HealthModule,
     UsersModule,
     AuthModule,

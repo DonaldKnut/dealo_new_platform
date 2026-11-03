@@ -6,7 +6,13 @@ import { PrismaService } from '../prisma/prisma.service';
 export class HealthService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async check(): Promise<{ status: 'ok' | 'degraded'; database: 'up' | 'down'; timestamp: string }> {
+  async check(): Promise<{
+    service: string;
+    status: 'ok' | 'degraded';
+    database: 'up' | 'down';
+    uptimeSeconds: number;
+    timestamp: string;
+  }> {
     let database: 'up' | 'down' = 'up';
 
     try {
@@ -16,8 +22,10 @@ export class HealthService {
     }
 
     return {
+      service: 'Dealo API',
       status: database === 'up' ? 'ok' : 'degraded',
       database,
+      uptimeSeconds: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
     };
   }
