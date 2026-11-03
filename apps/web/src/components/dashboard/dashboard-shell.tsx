@@ -8,6 +8,7 @@ import {
   ChevronRight,
   FileText,
   Headphones,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Mail,
@@ -104,6 +105,13 @@ const adminNav: NavItem[] = [
     labelKey: 'dash.nav.audit',
     icon: ScrollText,
     help: 'Backend and frontend activity trail for compliance review.',
+    tour: 'admin',
+  },
+  {
+    href: '/dashboard/api-keys',
+    labelKey: 'dash.nav.apiKeys',
+    icon: KeyRound,
+    help: 'Create and revoke partner API keys for the commercial Dealo API.',
     tour: 'admin',
   },
   {

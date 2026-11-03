@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
+import { ApiKeysModule } from './api-keys/api-keys.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { BlogModule } from './blog/blog.module';
@@ -62,6 +63,7 @@ import { UsersModule } from './users/users.module';
     AuditModule,
     SupportModule,
     MailModule,
+    ApiKeysModule,
   ],
   providers: [
     {

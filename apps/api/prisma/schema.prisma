@@ -86,6 +86,17 @@ enum SupportTicketPriority {
   URGENT
 }
 
+enum ApiKeyEnvironment {
+  LIVE
+  TEST
+}
+
+enum ApiKeyPlan {
+  SANDBOX
+  PARTNER
+  ENTERPRISE
+}
+
 model User {
   id                   String    @id @default(auto()) @map("_id") @db.ObjectId
   email                String    @unique
@@ -183,8 +194,9 @@ model Organization {
   updatedAt   DateTime @updatedAt
 
   members     OrganizationMember[]
+  members       OrganizationMember[]
   hireInquiries HireInquiry[]
-}
+  apiKeys       ApiKey[]
 
 model OrganizationMember {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId

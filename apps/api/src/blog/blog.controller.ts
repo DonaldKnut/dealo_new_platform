@@ -1,21 +1,12 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { blogPostInputSchema, type BlogPostInput } from '@dealo/shared';
+import { ApiScope, blogPostInputSchema, type BlogPostInput } from '@dealo/shared';
 
 import type { AuthUser } from '../auth/auth.types';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/current-user.decorator';
 import { Public } from '../common/public.decorator';
+import { RequireScopes } from '../common/scopes.decorator';
 import { Roles } from '../common/roles.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { BlogService } from './blog.service';
@@ -29,18 +20,25 @@ const STAFF = [
 
 @ApiTags('blog')
 @Controller('blog')
-@UseGuards(JwtAuthGuard)
 export class BlogController {
   constructor(private readonly blogService: BlogService) {}
 
   @Public()
   @Get()
+  @ApiBearerAuth('api_key')
+  @ApiOperation({
+    summary: 'List published blog posts',
+    description: 'Public. Partners may authenticate with blog:read for metered access later.',
+  })
+  @RequireScopes(ApiScope.BLOG_READ)
   listPublic() {
     return this.blogService.listPublic();
   }
 
   @Public()
   @Get('by-slug/:slug')
+  @ApiBearerAuth('api_key')
+  @RequireScopes(ApiScope.BLOG_READ)
   getBySlug(@Param('slug') slug: string) {
     return this.blogService.getBySlugPublic(slug);
   }

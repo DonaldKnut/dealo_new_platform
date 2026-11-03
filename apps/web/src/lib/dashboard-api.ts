@@ -515,3 +515,36 @@ export function mailAllUsers(payload: Record<string, unknown>) {
     json: payload,
   });
 }
+
+export type ApiKeyRow = {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  environment: 'LIVE' | 'TEST';
+  plan: 'SANDBOX' | 'PARTNER' | 'ENTERPRISE';
+  scopes: string[];
+  rateLimitPerMin: number;
+  isActive: boolean;
+  expiresAt: string | null;
+  lastUsedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreatedApiKey = ApiKeyRow & { apiKey: string };
+
+export function fetchApiKeys() {
+  return apiFetch<ApiKeyRow[]>('/api-keys');
+}
+
+export function createApiKey(payload: Record<string, unknown>) {
+  return apiFetch<CreatedApiKey>('/api-keys', { method: 'POST', json: payload });
+}
+
+export function updateApiKey(id: string, payload: Record<string, unknown>) {
+  return apiFetch<ApiKeyRow>(`/api-keys/${id}`, { method: 'PATCH', json: payload });
+}
+
+export function revokeApiKey(id: string) {
+  return apiFetch<{ id: string; revoked: boolean }>(`/api-keys/${id}`, { method: 'DELETE' });
+}

@@ -36,6 +36,7 @@ export const PermissionCode = {
   NEWSLETTER_MANAGE: 'newsletter.manage',
   SUPPORT_MANAGE: 'support.manage',
   USERS_MAIL: 'users.mail',
+  API_KEYS_MANAGE: 'api_keys.manage',
 } as const;
 
 export type PermissionCode = (typeof PermissionCode)[keyof typeof PermissionCode];
@@ -134,3 +135,31 @@ export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
 
 export const DEFAULT_CURRENCY = 'NGN' as const;
 export const DEFAULT_TIMEZONE = 'Africa/Lagos' as const;
+
+/** Partner API scopes (Bearer API keys). */
+export const ApiScope = {
+  HIRE_INQUIRIES_READ: 'hire-inquiries:read',
+  HIRE_INQUIRIES_WRITE: 'hire-inquiries:write',
+  CANDIDATES_READ: 'candidates:read',
+  BLOG_READ: 'blog:read',
+  HEALTH_READ: 'health:read',
+} as const;
+
+export type ApiScope = (typeof ApiScope)[keyof typeof ApiScope];
+
+export const API_SCOPES = Object.values(ApiScope);
+
+export const ApiKeyEnvironment = {
+  LIVE: 'LIVE',
+  TEST: 'TEST',
+} as const;
+
+export type ApiKeyEnvironment = (typeof ApiKeyEnvironment)[keyof typeof ApiKeyEnvironment];
+
+export const ApiKeyPlan = {
+  SANDBOX: 'SANDBOX',
+  PARTNER: 'PARTNER',
+  ENTERPRISE: 'ENTERPRISE',
+} as const;
+
+export type ApiKeyPlan = (typeof ApiKeyPlan)[keyof typeof ApiKeyPlan];

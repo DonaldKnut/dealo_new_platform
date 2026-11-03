@@ -84,6 +84,7 @@ const ROLE_DEFINITIONS: Array<{
       PermissionCode.NEWSLETTER_MANAGE,
       PermissionCode.SUPPORT_MANAGE,
       PermissionCode.USERS_MAIL,
+      PermissionCode.API_KEYS_MANAGE,
     ],
   },
   {

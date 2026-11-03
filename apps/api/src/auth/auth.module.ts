@@ -4,21 +4,24 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
+import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { CandidatesModule } from '../candidates/candidates.module';
 import type { AppEnv } from '../config/env.validation';
 import { UsersModule } from '../users/users.module';
+import { ApiKeyOrJwtGuard } from './api-key-or-jwt.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { GoogleStrategy } from './google.strategy';
-import { JwtAuthGuard } from './jwt-auth.guard';
 import { JwtStrategy } from './jwt.strategy';
 import { PermissionsGuard } from './permissions.guard';
 import { RolesGuard } from './roles.guard';
+import { ScopesGuard } from './scopes.guard';
 
 @Module({
   imports: [
     UsersModule,
     CandidatesModule,
+    ApiKeysModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -35,7 +38,7 @@ import { RolesGuard } from './roles.guard';
     GoogleStrategy,
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,
+      useClass: ApiKeyOrJwtGuard,
     },
     {
       provide: APP_GUARD,
@@ -44,6 +47,10 @@ import { RolesGuard } from './roles.guard';
     {
       provide: APP_GUARD,
       useClass: PermissionsGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ScopesGuard,
     },
   ],
   exports: [AuthService],

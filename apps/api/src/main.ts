@@ -18,9 +18,10 @@ async function bootstrap(): Promise<void> {
     exclude: [
       { path: '/', method: RequestMethod.GET },
       { path: 'health', method: RequestMethod.GET },
+      { path: 'api/openapi.json', method: RequestMethod.GET },
     ],
   });
-  app.use(helmet());
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cookieParser());
 
   const corsOrigin = config.getOrThrow<string>('CORS_ORIGIN');
@@ -38,19 +39,70 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
+  const apiUrl = config.get<string>('API_URL') ?? 'http://localhost:4000';
+
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Dealo API')
-    .setDescription('Dealo 2.0 recruitment and managed staffing platform API')
-    .setVersion('0.1.0')
+    .setDescription(
+      [
+        'Commercial hiring API for office talent and skilled trades.',
+        '',
+        '## Authentication',
+        '- **Dashboard / staff:** HTTP-only cookie `access_token` (login via `/api/v1/auth/login`).',
+        '- **Partners:** `Authorization: Bearer dk_live_…` or `dk_test_…` API key.',
+        '',
+        '## Scopes (API keys)',
+        '- `hire-inquiries:read` / `hire-inquiries:write`',
+        '- `candidates:read`',
+        '- `blog:read`',
+        '- `health:read`',
+        '',
+        'API keys are issued by Dealo admins. Contact sales for partner or enterprise plans.',
+      ].join('\n'),
+    )
+    .setVersion('1.0.0')
+    .setContact('Dealo API', 'https://dealo.com', 'api@dealo.com')
+    .addServer(apiUrl, 'Current environment')
+    .addServer('http://localhost:4000', 'Local development')
     .addCookieAuth('access_token')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'API Key',
+        description: 'Partner API key (`dk_live_…` or `dk_test_…`)',
+      },
+      'api_key',
+    )
+    .addTag('health', 'Liveness and dependency checks')
+    .addTag('auth', 'User authentication')
+    .addTag('hire-inquiries', 'Hiring intake and pipeline')
+    .addTag('api-keys', 'Partner API key administration')
+    .addTag('blog', 'Public content')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api/docs', app, document, {
+    customSiteTitle: 'Dealo API Docs',
+    swaggerOptions: {
+      persistAuthorization: true,
+      docExpansion: 'list',
+      filter: true,
+      displayRequestDuration: true,
+    },
+  });
+
+  const httpAdapter = app.getHttpAdapter();
+  httpAdapter.get('/api/openapi.json', (_req: unknown, res: { type: (t: string) => void; json: (b: unknown) => void }) => {
+    res.type('application/json');
+    res.json(document);
+  });
 
   const port = config.get<number>('PORT', 4000);
   await app.listen(port);
   logger.log(`API listening on port ${port}`);
+  logger.log(`Swagger UI: ${apiUrl}/api/docs`);
+  logger.log(`OpenAPI JSON: ${apiUrl}/api/openapi.json`);
 }
 
 void bootstrap();

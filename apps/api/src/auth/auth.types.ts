@@ -1,5 +1,7 @@
 import type { UserRole } from '@prisma/client';
 
+export type AuthType = 'jwt' | 'api_key';
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -7,6 +9,12 @@ export interface AuthUser {
   lastName: string;
   roles: UserRole[];
   permissions: string[];
+  authType?: AuthType;
+  /** Present when authenticated via API key */
+  scopes?: string[];
+  apiKeyId?: string;
+  apiKeyPlan?: string;
+  rateLimitPerMin?: number;
 }
 
 export interface JwtPayload {
