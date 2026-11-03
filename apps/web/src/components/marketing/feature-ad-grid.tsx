@@ -30,15 +30,15 @@ export function FeatureAdGrid({
         </div>
       </Reveal>
 
-      <div className="mt-8 grid gap-3 min-[340px]:mt-12 min-[340px]:gap-5 min-[480px]:grid-cols-2 lg:grid-cols-3">
+      <div className="card-grid mt-8 grid gap-3 min-[340px]:mt-12 min-[340px]:gap-5 min-[480px]:grid-cols-2 lg:grid-cols-3">
         {items.map((item, index) => {
           const Icon = item.icon;
           return (
-            <Reveal key={item.title} delay={index * 0.05}>
+            <Reveal key={item.title} delay={index * 0.05} className="h-full">
               <motion.article
                 whileHover={{ y: -4 }}
                 transition={{ duration: 0.25 }}
-                className="group relative overflow-hidden rounded-[1.15rem] border border-border/80 bg-surface-elevated/85 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-brand/50 hover:shadow-xl min-[340px]:rounded-[1.5rem] min-[340px]:p-6"
+                className="ui-card group relative min-h-[11.5rem] overflow-hidden p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-brand/50 hover:shadow-xl min-[340px]:min-h-[13rem] min-[340px]:p-6"
               >
                 {/* Hover shine effect */}
                 <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">

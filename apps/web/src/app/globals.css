@@ -61,6 +61,40 @@
   border-color: var(--border);
 }
 
+/* Interactive affordance across the app */
+button:not(:disabled),
+[type='button']:not(:disabled),
+[type='submit']:not(:disabled),
+[type='reset']:not(:disabled),
+a[href],
+summary,
+label[for],
+select:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+[role='link'],
+[role='menuitem'],
+[role='option'],
+[role='tab'],
+[role='switch'],
+[role='checkbox'],
+[role='radio'],
+[role='combobox'],
+.btn-primary:not(:disabled),
+.btn-secondary:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+[type='button']:disabled,
+[type='submit']:disabled,
+[type='reset']:disabled,
+select:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
 html {
   scroll-behavior: smooth;
   overflow-x: clip;
@@ -90,6 +124,90 @@ body {
   background:
     radial-gradient(ellipse 80% 50% at 50% -10%, var(--hero-glow), transparent 60%),
     var(--background);
+}
+
+.dash-atmosphere {
+  position: relative;
+  isolation: isolate;
+}
+
+.dash-atmosphere::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: -1rem -0.5rem auto;
+  height: 14rem;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 70% 80% at 12% 20%, color-mix(in srgb, var(--brand) 18%, transparent), transparent 55%),
+    radial-gradient(ellipse 55% 70% at 88% 10%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 50%);
+}
+
+.dash-panel {
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, var(--surface-elevated) 92%, var(--brand-soft)),
+      var(--surface-elevated)
+    );
+  border-radius: 1.25rem;
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+
+.dash-kpi {
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  border-radius: 1.15rem;
+  padding: 1rem 1.1rem;
+  min-height: 7.25rem;
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.dash-kpi:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--border));
+}
+
+.info-tooltip-trigger:hover svg,
+.dash-panel a:hover svg,
+.dash-kpi:hover svg {
+  transform: scale(1.12) rotate(-6deg);
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dash-rail {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.dash-rail-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.dash-rail-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.dash-progress {
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.dash-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), var(--accent));
 }
 
 .container-page {
@@ -177,6 +295,7 @@ body {
   border-radius: 999px;
   background: var(--brand);
   color: var(--on-brand, #071f14);
+  cursor: pointer;
   font-weight: 600;
   padding: 0.75rem 1.1rem;
   font-size: 0.92rem;
@@ -218,6 +337,7 @@ body {
   border: 1px solid var(--border);
   background: transparent;
   color: var(--foreground);
+  cursor: pointer;
   font-weight: 600;
   padding: 0.75rem 1.1rem;
   font-size: 0.92rem;
@@ -336,6 +456,46 @@ body {
   box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--brand) 12%, transparent);
 }
 
+/* Equal-size cards across marketing + dashboard grids */
+.ui-card {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  flex-direction: column;
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
+}
+
+@media (min-width: 340px) {
+  .ui-card {
+    border-radius: 1.5rem;
+  }
+}
+
+.card-grid {
+  align-items: stretch;
+}
+
+.card-grid > * {
+  height: 100%;
+  min-width: 0;
+}
+
+@keyframes scope-image-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.scope-image-track {
+  animation: scope-image-slide 36s linear infinite;
+}
+
 .glow-pill {
   position: relative;
   display: inline-flex;
@@ -367,6 +527,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .marquee-track,
+  .scope-image-track,
   .hero-orb,
   .hero-orb-delayed,
   .spotlight-sheen,
@@ -412,5 +573,14 @@ body {
 
 .info-tooltip-panel {
   word-break: break-word;
-  max-width: calc(100vw - 1.5rem);
+  overflow-wrap: anywhere;
+  max-width: min(280px, calc(100vw - 1rem));
+}
+
+@media (max-width: 339px) {
+  .info-tooltip-panel {
+    max-width: calc(100vw - 1rem);
+    font-size: 0.6875rem;
+    line-height: 1.45;
+  }
 }

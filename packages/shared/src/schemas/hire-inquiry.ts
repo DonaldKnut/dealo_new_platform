@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { ServiceType, WorkArrangement } from '../enums';
+import { RoleFamily, ServiceType, WorkArrangement } from '../enums';
 
 export const hireInquirySchema = z
   .object({
@@ -8,8 +8,16 @@ export const hireInquirySchema = z
     contactName: z.string().trim().min(2).max(150),
     email: z.string().email().max(255),
     phone: z.string().trim().min(7).max(30),
+    roleFamily: z.enum([RoleFamily.OFFICE_PROFESSIONAL, RoleFamily.SKILLED_TRADE]),
     serviceType: z.enum([ServiceType.DIRECT_RECRUITMENT, ServiceType.MANAGED_STAFFING]),
-    roleTitle: z.string().trim().min(2).max(200),
+    roleTitle: z
+      .string()
+      .trim()
+      .min(2)
+      .max(200)
+      .refine((value) => !/\d/.test(value), {
+        message: 'Role title should not include numbers',
+      }),
     numberOfProfessionals: z.coerce.number().int().min(1).max(500),
     location: z.string().trim().min(2).max(200),
     workArrangement: z.enum([
@@ -22,7 +30,8 @@ export const hireInquirySchema = z
     compensationMaxMinor: z.coerce.number().int().nonnegative().optional(),
     currency: z.string().length(3).default('NGN'),
     durationNotes: z.string().trim().max(1000).optional(),
-    requirements: z.string().trim().min(20).max(5000),
+    // One short sentence is enough — sales can deepen on the call.
+    requirements: z.string().trim().min(8).max(5000),
     additionalNotes: z.string().trim().max(2000).optional(),
   })
   .superRefine((data, ctx) => {
@@ -38,11 +47,18 @@ export const hireInquirySchema = z
       });
     }
 
-    if (data.serviceType === ServiceType.MANAGED_STAFFING && !data.durationNotes?.trim()) {
+    const needsDuration =
+      data.serviceType === ServiceType.MANAGED_STAFFING ||
+      data.roleFamily === RoleFamily.SKILLED_TRADE;
+
+    if (needsDuration && !data.durationNotes?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['durationNotes'],
-        message: 'Expected duration or engagement notes are required for managed staffing',
+        message:
+          data.roleFamily === RoleFamily.SKILLED_TRADE
+            ? 'Contract length or site duration is required for skilled trades'
+            : 'Expected duration or engagement notes are required for managed staffing',
       });
     }
   });

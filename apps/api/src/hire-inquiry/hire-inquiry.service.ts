@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import type { HireInquiryInput } from '@dealo/shared';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import type { HireInquiryInput, HireInquiryStatusUpdate } from '@dealo/shared';
 import { PermissionCode } from '@dealo/shared';
+import type { HireInquiryStatus } from '@prisma/client';
 
 import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
@@ -25,6 +26,7 @@ export class HireInquiryService {
         contactName: input.contactName,
         email,
         phone: input.phone,
+        roleFamily: input.roleFamily,
         serviceType: input.serviceType,
         roleTitle: input.roleTitle,
         numberOfProfessionals: input.numberOfProfessionals,
@@ -46,6 +48,7 @@ export class HireInquiryService {
       entityId: inquiry.id,
       metadata: {
         companyName: inquiry.companyName,
+        roleFamily: inquiry.roleFamily,
         serviceType: inquiry.serviceType,
         roleTitle: inquiry.roleTitle,
       },
@@ -71,6 +74,26 @@ export class HireInquiryService {
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
+  }
+
+  async updateStatus(id: string, input: HireInquiryStatusUpdate, actorId?: string) {
+    const existing = await this.prisma.hireInquiry.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Hire inquiry not found');
+
+    const inquiry = await this.prisma.hireInquiry.update({
+      where: { id },
+      data: { status: input.status as HireInquiryStatus },
+    });
+
+    await this.auditLog.record({
+      action: 'HIRE_INQUIRY_STATUS_UPDATED',
+      entityType: 'HireInquiry',
+      entityId: inquiry.id,
+      actorId,
+      metadata: { from: existing.status, to: inquiry.status },
+    });
+
+    return inquiry;
   }
 
   static readonly managePermission = PermissionCode.HIRE_INQUIRY_MANAGE;

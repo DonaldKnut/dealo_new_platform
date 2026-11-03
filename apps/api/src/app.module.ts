@@ -4,7 +4,10 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
+import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { BlogModule } from './blog/blog.module';
+import { CandidatesModule } from './candidates/candidates.module';
 import { CommonModule } from './common/common.module';
 import { validateEnv } from './config/env.validation';
 import { ContactModule } from './contact/contact.module';
@@ -12,13 +15,18 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { EmailModule } from './email/email.module';
 import { HealthModule } from './health/health.module';
 import { HireInquiryModule } from './hire-inquiry/hire-inquiry.module';
+import { MailModule } from './mail/mail.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SupportModule } from './support/support.module';
+import { TalentModule } from './talent/talent.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env', '.env.local', '.env.txt'],
       validate: validateEnv,
     }),
     LoggerModule.forRoot({
@@ -45,6 +53,13 @@ import { UsersModule } from './users/users.module';
     HireInquiryModule,
     DashboardModule,
     ContactModule,
+    BlogModule,
+    CandidatesModule,
+    NewsletterModule,
+    TalentModule,
+    AuditModule,
+    SupportModule,
+    MailModule,
   ],
   providers: [
     {

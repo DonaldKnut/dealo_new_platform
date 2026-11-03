@@ -2,25 +2,23 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { UserRole, registerSchema, type RegisterInput } from '@dealo/shared';
-import { BriefcaseBusiness, LockKeyhole, Mail, User } from 'lucide-react';
+import { LockKeyhole, Mail, User } from 'lucide-react';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
-import { AuthField, AuthSelectField } from '@/components/auth/auth-field';
+import { AuthField } from '@/components/auth/auth-field';
+import { AuthRoleDropdown } from '@/components/auth/auth-role-dropdown';
 import { AuthNavLink } from '@/components/forms/auth-nav-link';
 import { AuthDivider, OAuthGoogleButton } from '@/components/forms/oauth-google-button';
 import { FormStatus } from '@/components/forms/form-status';
-import { PrivacyConsent } from '@/components/forms/privacy-consent';
+import { useToast } from '@/components/ui/toast';
 import { useServerFormStatus } from '@/hooks/use-server-form-status';
 import { ApiError, apiFetch } from '@/lib/api';
 
-const registerFormSchema = registerSchema.extend({
-  acceptPrivacy: z.boolean().refine((value) => value === true, {
-    message: 'Accept the privacy policy to create an account',
-  }),
-});
+type RegisterFormValues = RegisterInput;
 
-type RegisterFormValues = z.infer<typeof registerFormSchema>;
+const ROLE_HELP =
+  'Choose Employer if you’re hiring for a company. Choose Professional if you want job matches.';
 
 export function RegisterForm({
   onSuccess,
@@ -29,22 +27,24 @@ export function RegisterForm({
   onSuccess?: () => void;
   variant?: 'modal' | 'page';
 }) {
+  const toast = useToast();
   const { serverError, serverMessage, setServerError, setServerMessage, clear } =
     useServerFormStatus();
 
   const {
     register,
+    control,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerFormSchema),
+    resolver: zodResolver(registerSchema),
     mode: 'onChange',
-    defaultValues: { role: UserRole.EMPLOYER, acceptPrivacy: false },
+    defaultValues: { role: UserRole.EMPLOYER },
   });
 
   const role = watch('role');
-  const canSubmit = registerFormSchema.safeParse(watch()).success;
+  const canSubmit = registerSchema.safeParse(watch()).success;
 
   const onSubmit = handleSubmit(async (values) => {
     clear();
@@ -61,9 +61,12 @@ export function RegisterForm({
         json: payload,
       });
       setServerMessage(result.message);
+      toast.success('Account created', result.message);
       onSuccess?.();
     } catch (error) {
-      setServerError(error instanceof ApiError ? error.message : 'Unable to create account.');
+      const message = error instanceof ApiError ? error.message : 'Unable to create account.';
+      setServerError(message);
+      toast.error('Registration failed', message);
     }
   });
 
@@ -106,26 +109,31 @@ export function RegisterForm({
         label="Password"
         icon={LockKeyhole}
         type="password"
+        revealable
         autoComplete="new-password"
         placeholder="Min. 8 chars, letter + number"
         error={errors.password?.message}
         {...register('password')}
       />
-      <AuthSelectField
+      <AuthRoleDropdown
+        control={control}
+        name="role"
         label="I am joining as"
-        icon={BriefcaseBusiness}
+        help={ROLE_HELP}
         error={errors.role?.message}
-        {...register('role')}
-      >
-        <option value={UserRole.EMPLOYER}>Employer</option>
-        <option value={UserRole.TALENT}>Professional / Talent</option>
-      </AuthSelectField>
-
-      <PrivacyConsent
-        registration={register('acceptPrivacy')}
-        error={errors.acceptPrivacy?.message}
-        termsLabel="Terms of Service"
       />
+
+      <p className="text-xs leading-relaxed text-muted">
+        By creating an account, you agree to Dealo&apos;s{' '}
+        <Link href="/privacy" className="font-semibold text-brand underline-offset-2 hover:underline">
+          Privacy Policy
+        </Link>{' '}
+        and{' '}
+        <Link href="/terms" className="font-semibold text-brand underline-offset-2 hover:underline">
+          Terms of Service
+        </Link>
+        .
+      </p>
 
       <FormStatus error={serverError} message={serverMessage} />
 

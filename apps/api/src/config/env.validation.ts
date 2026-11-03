@@ -44,6 +44,18 @@ const envSchema = z.object({
     .optional()
     .transform((value) => (value && value.trim().length > 0 ? value : undefined))
     .pipe(z.string().url().optional()),
+  CLOUDINARY_CLOUD_NAME: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
+  CLOUDINARY_API_KEY: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
+  CLOUDINARY_API_SECRET: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

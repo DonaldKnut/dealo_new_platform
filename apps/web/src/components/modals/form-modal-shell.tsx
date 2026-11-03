@@ -4,6 +4,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 
+import { BrandLogo } from '@/components/brand-logo';
+import { cn } from '@/lib/utils';
+
 interface FormModalShellProps {
   open: boolean;
   onClose: () => void;
@@ -11,6 +14,8 @@ interface FormModalShellProps {
   subtitle: string;
   illustration: ReactNode;
   children: ReactNode;
+  /** Full-bleed promo panel (photo carousel). Default keeps classic padded art. */
+  promoFill?: boolean;
 }
 
 export function FormModalShell({
@@ -20,6 +25,7 @@ export function FormModalShell({
   subtitle,
   illustration,
   children,
+  promoFill = false,
 }: FormModalShellProps) {
   useEffect(() => {
     if (!open) {
@@ -68,23 +74,43 @@ export function FormModalShell({
             exit={{ y: 28, opacity: 0, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 280, damping: 28 }}
           >
-            <div className="relative hidden overflow-hidden border-r border-border bg-surface p-8 lg:block">
-              <p className="font-display text-3xl text-foreground">Dealo</p>
-              <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">{subtitle}</p>
-              <div className="absolute inset-x-6 bottom-6 top-32">{illustration}</div>
+            <div
+              className={cn(
+                'relative hidden overflow-hidden border-r border-border lg:block',
+                promoFill ? 'bg-[#071f14]' : 'bg-surface p-8',
+              )}
+            >
+              {promoFill ? (
+                <>
+                  <div className="absolute inset-0">{illustration}</div>
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#071f14]/78 via-[#071f14]/28 to-transparent" />
+                  <div className="relative z-10 flex flex-col gap-4 p-8">
+                    <BrandLogo force="dark" href="/" className="pointer-events-auto" />
+                    <p className="max-w-xs text-sm leading-relaxed text-white/85">{subtitle}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <BrandLogo href="/" />
+                  <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">{subtitle}</p>
+                  <div className="absolute inset-x-6 bottom-6 top-32">{illustration}</div>
+                </>
+              )}
             </div>
 
             <div className="flex max-h-[96vh] flex-col sm:max-h-[94vh]">
-              <div className="flex items-start justify-between gap-3 border-b border-border px-3.5 py-3.5 min-[340px]:px-4 min-[340px]:py-4 sm:gap-4 sm:px-7">
-                <div className="min-w-0 pr-2">
+              <div className="flex items-start justify-between gap-2 border-b border-border px-3 py-3 min-[340px]:gap-3 min-[340px]:px-4 min-[340px]:py-4 sm:gap-4 sm:px-7">
+                <div className="min-w-0 pr-1 min-[340px]:pr-2">
                   <p className="eyebrow">Dealo</p>
                   <h2
                     id="dealo-modal-title"
-                    className="mt-1 font-display text-[1.35rem] leading-tight text-foreground min-[340px]:text-2xl sm:text-3xl"
+                    className="mt-1 font-display text-[1.2rem] leading-tight text-foreground min-[340px]:text-2xl sm:text-3xl"
                   >
                     {title}
                   </h2>
-                  <p className="mt-2 text-xs leading-relaxed text-muted lg:hidden">{subtitle}</p>
+                  <p className="mt-1.5 text-[11px] leading-relaxed text-muted min-[340px]:mt-2 min-[340px]:text-xs lg:hidden">
+                    {subtitle}
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -95,7 +121,7 @@ export function FormModalShell({
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="overflow-y-auto px-3.5 py-4 min-[340px]:px-4 min-[340px]:py-5 sm:px-7 sm:py-6">
+              <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-3.5 min-[340px]:px-4 min-[340px]:py-5 sm:px-7 sm:py-6">
                 {children}
               </div>
             </div>

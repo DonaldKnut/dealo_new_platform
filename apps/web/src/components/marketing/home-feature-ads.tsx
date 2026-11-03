@@ -10,43 +10,46 @@ import {
 } from 'lucide-react';
 
 import { FeatureAdGrid } from '@/components/marketing/feature-ad-grid';
+import { useLocale } from '@/components/i18n/locale-context';
 
 export function HomeFeatureAds() {
+  const { t } = useLocale();
+
   return (
     <FeatureAdGrid
-      eyebrow="Why Dealo"
-      title="Recruitment that behaves like an operating system"
-      description="Built for companies and organizations that plan to hire staff into their administrative structure — or want Dealo to run staffing for them."
+      eyebrow={t('home.why.eyebrow')}
+      title={t('home.why.title')}
+      description={t('home.why.body')}
       items={[
         {
           icon: Building2,
-          title: 'Direct recruitment',
-          body: 'Role brief → sourcing → screening → shortlist → interviews → placement.',
+          title: t('home.why.1.title'),
+          body: t('home.why.1.body'),
         },
         {
           icon: Handshake,
-          title: 'Managed staffing',
-          body: 'Agreed commercial terms with Dealo carrying the hiring operations.',
+          title: t('home.why.2.title'),
+          body: t('home.why.2.body'),
         },
         {
           icon: Workflow,
-          title: 'Clear stages',
-          body: 'Everyone knows where a role sits — from intake to placement.',
+          title: t('home.why.3.title'),
+          body: t('home.why.3.body'),
         },
         {
           icon: ShieldCheck,
-          title: 'Trusted network',
-          body: 'Verification-minded onboarding for professionals and employers.',
+          title: t('home.why.4.title'),
+          body: t('home.why.4.body'),
         },
         {
           icon: TimerReset,
-          title: 'Faster decisions',
-          body: 'Shortlists arrive screened against your brief, not open-ended noise.',
+          title: t('home.why.5.title'),
+          body: t('home.why.5.body'),
         },
         {
           icon: BadgeCheck,
-          title: 'Workspace ready',
-          body: 'Dashboard foundations for requests, pipeline, and team collaboration.',
+          title: t('home.why.6.title'),
+          body: t('home.why.6.body'),
         },
       ]}
     />

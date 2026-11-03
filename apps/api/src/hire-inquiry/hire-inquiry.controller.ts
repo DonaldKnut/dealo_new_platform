@@ -1,9 +1,17 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { hireInquirySchema, type HireInquiryInput, PermissionCode } from '@dealo/shared';
+import {
+  hireInquirySchema,
+  hireInquiryStatusUpdateSchema,
+  type HireInquiryInput,
+  type HireInquiryStatusUpdate,
+  PermissionCode,
+} from '@dealo/shared';
 import { Throttle } from '@nestjs/throttler';
 
+import type { AuthUser } from '../auth/auth.types';
+import { CurrentUser } from '../common/current-user.decorator';
 import { Permissions } from '../common/permissions.decorator';
 import { Public } from '../common/public.decorator';
 import { Roles } from '../common/roles.decorator';
@@ -30,5 +38,17 @@ export class HireInquiryController {
   @Permissions(PermissionCode.HIRE_INQUIRY_MANAGE)
   list() {
     return this.hireInquiryService.list();
+  }
+
+  @Patch(':id/status')
+  @ApiCookieAuth()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.RECRUITER, UserRole.OPERATIONS)
+  @Permissions(PermissionCode.HIRE_INQUIRY_MANAGE)
+  updateStatus(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(hireInquiryStatusUpdateSchema)) body: HireInquiryStatusUpdate,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.hireInquiryService.updateStatus(id, body, user.id);
   }
 }

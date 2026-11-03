@@ -6,10 +6,12 @@ import { useForm } from 'react-hook-form';
 
 import { FormField } from '@/components/forms/form-field';
 import { FormStatus } from '@/components/forms/form-status';
+import { useToast } from '@/components/ui/toast';
 import { useServerFormStatus } from '@/hooks/use-server-form-status';
 import { ApiError, apiFetch } from '@/lib/api';
 
 export function ContactForm({ onSuccess }: { onSuccess?: () => void }) {
+  const toast = useToast();
   const { serverError, serverMessage, setServerError, setServerMessage, clear } =
     useServerFormStatus();
 
@@ -34,10 +36,13 @@ export function ContactForm({ onSuccess }: { onSuccess?: () => void }) {
         json: values,
       });
       setServerMessage(result.message);
+      toast.success('Message sent', result.message);
       reset();
       onSuccess?.();
     } catch (error) {
-      setServerError(error instanceof ApiError ? error.message : 'Unable to send message.');
+      const message = error instanceof ApiError ? error.message : 'Unable to send message.';
+      setServerError(message);
+      toast.error('Message failed', message);
     }
   });
 

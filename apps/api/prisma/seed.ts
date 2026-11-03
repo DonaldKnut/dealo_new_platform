@@ -5,29 +5,34 @@ import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
 function loadEnvFile(): void {
-  const envPath = resolve(__dirname, '../.env');
-  if (!existsSync(envPath)) {
-    return;
-  }
+  const candidates = [
+    resolve(__dirname, '../.env'),
+    resolve(__dirname, '../.env.txt'),
+  ];
 
-  for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) {
+  for (const envPath of candidates) {
+    if (!existsSync(envPath)) {
       continue;
     }
-    const separator = trimmed.indexOf('=');
-    if (separator === -1) {
-      continue;
-    }
-    const key = trimmed.slice(0, separator).trim();
-    let value = trimmed.slice(separator + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    if (!(key in process.env)) {
+
+    for (const line of readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) {
+        continue;
+      }
+      const separator = trimmed.indexOf('=');
+      if (separator === -1) {
+        continue;
+      }
+      const key = trimmed.slice(0, separator).trim();
+      let value = trimmed.slice(separator + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      // Later files (e.g. .env.txt) may refresh local secrets intentionally.
       process.env[key] = value;
     }
   }
@@ -75,6 +80,10 @@ const ROLE_DEFINITIONS: Array<{
       PermissionCode.FINANCE_REPORT_VIEW,
       PermissionCode.AUDIT_VIEW,
       PermissionCode.HIRE_INQUIRY_MANAGE,
+      PermissionCode.BLOG_MANAGE,
+      PermissionCode.NEWSLETTER_MANAGE,
+      PermissionCode.SUPPORT_MANAGE,
+      PermissionCode.USERS_MAIL,
     ],
   },
   {
@@ -187,26 +196,81 @@ async function main(): Promise<void> {
       where: { code: UserRole.SUPER_ADMIN },
     });
 
-    const existing = await prisma.user.findUnique({
-      where: { email: adminEmail.toLowerCase() },
+    const email = adminEmail.toLowerCase();
+    const passwordHash = await argon2.hash(adminPassword);
+
+    const existingByEmail = await prisma.user.findUnique({
+      where: { email },
+      include: { roles: true },
     });
 
-    if (!existing) {
-      const passwordHash = await argon2.hash(adminPassword);
+    const existingSuperAdminAssignment = await prisma.userRoleAssignment.findFirst({
+      where: { roleId: superAdminRole.id },
+      include: { user: true },
+    });
+
+    if (existingByEmail) {
+      await prisma.user.update({
+        where: { email },
+        data: {
+          passwordHash,
+          firstName: existingByEmail.firstName || 'Ibrahim',
+          lastName: existingByEmail.lastName || 'Openiyi',
+          isEmailVerified: true,
+          isActive: true,
+          authProvider: 'local',
+        },
+      });
+
+      const hasSuperAdmin = existingByEmail.roles.some(
+        (assignment) => assignment.roleId === superAdminRole.id,
+      );
+      if (!hasSuperAdmin) {
+        await prisma.userRoleAssignment.create({
+          data: {
+            userId: existingByEmail.id,
+            roleId: superAdminRole.id,
+          },
+        });
+      }
+
+      console.log(`Updated SUPER_ADMIN user: ${email}`);
+    } else if (existingSuperAdminAssignment) {
+      // Mongo unique on optional googleId can block a second null googleId user,
+      // so migrate the existing SUPER_ADMIN identity to the configured email.
+      await prisma.user.update({
+        where: { id: existingSuperAdminAssignment.userId },
+        data: {
+          email,
+          passwordHash,
+          firstName: 'Ibrahim',
+          lastName: 'Openiyi',
+          isEmailVerified: true,
+          isActive: true,
+          authProvider: 'local',
+        },
+      });
+      console.log(
+        `Migrated SUPER_ADMIN ${existingSuperAdminAssignment.user.email} → ${email}`,
+      );
+    } else {
       await prisma.user.create({
         data: {
-          email: adminEmail.toLowerCase(),
+          email,
           passwordHash,
-          firstName: 'Super',
-          lastName: 'Admin',
+          firstName: 'Ibrahim',
+          lastName: 'Openiyi',
           isEmailVerified: true,
+          authProvider: 'local',
           roles: {
             create: [{ roleId: superAdminRole.id }],
           },
         },
       });
-      console.log(`Seeded SUPER_ADMIN user: ${adminEmail}`);
+      console.log(`Seeded SUPER_ADMIN user: ${email}`);
     }
+  } else {
+    console.warn('SUPER_ADMIN_EMAIL / SUPER_ADMIN_PASSWORD not set — skipped admin seed');
   }
 
   console.log('Seed completed');

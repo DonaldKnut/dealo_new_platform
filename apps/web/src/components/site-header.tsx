@@ -2,42 +2,48 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Building2,
   ChevronDown,
-  Handshake,
-  Route,
+  LayoutDashboard,
+  LogOut,
+  Settings,
   UserRound,
-  Users,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 import { AnimatedHamburger } from '@/components/animated-hamburger';
 import { BrandLogo } from '@/components/brand-logo';
-import { HeaderMegaMenu } from '@/components/header-mega-menu';
+import {
+  HeaderMegaMenu,
+  ResourcesMegaMenu,
+  useOfferItems,
+  useResourceItems,
+} from '@/components/header-mega-menu';
+import { LanguageSwitcher } from '@/components/i18n/language-switcher';
+import { useLocale } from '@/components/i18n/locale-context';
 import { useModal } from '@/components/modals/modal-context';
+import {
+  getPrimaryCta,
+  useAuthSession,
+} from '@/hooks/use-auth-session';
+import { apiFetch } from '@/lib/api';
 
 import { ThemeToggle } from './theme-toggle';
 
-const links = [
-  { href: '/how-it-works', label: 'How it works' },
-  { href: '/for-employers', label: 'For employers' },
-  { href: '/for-professionals', label: 'For professionals' },
-];
-
-const mobileSolutions = [
-  { href: '/services/direct-recruitment', label: 'Direct recruitment', icon: Building2 },
-  { href: '/services/managed-staffing', label: 'Managed staffing', icon: Handshake },
-  { href: '/services', label: 'All services', icon: Route },
-  { href: '/for-employers', label: 'For employers', icon: Users },
-  { href: '/for-professionals', label: 'For professionals', icon: UserRound },
-];
-
 export function SiteHeader() {
   const { open } = useModal();
+  const router = useRouter();
+  const { t } = useLocale();
+  const offerItems = useOfferItems();
+  const resourceItems = useResourceItems();
+  const { user, loading, refresh } = useAuthSession();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [solutionsOpen, setSolutionsOpen] = useState(false);
+  const [offerOpen, setOfferOpen] = useState(false);
+  const [resourcesOpen, setResourcesOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 18);
@@ -54,8 +60,38 @@ export function SiteHeader() {
   }, [mobileOpen]);
 
   useEffect(() => {
-    if (!mobileOpen) setSolutionsOpen(false);
+    if (!mobileOpen) {
+      setOfferOpen(false);
+      setResourcesOpen(false);
+    }
   }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!accountRef.current?.contains(event.target as Node)) setAccountOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [accountOpen]);
+
+  const cta = user ? getPrimaryCta(user.roles) : null;
+  const displayName = user
+    ? `${user.firstName} ${user.lastName}`.trim() || user.email
+    : '';
+
+  const logout = async () => {
+    try {
+      await apiFetch('/auth/logout', { method: 'POST' });
+    } catch {
+      // continue
+    }
+    setAccountOpen(false);
+    setMobileOpen(false);
+    await refresh();
+    router.push('/');
+    router.refresh();
+  };
 
   return (
     <header
@@ -71,34 +107,102 @@ export function SiteHeader() {
       }
     >
       <div className="container-page flex h-14 items-center justify-between gap-1.5 min-[230px]:gap-2 min-[340px]:h-[4.25rem] min-[340px]:gap-3 sm:h-20 sm:gap-4">
-        <div className="min-w-0 max-w-[46%] min-[280px]:max-w-[52%] min-[340px]:max-w-none">
-          <BrandLogo priority />
+        <div className="flex min-w-0 flex-1 items-center gap-4 min-[340px]:gap-5 xl:gap-8">
+          <div className="min-w-0 max-w-[46%] min-[280px]:max-w-[52%] min-[340px]:max-w-none">
+            <BrandLogo priority />
+          </div>
+
+          <nav className="hidden items-center gap-4 text-sm text-muted xl:gap-6 lg:flex">
+            <HeaderMegaMenu label={t('nav.offer')} />
+            <ResourcesMegaMenu label={t('nav.resources')} />
+            <Link href="/contact" className="whitespace-nowrap transition hover:text-foreground">
+              {t('nav.contact')}
+            </Link>
+          </nav>
         </div>
 
-        <nav className="hidden items-center gap-7 text-sm text-muted lg:flex">
-          <HeaderMegaMenu />
-          {links.map((link) => (
-            <Link key={link.href} href={link.href} className="transition hover:text-foreground">
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
         <div className="flex shrink-0 items-center gap-1 min-[230px]:gap-1.5 min-[340px]:gap-2 sm:gap-3">
+          <LanguageSwitcher className="hidden sm:inline-flex" />
           <ThemeToggle />
-          <Link
-            href="/auth/login"
-            className="hidden text-sm font-medium text-muted transition hover:text-foreground sm:inline"
-          >
-            Sign in
-          </Link>
-          <button
-            type="button"
-            onClick={() => open('hire')}
-            className="btn-primary hidden px-4 py-2 text-sm sm:inline-flex"
-          >
-            Hire talent
-          </button>
+
+          {!loading && user ? (
+            <>
+              <div ref={accountRef} className="relative hidden sm:block">
+                <button
+                  type="button"
+                  className="inline-flex max-w-[10rem] items-center gap-2 rounded-full border border-border bg-surface-elevated px-3 py-1.5 text-sm font-medium text-foreground transition hover:border-brand/40"
+                  onClick={() => setAccountOpen((value) => !value)}
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand">
+                    {(user.firstName?.[0] || user.email[0] || 'D').toUpperCase()}
+                  </span>
+                  <span className="truncate">{user.firstName || 'Account'}</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted" />
+                </button>
+                <AnimatePresence>
+                  {accountOpen ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 4 }}
+                      className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-surface-elevated p-1.5 shadow-xl"
+                    >
+                      <p className="truncate px-3 py-2 text-xs text-muted">{displayName}</p>
+                      <Link
+                        href={cta?.href ?? '/dashboard'}
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-surface"
+                        onClick={() => setAccountOpen(false)}
+                      >
+                        <LayoutDashboard className="h-4 w-4 text-brand" />
+                        {t('nav.dashboard')}
+                      </Link>
+                      <Link
+                        href="/dashboard/settings"
+                        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-surface"
+                        onClick={() => setAccountOpen(false)}
+                      >
+                        <Settings className="h-4 w-4 text-brand" />
+                        {t('nav.settings')}
+                      </Link>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-surface"
+                        onClick={() => void logout()}
+                      >
+                        <LogOut className="h-4 w-4 text-brand" />
+                        {t('nav.signOut')}
+                      </button>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </div>
+              {cta ? (
+                <Link
+                  href={cta.href}
+                  className="btn-primary hidden px-4 py-2 text-sm sm:inline-flex"
+                >
+                  {cta.label}
+                </Link>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <Link
+                href="/auth/login"
+                className="hidden text-sm font-medium text-muted transition hover:text-foreground sm:inline"
+              >
+                {t('nav.signIn')}
+              </Link>
+              <button
+                type="button"
+                onClick={() => open('hire')}
+                className="btn-primary hidden px-4 py-2 text-sm sm:inline-flex"
+              >
+                {t('nav.hireTalent')}
+              </button>
+            </>
+          )}
+
           <AnimatedHamburger open={mobileOpen} onToggle={() => setMobileOpen((value) => !value)} />
         </div>
       </div>
@@ -114,88 +218,141 @@ export function SiteHeader() {
             className="overflow-hidden border-t border-border bg-surface-elevated/95 backdrop-blur-md lg:hidden"
           >
             <div className="flex max-h-[calc(100svh-3.5rem)] flex-col gap-1 overflow-y-auto px-3 py-3 min-[340px]:px-4 min-[340px]:py-4">
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-left text-sm font-medium text-foreground min-[340px]:px-3 min-[340px]:py-3"
-                aria-expanded={solutionsOpen}
-                onClick={() => setSolutionsOpen((value) => !value)}
+              <div className="mb-1 px-1">
+                <LanguageSwitcher />
+              </div>
+              <MobileSection
+                label={t('nav.offer')}
+                open={offerOpen}
+                onToggle={() => setOfferOpen((value) => !value)}
+                items={offerItems}
+                onNavigate={() => setMobileOpen(false)}
+              />
+              <MobileSection
+                label={t('nav.resources')}
+                open={resourcesOpen}
+                onToggle={() => setResourcesOpen((value) => !value)}
+                items={resourceItems}
+                onNavigate={() => setMobileOpen(false)}
+              />
+              <Link
+                href="/contact"
+                className="rounded-xl px-2.5 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface min-[340px]:px-3 min-[340px]:py-3"
+                onClick={() => setMobileOpen(false)}
               >
-                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand min-[340px]:text-[11px]">
-                  Solutions
-                </span>
-                <ChevronDown
-                  className={`h-4 w-4 text-muted transition-transform ${
-                    solutionsOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-
-              <AnimatePresence initial={false}>
-                {solutionsOpen ? (
-                  <motion.div
-                    key="solutions-children"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                    className="overflow-hidden"
-                  >
-                    <div className="space-y-1 pb-2">
-                      {mobileSolutions.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <Link
-                            key={item.href + item.label}
-                            href={item.href}
-                            className="flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-sm text-muted transition hover:bg-surface hover:text-foreground min-[340px]:gap-3 min-[340px]:px-3 min-[340px]:py-3"
-                            onClick={() => setMobileOpen(false)}
-                          >
-                            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand">
-                              <Icon className="h-4 w-4" />
-                            </span>
-                            <span className="min-w-0 break-words">{item.label}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
+                {t('nav.contact')}
+              </Link>
 
               <div className="my-2 h-px bg-border" />
-              {links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="block rounded-xl px-2.5 py-2.5 text-sm text-muted transition hover:bg-surface hover:text-foreground min-[340px]:px-3 min-[340px]:py-3"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <div className="mt-2 grid gap-2">
-                <Link
-                  href="/auth/login"
-                  className="btn-secondary"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Sign in
-                </Link>
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => {
-                    setMobileOpen(false);
-                    open('hire');
-                  }}
-                >
-                  Hire talent
-                </button>
-              </div>
+
+              {user ? (
+                <div className="mt-2 grid gap-2">
+                  <p className="px-2 text-xs text-muted">{displayName}</p>
+                  <Link
+                    href={cta?.href ?? '/dashboard'}
+                    className="btn-primary"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {cta?.label ?? t('nav.dashboard')}
+                  </Link>
+                  <Link
+                    href="/dashboard/settings"
+                    className="btn-secondary"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {t('nav.settings')}
+                  </Link>
+                  <button type="button" className="btn-secondary" onClick={() => void logout()}>
+                    {t('nav.signOut')}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-2 grid gap-2">
+                  <Link
+                    href="/auth/login"
+                    className="btn-secondary"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {t('nav.signIn')}
+                  </Link>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      open('hire');
+                    }}
+                  >
+                    {t('nav.hireTalent')}
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         ) : null}
       </AnimatePresence>
     </header>
+  );
+}
+
+function MobileSection({
+  label,
+  open,
+  onToggle,
+  items,
+  onNavigate,
+}: {
+  label: string;
+  open: boolean;
+  onToggle: () => void;
+  items: Array<{ href: string; title: string; icon: typeof UserRound }>;
+  onNavigate: () => void;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        className="flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-left text-sm font-medium text-foreground min-[340px]:px-3 min-[340px]:py-3"
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand min-[340px]:text-[11px]">
+          {label}
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 text-muted transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-1 pb-2">
+              {items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href + item.title}
+                    href={item.href}
+                    className="flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-sm text-muted transition hover:bg-surface hover:text-foreground min-[340px]:gap-3 min-[340px]:px-3 min-[340px]:py-3"
+                    onClick={onNavigate}
+                  >
+                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 break-words">{item.title}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </>
   );
 }

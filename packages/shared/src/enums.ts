@@ -32,6 +32,10 @@ export const PermissionCode = {
   FINANCE_REPORT_VIEW: 'finance.report.view',
   AUDIT_VIEW: 'audit.view',
   HIRE_INQUIRY_MANAGE: 'hire_inquiry.manage',
+  BLOG_MANAGE: 'blog.manage',
+  NEWSLETTER_MANAGE: 'newsletter.manage',
+  SUPPORT_MANAGE: 'support.manage',
+  USERS_MAIL: 'users.mail',
 } as const;
 
 export type PermissionCode = (typeof PermissionCode)[keyof typeof PermissionCode];
@@ -42,6 +46,14 @@ export const ServiceType = {
 } as const;
 
 export type ServiceType = (typeof ServiceType)[keyof typeof ServiceType];
+
+/** Focused hiring families Dealo supports (not domestic staff or drivers). */
+export const RoleFamily = {
+  OFFICE_PROFESSIONAL: 'OFFICE_PROFESSIONAL',
+  SKILLED_TRADE: 'SKILLED_TRADE',
+} as const;
+
+export type RoleFamily = (typeof RoleFamily)[keyof typeof RoleFamily];
 
 export const WorkArrangement = {
   ONSITE: 'ONSITE',

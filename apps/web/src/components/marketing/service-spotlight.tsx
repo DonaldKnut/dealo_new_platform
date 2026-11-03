@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import {
   ArrowUpRight,
   Briefcase,
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { useLocale } from '@/components/i18n/locale-context';
 import { useModal } from '@/components/modals/modal-context';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 
@@ -21,14 +21,16 @@ import { CtaRow } from './cta-row';
 import { MarketingPill } from './marketing-pill';
 import { Reveal } from './reveal';
 
-const DIRECT_RECRUITMENT_HELP =
-  'Process: Role brief → sourcing → screening → shortlist → interviews → placement. Ideal for companies and organizations that intend to hire staff directly into their administrative payroll structure.';
-
-const MANAGED_STAFFING_HELP =
-  'Agreed staffing arrangements with clear commercial terms and operational follow-through. Dealo manages the talent operations, contracts, and payroll so you stay focused on execution.';
-
 export function ServiceSpotlight() {
   const { open } = useModal();
+  const { t } = useLocale();
+
+  const directSteps = [
+    { step: '01', title: t('home.services.direct.s1'), desc: t('home.services.direct.s1d') },
+    { step: '02', title: t('home.services.direct.s2'), desc: t('home.services.direct.s2d') },
+    { step: '03', title: t('home.services.direct.s3'), desc: t('home.services.direct.s3d') },
+    { step: '04', title: t('home.services.direct.s4'), desc: t('home.services.direct.s4d') },
+  ];
 
   return (
     <section className="relative overflow-hidden border-t border-border/80 py-12 min-[340px]:py-16 sm:py-24 lg:py-28">
@@ -36,16 +38,16 @@ export function ServiceSpotlight() {
 
       <div className="container-page grid items-center gap-8 min-[340px]:gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
         <Reveal>
-          <MarketingPill icon={Sparkles}>Core Solutions</MarketingPill>
+          <MarketingPill icon={Sparkles}>{t('home.services.pill')}</MarketingPill>
 
           <h2 className="display-title mt-3 text-[1.55rem] leading-tight text-foreground min-[230px]:text-[1.75rem] min-[340px]:mt-4 min-[340px]:text-3xl sm:text-4xl lg:text-5xl">
-            Outcomes for employers. <span className="text-gradient-brand">Opportunity</span> for
-            professionals.
+            {t('home.services.titleBefore')}{' '}
+            <span className="text-gradient-brand">{t('home.services.titleAccent')}</span>{' '}
+            {t('home.services.titleAfter')}
           </h2>
 
           <p className="mt-4 max-w-lg text-sm leading-relaxed text-muted min-[340px]:mt-5 min-[340px]:text-base sm:text-lg">
-            Dealo delivers recruitment and managed staffing results through a structured, transparent
-            digital operating system — where quality is verified before you ever see a resume.
+            {t('home.services.body')}
           </p>
 
           <CtaRow>
@@ -54,17 +56,17 @@ export function ServiceSpotlight() {
               className="btn-primary shadow-md transition-all hover:shadow-brand/20"
               onClick={() => open('hire')}
             >
-              Start a hiring request
+              {t('home.services.cta')}
             </button>
             <Link href="/services" className="btn-secondary">
-              Compare all services
+              {t('home.services.link')}
             </Link>
           </CtaRow>
         </Reveal>
 
-        <div className="space-y-4 min-[340px]:space-y-6">
-          <Reveal delay={0.1}>
-            <div className="group relative overflow-hidden rounded-[1.25rem] border border-border/80 bg-surface-elevated/90 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-brand/50 hover:shadow-xl min-[340px]:rounded-[1.75rem] min-[340px]:p-6 sm:p-8">
+        <div className="card-grid grid gap-4 min-[340px]:gap-6">
+          <Reveal delay={0.1} className="h-full">
+            <div className="ui-card group relative min-h-[18rem] overflow-hidden p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-brand/50 hover:shadow-xl min-[340px]:min-h-[20rem] min-[340px]:rounded-[1.75rem] min-[340px]:p-6 sm:p-8">
               <div className="flex items-start justify-between gap-2 min-[340px]:gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 min-[340px]:gap-2.5">
@@ -72,19 +74,21 @@ export function ServiceSpotlight() {
                       <Briefcase className="h-4 w-4" />
                     </span>
                     <h3 className="font-display text-xl font-semibold text-foreground min-[340px]:text-2xl">
-                      Direct recruitment
+                      {t('home.services.direct.title')}
                     </h3>
-                    <InfoTooltip label="Direct recruitment" content={DIRECT_RECRUITMENT_HELP} />
+                    <InfoTooltip
+                      label={t('home.services.direct.title')}
+                      content={t('home.services.direct.help')}
+                    />
                   </div>
                   <p className="mt-2 text-xs leading-relaxed text-muted min-[340px]:mt-3 min-[340px]:text-sm">
-                    Full-cycle recruitment: Intake brief → sourcing → technical screening → curated
-                    shortlist → placement into your payroll.
+                    {t('home.services.direct.body')}
                   </p>
                 </div>
 
                 <Link
                   href="/services/direct-recruitment"
-                  aria-label="Learn more about direct recruitment"
+                  aria-label={t('home.services.direct.title')}
                   className="shrink-0 rounded-full border border-border/70 p-1.5 text-brand transition hover:border-brand hover:bg-brand-soft min-[340px]:p-2"
                 >
                   <ArrowUpRight className="h-4 w-4 min-[340px]:h-5 min-[340px]:w-5" />
@@ -95,21 +99,16 @@ export function ServiceSpotlight() {
                 <div className="mb-3 flex flex-col gap-1 text-[11px] font-semibold text-muted min-[300px]:flex-row min-[300px]:items-center min-[300px]:justify-between min-[340px]:mb-3.5 min-[340px]:text-xs">
                   <span className="flex items-center gap-1.5 text-foreground">
                     <Zap className="h-3.5 w-3.5 text-brand" />
-                    Disciplined 4-Step Intake Path
+                    {t('home.services.direct.stepsLabel')}
                   </span>
-                  <span className="font-medium text-brand">Avg. 48h Delivery</span>
+                  <span className="font-medium text-brand">{t('home.services.direct.ready')}</span>
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 min-[280px]:grid-cols-2 sm:grid-cols-4">
-                  {[
-                    { step: '01', title: 'Role Intake', desc: 'Brief locked' },
-                    { step: '02', title: 'Deep Sourcing', desc: 'Top 1% screened' },
-                    { step: '03', title: 'Curated 3', desc: 'Ranked shortlist' },
-                    { step: '04', title: 'Placement', desc: 'Offer & signed' },
-                  ].map((s, idx) => (
+                <div className="card-grid grid grid-cols-1 gap-2 min-[280px]:grid-cols-2 sm:grid-cols-4">
+                  {directSteps.map((s) => (
                     <div
                       key={s.step}
-                      className="rounded-xl border border-border/60 bg-surface-elevated/80 p-2.5 transition-colors group-hover:border-brand/30"
+                      className="ui-card min-h-[4.75rem] rounded-xl p-2.5 transition-colors group-hover:border-brand/30"
                     >
                       <span className="text-[10px] font-bold tracking-wider text-brand">
                         {s.step}
@@ -123,8 +122,8 @@ export function ServiceSpotlight() {
             </div>
           </Reveal>
 
-          <Reveal delay={0.18}>
-            <div className="group relative overflow-hidden rounded-[1.25rem] border border-border/80 bg-surface-elevated/90 p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-brand/50 hover:shadow-xl min-[340px]:rounded-[1.75rem] min-[340px]:p-6 sm:p-8">
+          <Reveal delay={0.18} className="h-full">
+            <div className="ui-card group relative min-h-[18rem] overflow-hidden p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-brand/50 hover:shadow-xl min-[340px]:min-h-[20rem] min-[340px]:rounded-[1.75rem] min-[340px]:p-6 sm:p-8">
               <div className="flex items-start justify-between gap-2 min-[340px]:gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 min-[340px]:gap-2.5">
@@ -132,19 +131,21 @@ export function ServiceSpotlight() {
                       <Users2 className="h-4 w-4" />
                     </span>
                     <h3 className="font-display text-xl font-semibold text-foreground min-[340px]:text-2xl">
-                      Managed staffing
+                      {t('home.services.managed.title')}
                     </h3>
-                    <InfoTooltip label="Managed staffing" content={MANAGED_STAFFING_HELP} />
+                    <InfoTooltip
+                      label={t('home.services.managed.title')}
+                      content={t('home.services.managed.help')}
+                    />
                   </div>
                   <p className="mt-2 text-xs leading-relaxed text-muted min-[340px]:mt-3 min-[340px]:text-sm">
-                    Turnkey workforce management: Dealo provides verified specialists and absorbs
-                    the operational, payroll, and compliance overhead.
+                    {t('home.services.managed.body')}
                   </p>
                 </div>
 
                 <Link
                   href="/services/managed-staffing"
-                  aria-label="Learn more about managed staffing"
+                  aria-label={t('home.services.managed.title')}
                   className="shrink-0 rounded-full border border-border/70 p-1.5 text-brand transition hover:border-brand hover:bg-brand-soft min-[340px]:p-2"
                 >
                   <ArrowUpRight className="h-4 w-4 min-[340px]:h-5 min-[340px]:w-5" />
@@ -152,38 +153,35 @@ export function ServiceSpotlight() {
               </div>
 
               <div className="mt-4 rounded-xl border border-border/70 bg-surface/70 p-3 min-[340px]:mt-6 min-[340px]:rounded-2xl min-[340px]:p-4 sm:p-5">
-                <div className="mb-3 flex flex-col gap-1 text-[11px] font-semibold text-muted min-[300px]:flex-row min-[300px]:items-center min-[300px]:justify-between min-[340px]:mb-3.5 min-[340px]:text-xs">
-                  <span className="flex items-center gap-1.5 text-foreground">
-                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                    Zero Admin Burden Architecture
-                  </span>
-                  <span className="inline-flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="h-3 w-3" /> SLA Guaranteed
-                  </span>
+                <div className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold text-foreground min-[340px]:text-xs">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                  {t('home.pricing.managed.p1')}
                 </div>
 
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  <div className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-surface-elevated/80 p-2.5">
-                    <FileCheck2 className="h-4 w-4 text-brand shrink-0" />
+                <div className="card-grid grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div className="ui-card min-h-[4.5rem] flex-row items-center gap-2.5 rounded-xl p-2.5">
+                    <FileCheck2 className="h-4 w-4 shrink-0 text-brand" />
                     <div>
-                      <p className="text-xs font-semibold text-foreground">Payroll & Taxes</p>
-                      <p className="text-[10px] text-muted">100% Handled by Dealo</p>
+                      <p className="text-xs font-semibold text-foreground">
+                        {t('home.pricing.managed.p1')}
+                      </p>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-surface-elevated/80 p-2.5">
-                    <Layers className="h-4 w-4 text-brand shrink-0" />
+                  <div className="ui-card min-h-[4.5rem] flex-row items-center gap-2.5 rounded-xl p-2.5">
+                    <Layers className="h-4 w-4 shrink-0 text-brand" />
                     <div>
-                      <p className="text-xs font-semibold text-foreground">Instant Backfill</p>
-                      <p className="text-[10px] text-muted">48h replacement warranty</p>
+                      <p className="text-xs font-semibold text-foreground">
+                        {t('home.pricing.managed.p3')}
+                      </p>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-surface-elevated/80 p-2.5">
-                    <Users2 className="h-4 w-4 text-brand shrink-0" />
+                  <div className="ui-card min-h-[4.5rem] flex-row items-center gap-2.5 rounded-xl p-2.5">
+                    <Users2 className="h-4 w-4 shrink-0 text-brand" />
                     <div>
-                      <p className="text-xs font-semibold text-foreground">Dedicated PM</p>
-                      <p className="text-[10px] text-muted">Direct escalation channel</p>
+                      <p className="text-xs font-semibold text-foreground">
+                        {t('home.pricing.managed.p2')}
+                      </p>
                     </div>
                   </div>
                 </div>

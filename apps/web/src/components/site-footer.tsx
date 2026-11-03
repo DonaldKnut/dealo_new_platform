@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { ArrowUpRight, Mail } from 'lucide-react';
 
 import { BrandLogo } from '@/components/brand-logo';
+import { useLocale } from '@/components/i18n/locale-context';
 import { useModal } from '@/components/modals/modal-context';
 
 export function SiteFooter() {
   const { open } = useModal();
+  const { t } = useLocale();
 
   return (
     <footer className="relative overflow-hidden border-t border-border">
@@ -18,55 +20,57 @@ export function SiteFooter() {
           <div>
             <BrandLogo />
             <p className="mt-3 max-w-md text-sm leading-relaxed text-muted min-[340px]:mt-4 min-[340px]:text-base">
-              Professional recruitment, managed staffing, and talent operations for businesses that
-              need clarity, speed, and accountable placement outcomes.
+              {t('footer.blurb')}
             </p>
             <div className="mt-5 flex flex-col gap-2.5 min-[340px]:mt-8 min-[400px]:flex-row min-[400px]:flex-wrap min-[400px]:gap-3">
               <button type="button" className="btn-primary" onClick={() => open('hire')}>
-                Request talent
+                {t('cta.hire')}
               </button>
               <button type="button" className="btn-secondary" onClick={() => open('contact')}>
                 <Mail className="h-4 w-4" />
-                Contact
+                {t('cta.contact')}
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 min-[280px]:grid-cols-2 min-[340px]:gap-8 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-            <FooterColumn title="Product">
+            <FooterColumn title={t('footer.hireWith')}>
               <Link href="/services" className="footer-link">
-                Services
+                {t('footer.services')}
               </Link>
               <Link href="/how-it-works" className="footer-link">
-                How it works
+                {t('footer.how')}
               </Link>
               <button type="button" className="footer-link text-left" onClick={() => open('hire')}>
-                Hiring request
+                {t('footer.requestHire')}
               </button>
             </FooterColumn>
-            <FooterColumn title="Audiences">
+            <FooterColumn title={t('footer.whoFor')}>
               <Link href="/for-employers" className="footer-link">
-                Employers
+                {t('footer.employers')}
               </Link>
               <Link href="/for-professionals" className="footer-link">
-                Professionals
+                {t('footer.professionals')}
               </Link>
               <Link href="/auth/register" className="footer-link">
-                Create account
+                {t('footer.createAccount')}
               </Link>
             </FooterColumn>
-            <FooterColumn title="Company">
+            <FooterColumn title={t('footer.company')}>
               <Link href="/about" className="footer-link">
-                About
+                {t('footer.about')}
+              </Link>
+              <Link href="/developers" className="footer-link">
+                {t('footer.developers')}
               </Link>
               <button type="button" className="footer-link text-left" onClick={() => open('contact')}>
-                Contact
+                {t('nav.contact')}
               </button>
               <Link href="/privacy" className="footer-link">
-                Privacy
+                {t('footer.privacy')}
               </Link>
               <Link href="/terms" className="footer-link">
-                Terms
+                {t('footer.terms')}
               </Link>
             </FooterColumn>
           </div>
@@ -74,13 +78,13 @@ export function SiteFooter() {
 
         <div className="mt-6 flex flex-col gap-3 border-t border-border pt-5 min-[340px]:mt-8 min-[340px]:gap-4 min-[340px]:pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-muted min-[340px]:text-sm">
-            © {new Date().getFullYear()} Dealo. All rights reserved.
+            © {new Date().getFullYear()} Dealo. {t('footer.rights')}
           </p>
           <Link
             href="/auth/login"
             className="inline-flex items-center gap-2 text-xs font-semibold text-foreground transition hover:text-brand min-[340px]:text-sm"
           >
-            Sign in to workspace
+            {t('cta.signInAccount')}
             <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>

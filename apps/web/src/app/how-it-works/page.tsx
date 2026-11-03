@@ -10,6 +10,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 
+import { useLocale } from '@/components/i18n/locale-context';
 import { CtaBanner } from '@/components/marketing/cta-banner';
 import { FeatureAdGrid } from '@/components/marketing/feature-ad-grid';
 import { IllustrationBand } from '@/components/marketing/illustration-band';
@@ -18,40 +19,41 @@ import { ProcessRail } from '@/components/marketing/process-rail';
 import { StatAdvert } from '@/components/marketing/stat-advert';
 import { useModal } from '@/components/modals/modal-context';
 
-const steps = [
-  {
-    icon: MessageSquareQuote,
-    title: 'Brief',
-    body: 'You submit a hiring request with role, headcount, location, and commercial context.',
-  },
-  {
-    icon: SearchCheck,
-    title: 'Source & screen',
-    body: 'Dealo sources and screens professionals against your requirements before shortlisting.',
-  },
-  {
-    icon: ClipboardCheck,
-    title: 'Interview & place',
-    body: 'Coordinate interviews, confirm fit, place talent, and keep operational follow-through clear.',
-  },
-];
-
 export default function HowItWorksPage() {
   const { open } = useModal();
+  const { t } = useLocale();
+
+  const steps = [
+    {
+      icon: MessageSquareQuote,
+      title: t('how.s1.title'),
+      body: t('how.s1.body'),
+    },
+    {
+      icon: SearchCheck,
+      title: t('how.s2.title'),
+      body: t('how.s2.body'),
+    },
+    {
+      icon: ClipboardCheck,
+      title: t('how.s3.title'),
+      body: t('how.s3.body'),
+    },
+  ];
 
   return (
     <div>
       <PageHero
-        eyebrow="Process"
-        title="How Dealo works"
-        description="A structured recruitment and managed staffing path — from role brief to placement — built for companies that need reliable operating follow-through."
+        eyebrow={t('how.eyebrow')}
+        title={t('how.title')}
+        description={t('how.body')}
         actions={
           <>
             <button type="button" className="btn-primary" onClick={() => open('hire')}>
-              Start a hiring request
+              {t('how.cta')}
             </button>
             <button type="button" className="btn-secondary" onClick={() => open('contact')}>
-              Talk to Dealo
+              {t('how.talk')}
             </button>
           </>
         }
@@ -59,29 +61,29 @@ export default function HowItWorksPage() {
 
       <StatAdvert
         items={[
-          { value: '6-stage', label: 'Recruitment operating path' },
-          { value: '2 modes', label: 'Direct hire or managed staffing' },
-          { value: '1 workspace', label: 'Clear brief → shortlist → placement trail' },
+          { value: t('how.stat1v'), label: t('how.stat1l') },
+          { value: t('how.stat2v'), label: t('how.stat2l') },
+          { value: t('how.stat3v'), label: t('how.stat3l') },
         ]}
       />
 
       <FeatureAdGrid
-        eyebrow="Operating path"
-        title="Built around how serious hiring actually moves"
-        description="No job-board noise. A recruiter-led process with commercial clarity."
+        eyebrow={t('how.steps.eyebrow')}
+        title={t('how.steps.title')}
+        description={t('how.steps.body')}
         items={steps}
       />
 
       <IllustrationBand
-        eyebrow="Visibility"
-        title="Every stage stays accountable"
-        description="From brief intake to screening notes and placement follow-through, Dealo keeps the hiring path structured so employers and professionals know what happens next."
+        eyebrow={t('how.vis.eyebrow')}
+        title={t('how.vis.title')}
+        description={t('how.vis.body')}
         illustration={
           <div className="grid w-full max-w-sm gap-3">
             {[
-              { icon: BriefcaseBusiness, label: 'Role brief locked' },
-              { icon: UsersRound, label: 'Shortlist prepared' },
-              { icon: ShieldCheck, label: 'Placement confirmed' },
+              { icon: BriefcaseBusiness, label: t('how.vis.1') },
+              { icon: UsersRound, label: t('how.vis.2') },
+              { icon: ShieldCheck, label: t('how.vis.3') },
             ].map((row) => {
               const Icon = row.icon;
               return (
@@ -103,24 +105,24 @@ export default function HowItWorksPage() {
       <ProcessRail />
 
       <FeatureAdGrid
-        eyebrow="Why teams choose Dealo"
-        title="Clean process. Clear commercial terms."
-        description="Whether you hire into your structure or let Dealo run staffing operations, the path stays intentional."
+        eyebrow={t('how.why.eyebrow')}
+        title={t('how.why.title')}
+        description={t('how.why.body')}
         items={[
           {
             icon: Sparkles,
-            title: 'Direct recruitment',
-            body: 'Role brief → sourcing → screening → shortlist → interviews → placement into your admin structure.',
+            title: t('how.why.1.title'),
+            body: t('how.why.1.body'),
           },
           {
             icon: ShieldCheck,
-            title: 'Managed staffing',
-            body: 'Agreed arrangements with commercial terms — Dealo’s platform carries the hiring load for you.',
+            title: t('how.why.2.title'),
+            body: t('how.why.2.body'),
           },
           {
             icon: ClipboardCheck,
-            title: 'Operational follow-through',
-            body: 'Not just introductions. Structured steps, ownership, and next actions at every stage.',
+            title: t('how.why.3.title'),
+            body: t('how.why.3.body'),
           },
         ]}
       />

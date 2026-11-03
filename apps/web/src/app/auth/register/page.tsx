@@ -5,7 +5,7 @@ import { RegisterForm } from '@/components/forms/register-form';
 
 export const metadata: Metadata = {
   title: 'Create account',
-  description: 'Join Dealo as an employer or professional.',
+  description: 'Join Dealo as a company or a professional.',
 };
 
 export default function RegisterPage() {
@@ -14,7 +14,7 @@ export default function RegisterPage() {
       <AuthPageHeader
         eyebrow="Join Dealo"
         title="Create your account"
-        subtitle="Register with email or Google. Verification helps keep the talent network trusted."
+        subtitle="Sign up with email or Google. We verify accounts to keep Dealo trusted."
       />
       <RegisterForm variant="page" />
     </>

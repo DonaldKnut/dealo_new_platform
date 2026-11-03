@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { useLocale } from '@/components/i18n/locale-context';
 import { CtaBanner } from '@/components/marketing/cta-banner';
 import { FeatureAdGrid } from '@/components/marketing/feature-ad-grid';
 import { IllustrationBand } from '@/components/marketing/illustration-band';
@@ -23,20 +24,21 @@ import { useModal } from '@/components/modals/modal-context';
 
 export default function DirectRecruitmentPage() {
   const { open } = useModal();
+  const { t } = useLocale();
 
   return (
     <div>
       <PageHero
-        eyebrow="Direct recruitment"
-        title="Placement built around your role brief"
-        description="Ideal for companies that plan to hire staff into their administrative structure. Role brief → sourcing → screening → shortlist → interviews → placement."
+        eyebrow={t('direct.eyebrow')}
+        title={t('direct.title')}
+        description={t('direct.body')}
         actions={
           <>
             <button type="button" className="btn-primary" onClick={() => open('hire')}>
-              Start a hiring request
+              {t('direct.cta')}
             </button>
             <Link href="/auth/register" className="btn-secondary">
-              Create employer account
+              {t('direct.register')}
             </Link>
           </>
         }
@@ -44,47 +46,47 @@ export default function DirectRecruitmentPage() {
 
       <StatAdvert
         items={[
-          { value: '6 stages', label: 'Clear path from brief to placement' },
-          { value: 'Screened', label: 'Candidates reviewed before interviews' },
-          { value: 'Into your org', label: 'Hires land in your admin structure' },
+          { value: t('direct.stat1v'), label: t('direct.stat1l') },
+          { value: t('direct.stat2v'), label: t('direct.stat2l') },
+          { value: t('direct.stat3v'), label: t('direct.stat3l') },
         ]}
       />
 
       <FeatureAdGrid
-        eyebrow="Path"
+        eyebrow="Clear steps"
         title="What direct recruitment covers"
-        description="A disciplined hire-into-your-org path with screened shortlists and accountable follow-through."
+        description="A clear path to hire onto your team, with screened shortlists and clear follow-up."
         items={[
           {
             icon: ClipboardList,
-            title: 'Role brief',
-            body: 'Lock requirements, headcount, location, and commercial expectations first.',
+            title: 'Role details',
+            body: 'Lock requirements, headcount, location, and pricing expectations first.',
           },
           {
             icon: Search,
             title: 'Source & screen',
-            body: 'Dealo sources and screens professionals against your brief before interviews.',
+            body: 'Dealo sources and screens people against your role details before interviews.',
           },
           {
             icon: UserCheck,
             title: 'Interview & place',
-            body: 'Coordinate interviews and place talent into your structure with clear next steps.',
+            body: 'Coordinate interviews and place talent onto your team with clear next steps.',
           },
         ]}
       />
 
       <IllustrationBand
         eyebrow="Built for intentional hires"
-        title="Not a job board. An operating path."
-        description="Direct recruitment is for organizations that intend to incorporate professionals into their administrative structure — with Dealo running a structured path from brief to placement."
+        title="Not a job board. Clear steps."
+        description="Direct recruitment is for companies that want to hire people onto their payroll — with Dealo running clear steps from role details to placement."
         actions={
           <button type="button" className="btn-primary" onClick={() => open('hire')}>
-            Submit a role brief
+            Submit role details
           </button>
         }
         illustration={
           <ol className="w-full max-w-sm space-y-3">
-            {['Brief', 'Source', 'Screen', 'Shortlist', 'Interview', 'Place'].map((label, index) => (
+            {['Details', 'Source', 'Screen', 'Shortlist', 'Interview', 'Place'].map((label, index) => (
               <li
                 key={label}
                 className="flex items-center gap-3 rounded-xl border border-border bg-surface-elevated/90 px-4 py-2.5"
@@ -102,37 +104,37 @@ export default function DirectRecruitmentPage() {
       <FeatureAdGrid
         eyebrow="Employer advantages"
         title="Why teams choose direct recruitment"
-        description="Clarity for stakeholders, screened shortlists, and placement follow-through."
+        description="Clarity for your stakeholders, screened shortlists, and clear follow-up through placement."
         items={[
           {
             icon: Building2,
-            title: 'Into your structure',
-            body: 'Professionals are hired into your organization — not left as open-ended introductions.',
+            title: 'Onto your team',
+            body: 'People are hired onto your company payroll — not left as open-ended introductions.',
           },
           {
             icon: ShieldCheck,
             title: 'Quality gate',
-            body: 'Screening happens before you invest interview cycles.',
+            body: 'Screening happens before you spend interview time.',
           },
           {
             icon: ClipboardCheck,
             title: 'Documented trail',
-            body: 'Brief, shortlist, and interview stages stay organized for approvals.',
+            body: 'Role details, shortlist, and interview stages stay organized for approvals.',
           },
           {
             icon: UsersRound,
             title: 'Headcount ready',
-            body: 'Request one role or multiple professionals against the same brief.',
+            body: 'Request one role or several people against the same role details.',
           },
           {
             icon: MessageSquare,
             title: 'Clear communication',
-            body: 'Dealo coordinates updates so hiring managers know what happens next.',
+            body: 'Dealo shares updates so hiring managers know what happens next.',
           },
           {
             icon: BadgeCheck,
-            title: 'Commercial clarity',
-            body: 'Engagement terms sit alongside the operating process — not afterthoughts.',
+            title: 'Clear pricing and terms',
+            body: 'Pricing and terms sit with the clear steps — not as an afterthought.',
           },
         ]}
       />
@@ -143,7 +145,7 @@ export default function DirectRecruitmentPage() {
         reverse
         eyebrow="Compare"
         title="Need Dealo to run staffing for you instead?"
-        description="Managed staffing keeps commercial terms and hiring operations on Dealo’s platform — ideal when you want less operational burden on your team."
+        description="Managed staffing keeps pricing, terms, and hiring work on Dealo’s side — ideal when you want less load on your team."
         actions={
           <Link href="/services/managed-staffing" className="btn-secondary">
             Explore managed staffing
@@ -152,8 +154,8 @@ export default function DirectRecruitmentPage() {
         illustration={
           <div className="grid w-full max-w-sm gap-3">
             {[
-              { title: 'Direct recruitment', body: 'You hire into your admin structure.' },
-              { title: 'Managed staffing', body: 'Dealo carries hiring operations for you.' },
+              { title: 'Direct recruitment', body: 'You hire onto your company payroll.' },
+              { title: 'Managed staffing', body: 'Dealo handles hiring for you.' },
             ].map((card) => (
               <div
                 key={card.title}

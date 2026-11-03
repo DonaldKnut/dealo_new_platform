@@ -36,6 +36,56 @@ enum WorkArrangement {
   REMOTE
 }
 
+enum RoleFamily {
+  OFFICE_PROFESSIONAL
+  SKILLED_TRADE
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CandidateScreenStatus {
+  NEW
+  SCREENING
+  SCREENED
+  REJECTED
+}
+
+enum CandidateDocumentKind {
+  CV
+  CERTIFICATE
+  OTHER
+}
+
+enum NewsletterCampaignStatus {
+  DRAFT
+  SENT
+}
+
+enum NewsletterSendStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_USER
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
 model User {
   id                   String    @id @default(auto()) @map("_id") @db.ObjectId
   email                String    @unique
@@ -58,6 +108,10 @@ model User {
   refreshTokens           RefreshToken[]
   organizationMemberships OrganizationMember[]
   auditLogs               AuditLog[]
+  candidate               Candidate?
+  supportTickets          SupportTicket[]      @relation("TicketRequester")
+  assignedTickets         SupportTicket[]      @relation("TicketAssignee")
+  ticketMessages          SupportTicketMessage[]
 }
 
 model Role {
@@ -154,6 +208,7 @@ model HireInquiry {
   contactName             String
   email                   String
   phone                   String
+  roleFamily              RoleFamily        @default(OFFICE_PROFESSIONAL)
   serviceType             ServiceType
   roleTitle               String
   numberOfProfessionals   Int
@@ -172,10 +227,135 @@ model HireInquiry {
   updatedAt               DateTime          @updatedAt
 
   organization Organization? @relation(fields: [organizationId], references: [id])
+  shortlists   Shortlist[]
 
   @@index([email])
   @@index([status])
   @@index([createdAt])
+}
+
+model BlogPost {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  title          String
+  slug           String         @unique
+  excerpt        String
+  content        String
+  coverImage     String?
+  seoTitle       String?
+  seoDescription String?
+  status         BlogPostStatus @default(DRAFT)
+  publishedAt    DateTime?
+  authorId       String?        @db.ObjectId
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status, publishedAt])
+}
+
+model Candidate {
+  id           String                @id @default(auto()) @map("_id") @db.ObjectId
+  fullName     String
+  email        String
+  phone        String?
+  roleTitle    String?
+  location     String?
+  notes        String?
+  screenStatus CandidateScreenStatus @default(NEW)
+  userId       String?               @unique @db.ObjectId
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  user             User?                @relation(fields: [userId], references: [id])
+  shortlistEntries ShortlistEntry[]
+  documents        CandidateDocument[]
+
+  @@index([email])
+  @@index([screenStatus])
+}
+
+model CandidateDocument {
+  id          String                @id @default(auto()) @map("_id") @db.ObjectId
+  candidateId String                @db.ObjectId
+  kind        CandidateDocumentKind @default(OTHER)
+  fileName    String
+  mimeType    String
+  byteSize    Int
+  url         String
+  publicId    String
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+
+  @@index([candidateId])
+}
+
+model Shortlist {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  hireInquiryId String   @db.ObjectId
+  title         String
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  hireInquiry HireInquiry     @relation(fields: [hireInquiryId], references: [id])
+  entries     ShortlistEntry[]
+
+  @@index([hireInquiryId])
+}
+
+model ShortlistEntry {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  shortlistId String   @db.ObjectId
+  candidateId String   @db.ObjectId
+  rank        Int      @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  shortlist Shortlist @relation(fields: [shortlistId], references: [id])
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+
+  @@unique([shortlistId, candidateId])
+}
+
+model NewsletterSubscriber {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  email       String   @unique
+  firstName   String?
+  roleSegment String   @default("ALL")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NewsletterCampaign {
+  id          String                    @id @default(auto()) @map("_id") @db.ObjectId
+  subject     String
+  bodyHtml    String
+  bodyText    String?
+  segment     String                    @default("ALL")
+  status      NewsletterCampaignStatus  @default(DRAFT)
+  sentAt      DateTime?
+  createdById String?                   @db.ObjectId
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  sends NewsletterSend[]
+}
+
+model NewsletterSend {
+  id         String               @id @default(auto()) @map("_id") @db.ObjectId
+  campaignId String               @db.ObjectId
+  email      String
+  status     NewsletterSendStatus @default(QUEUED)
+  error      String?
+  sentAt     DateTime?
+  createdAt  DateTime             @default(now())
+
+  campaign NewsletterCampaign @relation(fields: [campaignId], references: [id])
+
+  @@index([campaignId])
 }
 
 model AuditLog {
@@ -201,4 +381,40 @@ model SystemSetting {
   value     Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model SupportTicket {
+  id           String                @id @default(auto()) @map("_id") @db.ObjectId
+  subject      String
+  body         String
+  status       SupportTicketStatus   @default(OPEN)
+  priority     SupportTicketPriority @default(NORMAL)
+  category     String                @default("general")
+  requesterId  String                @db.ObjectId
+  assigneeId   String?               @db.ObjectId
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  resolvedAt   DateTime?
+
+  requester User                   @relation("TicketRequester", fields: [requesterId], references: [id])
+  assignee  User?                  @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  messages  SupportTicketMessage[]
+
+  @@index([requesterId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SupportTicketMessage {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  ticketId   String   @db.ObjectId
+  authorId   String   @db.ObjectId
+  body       String
+  internal   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id])
+  author User          @relation(fields: [authorId], references: [id])
+
+  @@index([ticketId])
 }

@@ -1,17 +1,21 @@
 'use client';
 
-const items = [
-  'Direct Recruitment & Executive Search',
-  'Managed Staffing Operations',
-  'Top 2% Technical & Executive Screening',
-  '48-Hour Curated Shortlists',
-  'Structured Interview Coordination',
-  'Payroll, Compliance & Contracts',
-  'Lagos • Abuja • Remote Pan-Africa',
-  '90-Day Placement Warranty',
+import { useLocale } from '@/components/i18n/locale-context';
+import type { TranslationKey } from '@/components/i18n/dictionaries';
+
+const ITEM_KEYS: TranslationKey[] = [
+  'home.marquee.1',
+  'home.marquee.2',
+  'home.marquee.3',
+  'home.marquee.4',
+  'home.marquee.5',
+  'home.marquee.6',
+  'home.marquee.7',
 ];
 
 export function MarqueeStrip() {
+  const { t } = useLocale();
+  const items = ITEM_KEYS.map((key) => t(key));
   const loop = [...items, ...items, ...items];
 
   return (

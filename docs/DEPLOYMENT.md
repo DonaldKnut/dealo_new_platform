@@ -1,25 +1,108 @@
 # Deployment
 
-Frontend and API deploy independently.
+Dealo is a **monorepo with two apps**:
+
+| App | Package | What it is | Typical host |
+|-----|---------|------------|--------------|
+| Web | `@dealo/web` | Next.js frontend | [Vercel](https://vercel.com) |
+| API | `@dealo/api` | NestJS backend | [Railway](https://railway.app), [Render](https://render.com), or a VPS |
+| Shared | `@dealo/shared` | Zod schemas / enums used by both | Built with either app |
+
+They are **not** one deploy. Next.js goes to a frontend host; NestJS goes to a Node host.
 
 ## Prerequisites
 
-- MongoDB (Atlas recommended)
+- MongoDB Atlas
 - Node 20+
 - Resend and/or SMTP credentials
-- Environment variables from `docs/ENVIRONMENT_VARIABLES.md`
+- Env vars from `docs/ENVIRONMENT_VARIABLES.md`
 
-## API
+---
 
-1. Set production env vars
-2. `pnpm --filter @dealo/api prisma:generate`
-3. `pnpm --filter @dealo/api prisma:push` (or controlled schema deploy process)
-4. `pnpm --filter @dealo/api seed` (bootstrap roles; optional admin)
-5. `pnpm --filter @dealo/api build && pnpm --filter @dealo/api start:prod`
+## 1) Frontend on Vercel (Next.js)
 
-## Web
+### Project settings (important)
 
-1. Set `NEXT_PUBLIC_*` values
-2. `pnpm --filter @dealo/web build && pnpm --filter @dealo/web start`
+Use the **repo root** as the Vercel project root (do **not** set Root Directory to `apps/web` unless you also override install/build as below).
 
-Domain/DNS, HTTPS, backups, and monitoring are required before production launch.
+This repo includes a root `vercel.json` that:
+
+1. Installs the whole pnpm workspace
+2. Builds `@dealo/shared`
+3. Builds `@dealo/web`
+
+### Environment variables (Vercel → Settings → Environment Variables)
+
+- `NEXT_PUBLIC_APP_URL` — your Vercel URL, e.g. `https://your-app.vercel.app`
+- `NEXT_PUBLIC_API_URL` — your Nest API public URL, e.g. `https://api.yourdomain.com`
+
+### If you already set Root Directory to `apps/web`
+
+Change settings to:
+
+- **Install Command:** `cd ../.. && pnpm install`
+- **Build Command:** `cd ../.. && pnpm --filter @dealo/shared build && pnpm --filter @dealo/web build`
+- **Output:** leave Next.js default
+
+### Why the previous build failed
+
+```
+Module not found: Can't resolve '@dealo/shared'
+```
+
+Vercel installed the workspace link, but `@dealo/shared` publishes compiled files under `dist/`. If that package is not built before `next build`, webpack cannot resolve it. The build command now builds shared first.
+
+---
+
+## 2) Backend on Railway / Render (NestJS)
+
+Create a **separate** service from the same GitHub repo.
+
+### Build / start
+
+- **Root directory:** repo root (or `apps/api` if the host supports monorepos)
+- **Install:** `pnpm install`
+- **Build:** `pnpm --filter @dealo/shared build && pnpm --filter @dealo/api prisma:generate && pnpm --filter @dealo/api build`
+- **Start:** `pnpm --filter @dealo/api start:prod`
+
+### Environment variables (API)
+
+Copy from `apps/api/.env.example` — never commit real `.env` files.
+
+Typical keys: `DATABASE_URL`, `JWT_*`, `COOKIE_*`, `CORS_ORIGIN` (your Vercel URL), Google OAuth, email providers.
+
+After deploy, point Vercel `NEXT_PUBLIC_API_URL` at this API URL, and set API `CORS_ORIGIN` / cookie domain to match the web URL.
+
+### Database
+
+```bash
+pnpm --filter @dealo/api prisma:generate
+pnpm --filter @dealo/api prisma:push
+pnpm --filter @dealo/api seed
+```
+
+Run these against production Mongo once (CI job or one-off shell on the host).
+
+---
+
+## Local production check
+
+```bash
+pnpm --filter @dealo/shared build
+pnpm --filter @dealo/api build
+pnpm --filter @dealo/web build
+```
+
+---
+
+## Quick mental model
+
+```
+Browser  →  Vercel (Next.js @dealo/web)
+                ↓  NEXT_PUBLIC_API_URL
+            Railway/Render (NestJS @dealo/api)
+                ↓
+            MongoDB Atlas
+```
+
+Domain/DNS, HTTPS, backups, and monitoring are required before a real production launch.

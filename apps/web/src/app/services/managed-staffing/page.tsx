@@ -2,6 +2,7 @@
 
 import { FileSignature, Headphones, Layers3 } from 'lucide-react';
 
+import { useLocale } from '@/components/i18n/locale-context';
 import { CtaBanner } from '@/components/marketing/cta-banner';
 import { FeatureAdGrid } from '@/components/marketing/feature-ad-grid';
 import { PageHero } from '@/components/marketing/page-hero';
@@ -9,38 +10,39 @@ import { useModal } from '@/components/modals/modal-context';
 
 export default function ManagedStaffingPage() {
   const { open } = useModal();
+  const { t } = useLocale();
 
   return (
     <div>
       <PageHero
-        eyebrow="Managed staffing"
-        title="Staffing arrangements with operational clarity"
-        description="Dealo uses its administrative platform to take care of hiring needs — agreed commercial terms and operational follow-through, so less sits on the client."
+        eyebrow={t('managed.eyebrow')}
+        title={t('managed.title')}
+        description={t('managed.body')}
         actions={
           <button type="button" className="btn-primary" onClick={() => open('hire')}>
-            Request managed staffing
+            {t('managed.cta')}
           </button>
         }
       />
       <FeatureAdGrid
-        eyebrow="How it works"
-        title="Dealo runs the staffing operations"
-        description="You agree the arrangement. Dealo carries sourcing, screening, and placement workflow."
+        eyebrow={t('mega.how.title')}
+        title={t('svc.managed.title')}
+        description={t('managed.body')}
         items={[
           {
             icon: FileSignature,
-            title: 'Clear commercial terms',
-            body: 'Engagement scope, duration notes, and billing structure stay explicit.',
+            title: t('svc.share.3.title'),
+            body: t('svc.share.3.body'),
           },
           {
             icon: Layers3,
-            title: 'Platform-led hiring',
-            body: 'Dealo’s operating process handles the hiring load end to end.',
+            title: t('home.services.managed.title'),
+            body: t('home.services.managed.body'),
           },
           {
             icon: Headphones,
-            title: 'Ongoing follow-through',
-            body: 'Not a one-off introduction — staffing arrangements stay operationally owned.',
+            title: t('how.why.3.title'),
+            body: t('how.why.3.body'),
           },
         ]}
       />

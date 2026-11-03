@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
 import Link from 'next/link';
 
+import { useLocale } from '@/components/i18n/locale-context';
 import { useModal } from '@/components/modals/modal-context';
 
 import { CtaRow } from './cta-row';
@@ -12,6 +13,7 @@ import { TalentOpsConsole } from './talent-ops-console';
 
 export function HeroSection() {
   const { open } = useModal();
+  const { t } = useLocale();
 
   return (
     <section className="relative overflow-hidden pt-14 min-[230px]:pt-[4.25rem] min-[340px]:pt-[4.75rem] sm:pt-20">
@@ -31,7 +33,7 @@ export function HeroSection() {
             </span>
             <span className="shrink-0 font-semibold text-brand">Dealo 2.0</span>
             <span className="hidden text-muted min-[280px]:inline">•</span>
-            <span className="min-w-0 truncate text-muted">Structured Recruitment & Staffing</span>
+            <span className="min-w-0 truncate text-muted">{t('hero.badge')}</span>
           </motion.div>
 
           <motion.h1
@@ -40,8 +42,9 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
           >
-            Find, place, and manage the{' '}
-            <span className="text-gradient-brand">exceptional talent</span> your business needs.
+            {t('hero.titleBefore')}{' '}
+            <span className="text-gradient-brand">{t('hero.titleAccent')}</span>
+            {t('hero.titleAfter')}
           </motion.h1>
 
           <motion.p
@@ -50,8 +53,7 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.16 }}
           >
-            A disciplined recruitment engine and managed staffing solution for high-growth African
-            businesses — connecting employers with pre-vetted specialists in under 48 hours.
+            {t('hero.subtitle')}
           </motion.p>
 
           <motion.div
@@ -65,11 +67,11 @@ export function HeroSection() {
                 className="btn-primary group shadow-lg shadow-brand/20 transition-all hover:shadow-brand/35"
                 onClick={() => open('hire')}
               >
-                Request talent
+                {t('cta.hire')}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
               <Link href="/auth/register" className="btn-secondary transition-all">
-                Join as a professional
+                {t('cta.join')}
               </Link>
             </CtaRow>
           </motion.div>
@@ -81,9 +83,9 @@ export function HeroSection() {
             transition={{ duration: 0.7, delay: 0.35 }}
           >
             {[
-              { icon: Zap, title: '48h Shortlists', sub: 'Rapid role intake' },
-              { icon: ShieldCheck, title: 'Pre-Vetted', sub: 'Technical & culture' },
-              { icon: CheckCircle2, title: '98.4% Retention', sub: 'Placement protection' },
+              { icon: Zap, title: t('home.hero.f1.title'), sub: t('home.hero.f1.sub') },
+              { icon: ShieldCheck, title: t('home.hero.f2.title'), sub: t('home.hero.f2.sub') },
+              { icon: CheckCircle2, title: t('home.hero.f3.title'), sub: t('home.hero.f3.sub') },
             ].map((item) => {
               const Icon = item.icon;
               return (

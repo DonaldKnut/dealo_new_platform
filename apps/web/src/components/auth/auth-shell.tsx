@@ -6,31 +6,32 @@ import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { BrandLogo } from '@/components/brand-logo';
+import { PromoFlyer } from '@/components/illustrations/promo-flyer';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { PROMO_FLYER_IMAGES } from '@/lib/promo-images';
 
 const slides = [
   {
     eyebrow: 'Direct recruitment',
-    title: 'Hire into your structure with a clear operating path.',
-    body: 'Role brief → sourcing → screening → shortlist → interviews → placement.',
-    gradient:
-      'linear-gradient(145deg, rgba(12,44,26,0.95), rgba(7,31,20,0.92)), radial-gradient(circle at 80% 20%, rgba(124,255,77,0.35), transparent 42%)',
+    title: 'Hire people onto your team, step by step.',
+    body: 'Tell us the role. We find, check, shortlist, interview, and place.',
   },
   {
     eyebrow: 'Managed staffing',
-    title: 'Let Dealo run staffing operations for your team.',
-    body: 'Agreed commercial terms, platform-led hiring, and accountable follow-through.',
-    gradient:
-      'linear-gradient(160deg, rgba(18,56,37,0.96), rgba(7,31,20,0.94)), radial-gradient(circle at 20% 80%, rgba(157,255,107,0.32), transparent 42%)',
+    title: 'Let Dealo run staffing for your team.',
+    body: 'Clear terms. Dealo handles hiring and stays with you after placement.',
   },
   {
     eyebrow: 'Talent network',
-    title: 'Professionals ready for serious administrative roles.',
-    body: 'Trusted profiles, screened shortlists, and interview clarity in one workspace.',
-    gradient:
-      'linear-gradient(135deg, rgba(7,31,20,0.96), rgba(15,61,34,0.9)), radial-gradient(circle at 70% 60%, rgba(124,255,77,0.38), transparent 45%)',
+    title: 'Professionals ready for real roles.',
+    body: 'Checked profiles, shortlists, and clear interview steps — in one place.',
   },
-];
+  {
+    eyebrow: 'Checked shortlists',
+    title: 'Office talent and skilled trades, screened first.',
+    body: 'Review ready candidates before interviews — for Nigeria, Africa, and inbound teams.',
+  },
+] as const;
 
 export function AuthShell({ children }: { children: ReactNode }) {
   const [index, setIndex] = useState(0);
@@ -47,18 +48,15 @@ export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex h-svh max-h-svh overflow-hidden bg-background text-foreground">
       <aside className="relative hidden h-svh w-[46%] shrink-0 overflow-hidden lg:block xl:w-[48%]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={slide.title}
-            className="absolute inset-0"
-            style={{ background: slide.gradient }}
-            initial={{ opacity: 0, scale: 1.04 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          />
-        </AnimatePresence>
-        <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.18)_1px,transparent_0)] [background-size:22px_22px]" />
+        <PromoFlyer
+          className="absolute inset-0"
+          index={index % PROMO_FLYER_IMAGES.length}
+          showDots={false}
+          objectPosition="center 18%"
+          sizes="(max-width: 1024px) 0px, 50vw"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#071f14]/92 via-[#071f14]/55 to-[#071f14]/35" />
+        <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.18)_1px,transparent_0)] [background-size:22px_22px]" />
 
         <div className="relative z-10 flex h-full flex-col justify-between p-8 xl:p-10">
           <BrandLogo force="dark" href="/" priority />
@@ -75,7 +73,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lime-100">
                   {slide.eyebrow}
                 </p>
-                <h2 className="mt-4 font-display text-3xl leading-tight xl:text-4xl">{slide.title}</h2>
+                <h2 className="mt-4 font-display text-3xl leading-tight xl:text-4xl">
+                  {slide.title}
+                </h2>
                 <p className="mt-4 text-sm leading-relaxed text-lime-50/90 xl:text-base">
                   {slide.body}
                 </p>

@@ -11,6 +11,7 @@ import { createHash, randomBytes } from 'crypto';
 import type { Response } from 'express';
 import type { LoginInput, RegisterInput } from '@dealo/shared';
 
+import { CandidatesService } from '../candidates/candidates.service';
 import { normalizeEmail } from '../common/normalize-email';
 import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
@@ -23,6 +24,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly candidatesService: CandidatesService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService<AppEnv, true>,
     private readonly emailService: EmailService,
@@ -55,6 +57,10 @@ export class AuthService {
         },
       },
     });
+
+    if (input.role === UserRole.TALENT) {
+      await this.candidatesService.ensureCandidateForUser(user);
+    }
 
     const appUrl = this.config.get('APP_URL', { infer: true });
     await this.emailService.send({
@@ -167,6 +173,10 @@ export class AuthService {
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Unable to sign in with Google');
+    }
+
+    if (user.roles.includes(UserRole.TALENT)) {
+      await this.candidatesService.ensureCandidateForUser(user);
     }
 
     const authUser = this.toAuthUser(user);

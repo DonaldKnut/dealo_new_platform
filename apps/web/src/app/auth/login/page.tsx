@@ -5,7 +5,7 @@ import { LoginForm } from '@/components/forms/login-form';
 
 export const metadata: Metadata = {
   title: 'Sign in',
-  description: 'Sign in to your Dealo employer or talent workspace.',
+  description: 'Sign in to Dealo as a company or a professional.',
 };
 
 export default function LoginPage() {
@@ -14,7 +14,7 @@ export default function LoginPage() {
       <AuthPageHeader
         eyebrow="Sign in"
         title="Welcome back"
-        subtitle="Access your hiring workspace, talent pipeline, and account settings."
+        subtitle="See your hire requests, candidates, and account settings."
       />
       <LoginForm variant="page" />
     </>

@@ -11,6 +11,7 @@ coverage
 
 # env
 .env
+.env.txt
 .env.local
 .env.*.local
 !.env.example

@@ -10,96 +10,116 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { useLocale } from '@/components/i18n/locale-context';
 import { CtaBanner } from '@/components/marketing/cta-banner';
 import { FeatureAdGrid } from '@/components/marketing/feature-ad-grid';
 import { IllustrationBand } from '@/components/marketing/illustration-band';
 import { PageHero } from '@/components/marketing/page-hero';
 import { StatAdvert } from '@/components/marketing/stat-advert';
 
+/** Distinct from /for-employers slider — no repeated assets. */
+const PROFESSIONAL_HERO_SLIDER = [
+  {
+    src: 'https://res.cloudinary.com/dyaetoldv/image/upload/v1793441258/Professionals_standing_together___406b9a05_2K_1_r9fxzc.jpg',
+    alt: 'Professionals across office and skilled trade roles',
+  },
+  {
+    src: 'https://res.cloudinary.com/dyaetoldv/image/upload/v1793439562/Professionals_standing_together___8db5883f_2K_ghskpu.jpg',
+    alt: 'Diverse professionals ready for placement',
+  },
+  {
+    src: 'https://res.cloudinary.com/dyaetoldv/image/upload/v1793439563/Professionals_standing_in_modern__6ae13ee8_2K_joqlbm.jpg',
+    alt: 'Office professionals in a modern workplace',
+  },
+] as const;
+
 export default function ForProfessionalsPage() {
+  const { t } = useLocale();
+
   return (
     <div>
       <PageHero
-        eyebrow="Professionals"
-        title="Build a professional profile employers can trust"
-        description="Create your profile, upload documents securely, apply to opportunities, and track interviews and offers in one place."
+        eyebrow={t('pro.eyebrow')}
+        title={t('pro.title')}
+        description={t('pro.body')}
         actions={
           <>
             <Link href="/auth/register" className="btn-primary">
-              Register as talent
+              {t('pro.register')}
             </Link>
             <Link href="/auth/login" className="btn-secondary">
-              Sign in
+              {t('pro.signIn')}
             </Link>
           </>
         }
+        sliderImages={[...PROFESSIONAL_HERO_SLIDER]}
       />
 
       <StatAdvert
         items={[
-          { value: 'Profile-first', label: 'Show experience employers can verify' },
-          { value: 'Matched', label: 'Opportunities aligned to your strengths' },
-          { value: 'Tracked', label: 'Interviews and offers in one workspace' },
+          { value: t('pro.stat1v'), label: t('pro.stat1l') },
+          { value: t('pro.stat2v'), label: t('pro.stat2l') },
+          { value: t('pro.stat3v'), label: t('pro.stat3l') },
         ]}
       />
 
       <FeatureAdGrid
-        eyebrow="Talent network"
-        title="Show up ready for serious roles"
-        description="Dealo connects professionals with employers who hire through structured recruitment and managed staffing."
+        eyebrow={t('pro.grid.eyebrow')}
+        title={t('pro.grid.title')}
+        description={t('pro.grid.body')}
         items={[
           {
             icon: UserRoundCheck,
-            title: 'Trusted profile',
-            body: 'Present your experience, skills, and readiness with a clean professional presence.',
+            title: t('pro.1.title'),
+            body: t('pro.1.body'),
           },
           {
             icon: FileUp,
-            title: 'Secure documents',
-            body: 'Upload credentials and supporting files through a controlled, professional flow.',
+            title: t('pro.2.title'),
+            body: t('pro.2.body'),
           },
           {
             icon: Briefcase,
-            title: 'Relevant openings',
-            body: 'Get considered for roles that match administrative and professional staffing needs.',
+            title: t('pro.3.title'),
+            body: t('pro.3.body'),
           },
           {
             icon: CalendarCheck2,
-            title: 'Interview clarity',
-            body: 'Track interview stages and next actions without chasing scattered messages.',
+            title: t('pro.4.title'),
+            body: t('pro.4.body'),
           },
           {
             icon: BadgeCheck,
-            title: 'Placement support',
-            body: 'From shortlist to offer, stay aligned with Dealo’s operating process.',
+            title: t('pro.5.title'),
+            body: t('pro.5.body'),
           },
           {
             icon: Sparkles,
-            title: 'Google sign-in',
-            body: 'Create or continue your account quickly with secure Google authentication.',
+            title: t('pro.6.title'),
+            body: t('pro.6.body'),
           },
         ]}
       />
 
       <IllustrationBand
-        eyebrow="Your path"
-        title="Register once. Stay ready for the right brief."
-        description="Employers submit structured requests. Dealo screens and shortlists. When your profile fits, you move into interviews with clarity."
+        eyebrow={t('pro.band.eyebrow')}
+        title={t('pro.band.title')}
+        description={t('pro.band.body')}
         actions={
           <Link href="/auth/register" className="btn-primary">
-            Join the talent network
+            {t('pro.band.cta')}
           </Link>
         }
         illustration={
           <div className="grid w-full max-w-sm gap-3">
-            {['Create profile', 'Complete documents', 'Get shortlisted', 'Interview & place'].map(
+            {[t('pro.path.1'), t('pro.path.2'), t('pro.path.3'), t('pro.path.4')].map(
               (label, index) => (
                 <div
                   key={label}
                   className="rounded-xl border border-border bg-surface-elevated/90 px-4 py-3"
                 >
                   <p className="text-xs font-semibold uppercase tracking-wider text-brand">
-                    Stage {index + 1}
+                    {t('pro.stage')} {index + 1}
                   </p>
                   <p className="mt-1 text-sm font-medium text-foreground">{label}</p>
                 </div>

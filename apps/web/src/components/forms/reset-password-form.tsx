@@ -78,6 +78,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         label="New password"
         icon={LockKeyhole}
         type="password"
+        revealable
         autoComplete="new-password"
         placeholder="Min. 8 chars, letter + number"
         error={errors.password?.message}
@@ -87,6 +88,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         label="Confirm password"
         icon={LockKeyhole}
         type="password"
+        revealable
         autoComplete="new-password"
         placeholder="Repeat password"
         error={errors.confirmPassword?.message}

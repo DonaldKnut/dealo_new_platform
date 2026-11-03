@@ -13,19 +13,18 @@ import { AuthField } from '@/components/auth/auth-field';
 import { AuthNavLink } from '@/components/forms/auth-nav-link';
 import { AuthDivider, OAuthGoogleButton } from '@/components/forms/oauth-google-button';
 import { FormStatus } from '@/components/forms/form-status';
-import { PrivacyConsent } from '@/components/forms/privacy-consent';
 import { useModal } from '@/components/modals/modal-context';
 import { useServerFormStatus } from '@/hooks/use-server-form-status';
+import { getDashboardHome } from '@/hooks/use-auth-session';
+import { useToast } from '@/components/ui/toast';
 import { ApiError, apiFetch } from '@/lib/api';
+import { logClientAudit } from '@/lib/client-audit';
 import { loadRememberedAuth, saveRememberedAuth } from '@/lib/remember-auth';
 
 const loginFormSchema = z.object({
   email: z.string().email().max(255),
   password: z.string().min(1).max(128),
   rememberMe: z.boolean(),
-  acceptPrivacy: z.boolean().refine((value) => value === true, {
-    message: 'Please acknowledge the privacy policy to continue',
-  }),
 });
 
 type LoginFormValues = z.infer<typeof loginFormSchema>;
@@ -39,6 +38,7 @@ export function LoginForm({
 }) {
   const modal = useModal();
   const router = useRouter();
+  const toast = useToast();
   const { serverError, serverMessage, setServerError, setServerMessage, clear } =
     useServerFormStatus();
   const [hydrated, setHydrated] = useState(false);
@@ -55,7 +55,6 @@ export function LoginForm({
     defaultValues: {
       email: '',
       password: '',
-      acceptPrivacy: false,
       rememberMe: false,
     },
   });
@@ -66,7 +65,6 @@ export function LoginForm({
       reset({
         email: remembered.email,
         password: '',
-        acceptPrivacy: false,
         rememberMe: true,
       });
     }
@@ -83,20 +81,24 @@ export function LoginForm({
         password: values.password,
         rememberMe: values.rememberMe,
       };
-      await apiFetch('/auth/login', {
+      const result = await apiFetch<{ user: { roles: string[] } }>('/auth/login', {
         method: 'POST',
         json: payload,
       });
       saveRememberedAuth(values.email, Boolean(values.rememberMe));
       setServerMessage('Signed in successfully.');
+      toast.success('Welcome back', 'Signed in successfully.');
+      logClientAudit({ action: 'AUTH_LOGIN_UI', entityType: 'Auth' });
       onSuccess?.();
       if (variant === 'modal') {
         modal.close();
       }
-      router.push('/dashboard');
+      router.push(getDashboardHome(result.user?.roles ?? []));
       router.refresh();
     } catch (error) {
-      setServerError(error instanceof ApiError ? error.message : 'Unable to sign in.');
+      const message = error instanceof ApiError ? error.message : 'Unable to sign in.';
+      setServerError(message);
+      toast.error('Sign in failed', message);
     }
   });
 
@@ -118,6 +120,7 @@ export function LoginForm({
         label="Password"
         icon={LockKeyhole}
         type="password"
+        revealable
         autoComplete="current-password"
         placeholder="••••••••"
         error={errors.password?.message}
@@ -146,11 +149,6 @@ export function LoginForm({
         </label>
         <p className="text-[11px] text-muted">Keeps you signed in longer on this device.</p>
       </div>
-
-      <PrivacyConsent
-        registration={register('acceptPrivacy')}
-        error={errors.acceptPrivacy?.message}
-      />
 
       <FormStatus error={serverError} message={serverMessage} />
 

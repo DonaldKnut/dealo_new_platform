@@ -3,6 +3,7 @@
 import { Building2, Handshake, ShieldCheck, Workflow } from 'lucide-react';
 import Link from 'next/link';
 
+import { useLocale } from '@/components/i18n/locale-context';
 import { CtaBanner } from '@/components/marketing/cta-banner';
 import { FeatureAdGrid } from '@/components/marketing/feature-ad-grid';
 import { PageHero } from '@/components/marketing/page-hero';
@@ -11,20 +12,21 @@ import { useModal } from '@/components/modals/modal-context';
 
 export default function ServicesPage() {
   const { open } = useModal();
+  const { t } = useLocale();
 
   return (
     <div>
       <PageHero
-        eyebrow="Services"
-        title="Recruitment outcomes for growing teams"
-        description="Choose direct recruitment into your structure, or managed staffing where Dealo runs the hiring operations for you."
+        eyebrow={t('svc.eyebrow')}
+        title={t('svc.title')}
+        description={t('svc.body')}
         actions={
           <>
             <button type="button" className="btn-primary" onClick={() => open('hire')}>
-              Request talent
+              {t('svc.cta')}
             </button>
             <Link href="/how-it-works" className="btn-secondary">
-              See how it works
+              {t('svc.how')}
             </Link>
           </>
         }
@@ -32,56 +34,54 @@ export default function ServicesPage() {
 
       <StatAdvert
         items={[
-          { value: 'Direct', label: 'Hire into your administrative structure' },
-          { value: 'Managed', label: 'Dealo runs staffing with clear terms' },
-          { value: 'Tracked', label: 'Brief → shortlist → placement trail' },
+          { value: t('svc.stat1v'), label: t('svc.stat1l') },
+          { value: t('svc.stat2v'), label: t('svc.stat2l') },
+          { value: t('svc.stat3v'), label: t('svc.stat3l') },
         ]}
       />
 
-      <section className="container-page grid gap-6 py-12 md:grid-cols-2 md:py-16">
+      <section className="container-page card-grid grid gap-6 py-12 md:grid-cols-2 md:py-16">
         <Link
           href="/services/direct-recruitment"
-          className="rounded-2xl border border-border bg-surface-elevated/70 p-6 transition hover:border-brand/40 min-[340px]:p-8"
+          className="ui-card min-h-[11rem] p-6 transition hover:border-brand/40 min-[340px]:p-8"
         >
           <Building2 className="h-6 w-6 text-brand" />
-          <h2 className="mt-4 font-display text-2xl text-foreground">Direct recruitment</h2>
+          <h2 className="mt-4 font-display text-2xl text-foreground">{t('svc.direct.title')}</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">
-            Role brief → sourcing → screening → shortlist → interviews → placement into your
-            organization.
+            {t('svc.direct.body')}
           </p>
         </Link>
         <Link
           href="/services/managed-staffing"
-          className="rounded-2xl border border-border bg-surface-elevated/70 p-6 transition hover:border-brand/40 min-[340px]:p-8"
+          className="ui-card min-h-[11rem] p-6 transition hover:border-brand/40 min-[340px]:p-8"
         >
           <Handshake className="h-6 w-6 text-brand" />
-          <h2 className="mt-4 font-display text-2xl text-foreground">Managed staffing</h2>
+          <h2 className="mt-4 font-display text-2xl text-foreground">{t('svc.managed.title')}</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">
-            Agreed staffing arrangements with commercial terms — Dealo’s platform carries the hiring
-            load.
+            {t('svc.managed.body')}
           </p>
         </Link>
       </section>
 
       <FeatureAdGrid
-        eyebrow="Operating clarity"
-        title="What both services share"
-        description="A disciplined path, accountable follow-through, and professional communication."
+        eyebrow={t('svc.share.eyebrow')}
+        title={t('svc.share.title')}
+        description={t('svc.share.body')}
         items={[
           {
             icon: Workflow,
-            title: 'Structured stages',
-            body: 'Every engagement moves through clear operating steps instead of open-ended posting.',
+            title: t('svc.share.1.title'),
+            body: t('svc.share.1.body'),
           },
           {
             icon: ShieldCheck,
-            title: 'Trusted network',
-            body: 'Professionals are screened against the brief before employers invest interview time.',
+            title: t('svc.share.2.title'),
+            body: t('svc.share.2.body'),
           },
           {
             icon: Handshake,
-            title: 'Commercial clarity',
-            body: 'Terms and next actions stay explicit — especially for managed staffing arrangements.',
+            title: t('svc.share.3.title'),
+            body: t('svc.share.3.body'),
           },
         ]}
       />

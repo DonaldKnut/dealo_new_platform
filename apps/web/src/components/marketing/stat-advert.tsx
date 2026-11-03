@@ -15,14 +15,14 @@ export function StatAdvert({
   return (
     <section className="relative border-y border-border/80 bg-surface/70 backdrop-blur-sm">
       <div className="container-page py-7 min-[340px]:py-10 sm:py-12">
-        <div className="grid gap-3 min-[340px]:gap-4 min-[480px]:grid-cols-3 sm:gap-6">
+        <div className="card-grid grid gap-3 min-[340px]:gap-4 min-[480px]:grid-cols-3 sm:gap-6">
           {items.map((item, index) => {
             const Icon = DEFAULT_ICONS[index % DEFAULT_ICONS.length];
             return (
-              <Reveal key={item.label} delay={index * 0.07}>
+              <Reveal key={item.label} delay={index * 0.07} className="h-full">
                 <motion.div
                   whileHover={{ y: -3 }}
-                  className="group relative overflow-hidden rounded-xl border border-border/70 bg-surface-elevated/70 p-3.5 shadow-sm transition-all duration-300 hover:border-brand/40 hover:shadow-md min-[340px]:rounded-2xl min-[340px]:p-5"
+                  className="ui-card group relative min-h-[8.5rem] overflow-hidden p-3.5 shadow-sm transition-all duration-300 hover:border-brand/40 hover:shadow-md min-[340px]:min-h-[9.5rem] min-[340px]:p-5"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand transition-transform group-hover:scale-110 min-[340px]:h-10 min-[340px]:w-10">

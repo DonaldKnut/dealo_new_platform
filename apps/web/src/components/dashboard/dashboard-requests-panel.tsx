@@ -4,8 +4,16 @@ import { LoaderCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { isStaffRole } from '@/hooks/use-auth-session';
 import { ApiError } from '@/lib/api';
-import { fetchDashboardRequests, type DashboardRequest } from '@/lib/dashboard-api';
+import {
+  fetchAuthMe,
+  fetchDashboardRequests,
+  updateHireInquiryStatus,
+  type DashboardRequest,
+} from '@/lib/dashboard-api';
+
+const STATUSES = ['NEW', 'CONTACTED', 'QUALIFIED', 'CONVERTED', 'CLOSED'] as const;
 
 function formatStatus(status: string) {
   return status
@@ -19,16 +27,21 @@ export function DashboardRequestsPanel() {
   const [rows, setRows] = useState<DashboardRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const load = async () => {
+    const [data, me] = await Promise.all([fetchDashboardRequests(), fetchAuthMe()]);
+    setRows(data);
+    setIsAdmin(isStaffRole(me.roles));
+  };
 
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const data = await fetchDashboardRequests();
-        if (active) {
-          setRows(data);
-          setError(null);
-        }
+        await load();
+        if (active) setError(null);
       } catch (err) {
         if (active) {
           setError(err instanceof ApiError ? err.message : 'Unable to load requests.');
@@ -41,6 +54,19 @@ export function DashboardRequestsPanel() {
       active = false;
     };
   }, []);
+
+  const onStatusChange = async (id: string, status: string) => {
+    setUpdatingId(id);
+    setError(null);
+    try {
+      await updateHireInquiryStatus(id, status);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Unable to update status.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -55,9 +81,15 @@ export function DashboardRequestsPanel() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 min-[400px]:flex-row min-[400px]:items-end min-[400px]:justify-between">
         <div>
-          <p className="eyebrow">Pipeline</p>
-          <h1 className="display-title mt-2 text-[1.65rem] min-[340px]:text-3xl">Hiring requests</h1>
-          <p className="mt-2 text-sm text-muted">Live briefs from `/dashboard/requests`.</p>
+          <p className="eyebrow">Requests</p>
+          <h1 className="display-title mt-2 text-[1.65rem] min-[340px]:text-3xl">
+            {isAdmin ? 'Hiring requests' : 'My requests'}
+          </h1>
+          <p className="mt-2 text-sm text-muted">
+            {isAdmin
+              ? 'Review and advance hire inquiries through the pipeline.'
+              : 'Track the status of your open hiring requests.'}
+          </p>
         </div>
         <Link href="/hire" className="btn-primary w-full min-[400px]:w-auto">
           New request
@@ -74,7 +106,7 @@ export function DashboardRequestsPanel() {
                 <th className="px-3 py-3 font-medium min-[340px]:px-4">Company</th>
                 <th className="px-3 py-3 font-medium min-[340px]:px-4">Role</th>
                 <th className="hidden px-4 py-3 font-medium min-[480px]:table-cell">Service</th>
-                <th className="hidden px-4 py-3 font-medium sm:table-cell">Headcount</th>
+                <th className="hidden px-4 py-3 font-medium sm:table-cell">People</th>
                 <th className="px-3 py-3 font-medium min-[340px]:px-4">Status</th>
               </tr>
             </thead>
@@ -88,8 +120,12 @@ export function DashboardRequestsPanel() {
               ) : (
                 rows.map((row) => (
                   <tr key={row.id} className="border-t border-border">
-                    <td className="px-3 py-3.5 text-foreground min-[340px]:px-4">{row.companyName}</td>
-                    <td className="px-3 py-3.5 text-foreground min-[340px]:px-4">{row.roleTitle}</td>
+                    <td className="px-3 py-3.5 text-foreground min-[340px]:px-4">
+                      {row.companyName}
+                    </td>
+                    <td className="px-3 py-3.5 text-foreground min-[340px]:px-4">
+                      {row.roleTitle}
+                    </td>
                     <td className="hidden px-4 py-3.5 text-muted min-[480px]:table-cell">
                       {row.serviceType.replaceAll('_', ' ')}
                     </td>
@@ -97,9 +133,24 @@ export function DashboardRequestsPanel() {
                       {row.numberOfProfessionals}
                     </td>
                     <td className="px-3 py-3.5 min-[340px]:px-4">
-                      <span className="rounded-full border border-border px-2.5 py-1 text-xs font-semibold text-brand">
-                        {formatStatus(row.status)}
-                      </span>
+                      {isAdmin ? (
+                        <select
+                          className="rounded-lg border border-border bg-surface-elevated px-2 py-1.5 text-xs font-semibold text-brand"
+                          value={row.status}
+                          disabled={updatingId === row.id}
+                          onChange={(event) => void onStatusChange(row.id, event.target.value)}
+                        >
+                          {STATUSES.map((status) => (
+                            <option key={status} value={status}>
+                              {formatStatus(status)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="rounded-full border border-border px-2.5 py-1 text-xs font-semibold text-brand">
+                          {formatStatus(row.status)}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))
