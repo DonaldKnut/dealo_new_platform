@@ -1,5 +1,6 @@
 export * from './api-key';
 export * from './audit';
+export * from './billing';
 export * from './auth';
 export * from './blog';
 export * from './candidate';

@@ -7,6 +7,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { BillingModule } from './billing/billing.module';
 import { BlogModule } from './blog/blog.module';
 import { CandidatesModule } from './candidates/candidates.module';
 import { CommonModule } from './common/common.module';
@@ -66,6 +67,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     MailModule,
     ApiKeysModule,
     WebhooksModule,
+    BillingModule,
   ],
   providers: [
     {

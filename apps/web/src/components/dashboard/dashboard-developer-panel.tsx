@@ -4,6 +4,7 @@ import { SANDBOX_KEY_POLICY } from '@dealo/shared';
 import { ExternalLink } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import { DashboardApiBillingPanel } from '@/components/dashboard/dashboard-api-billing-panel';
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
 import { DashboardWebhooksPanel } from '@/components/dashboard/dashboard-webhooks-panel';
 import { useToast } from '@/components/ui/toast';
@@ -178,6 +179,14 @@ export function DashboardDeveloperPanel() {
           </ul>
         )}
       </DashPanel>
+
+      <DashboardApiBillingPanel
+        onKeyCreated={(key) => {
+          setRevealed(key);
+          void load();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
 
       <DashboardWebhooksPanel canCreateGlobal={isAdmin} />
     </div>

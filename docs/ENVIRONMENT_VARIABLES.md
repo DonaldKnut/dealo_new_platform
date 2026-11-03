@@ -16,6 +16,9 @@
 | `SMTP_*` | For Nodemailer fallback | host/port/user/pass/secure |
 | `SUPER_ADMIN_EMAIL` | Optional | Seed bootstrap admin |
 | `SUPER_ADMIN_PASSWORD` | Optional | Seed bootstrap admin |
+| `CLOUDINARY_*` | For uploads | Talent documents and blog cover images |
+| `PAYSTACK_SECRET_KEY` | For paid API plans | Enables checkout; also verifies webhook signatures. Set webhook URL in Paystack to `<API_URL>/api/v1/billing/paystack/webhook` |
+| `PAYSTACK_PUBLIC_KEY` | Optional | Reserved for inline checkout |
 
 ## Web (`apps/web`)
 

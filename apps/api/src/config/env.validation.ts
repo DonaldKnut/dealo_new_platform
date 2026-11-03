@@ -56,6 +56,14 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
+  PAYSTACK_SECRET_KEY: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
+  PAYSTACK_PUBLIC_KEY: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

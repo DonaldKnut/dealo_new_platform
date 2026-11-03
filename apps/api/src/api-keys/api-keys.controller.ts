@@ -9,11 +9,13 @@ import {
 } from '@nestjs/swagger';
 import {
   createApiKeySchema,
+  createLiveApiKeySchema,
   createSandboxApiKeySchema,
   PermissionCode,
   SANDBOX_KEY_POLICY,
   updateApiKeySchema,
   type CreateApiKeyInput,
+  type CreateLiveApiKeyInput,
   type CreateSandboxApiKeyInput,
   type UpdateApiKeyInput,
   UserRole,
@@ -66,6 +68,21 @@ export class ApiKeysController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.apiKeysService.createSandbox(body, user);
+  }
+
+  @Post('live')
+  @Roles(...SANDBOX_ROLES)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Self-serve: create a live (dk_live_) key',
+    description: 'Requires an active paid API plan; limits and key count come from that plan.',
+  })
+  @ApiCreatedResponse({ description: 'Live key created (plaintext returned once)' })
+  createLive(
+    @Body(new ZodValidationPipe(createLiveApiKeySchema)) body: CreateLiveApiKeyInput,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.apiKeysService.createLive(body, user);
   }
 
   @Get('mine')

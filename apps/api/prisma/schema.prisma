@@ -125,6 +125,8 @@ model User {
   ticketMessages          SupportTicketMessage[]
   apiKeysCreated          ApiKey[]             @relation("ApiKeyCreator")
   webhookEndpoints        WebhookEndpoint[]    @relation("WebhookOwner")
+  apiSubscription         ApiSubscription?     @relation("ApiSubscriber")
+  apiInvoices             ApiInvoice[]         @relation("ApiInvoiceOwner")
 }
 
 model Role {
@@ -493,6 +495,77 @@ model OAuthClient {
   apiKey ApiKey @relation(fields: [apiKeyId], references: [id])
 
   @@index([apiKeyId])
+}
+
+/// Admin-editable pricing and limits per API plan (amounts in minor units, e.g. kobo).
+model ApiPlanConfig {
+  id              String     @id @default(auto()) @map("_id") @db.ObjectId
+  plan            ApiKeyPlan @unique
+  name            String
+  description     String?
+  priceMinor      Int
+  currency        String     @default("NGN")
+  periodDays      Int        @default(30)
+  rateLimitPerMin Int
+  monthlyQuota    Int
+  maxLiveKeys     Int        @default(0)
+  isPurchasable   Boolean    @default(true)
+  updatedAt       DateTime   @updatedAt
+  createdAt       DateTime   @default(now())
+}
+
+enum ApiSubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model ApiSubscription {
+  id                 String                @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String                @unique @db.ObjectId
+  plan               ApiKeyPlan
+  status             ApiSubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  user     User         @relation("ApiSubscriber", fields: [userId], references: [id])
+  invoices ApiInvoice[]
+
+  @@index([status, currentPeriodEnd])
+}
+
+enum ApiInvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+model ApiInvoice {
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  reference      String           @unique
+  userId         String           @db.ObjectId
+  subscriptionId String?          @db.ObjectId
+  plan           ApiKeyPlan
+  amountMinor    Int
+  currency       String
+  periodDays     Int
+  status         ApiInvoiceStatus @default(PENDING)
+  provider       String           @default("paystack")
+  providerTxnId  String?
+  authorizationUrl String?
+  paidAt         DateTime?
+  failureReason  String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user         User             @relation("ApiInvoiceOwner", fields: [userId], references: [id])
+  subscription ApiSubscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([status])
 }
 
 enum WebhookDeliveryStatus {

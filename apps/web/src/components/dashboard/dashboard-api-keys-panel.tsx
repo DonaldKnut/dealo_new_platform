@@ -4,6 +4,7 @@ import { ApiScope } from '@dealo/shared';
 import { useEffect, useState } from 'react';
 
 import { DashboardApiKeyUsage } from '@/components/dashboard/dashboard-api-key-usage';
+import { DashboardApiPlansAdmin } from '@/components/dashboard/dashboard-api-plans-admin';
 import { DashboardOAuthClients } from '@/components/dashboard/dashboard-oauth-clients';
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
@@ -285,6 +286,8 @@ export function DashboardApiKeysPanel() {
       {usageKeyId ? (
         <DashboardApiKeyUsage keyId={usageKeyId} onClose={() => setUsageKeyId(null)} />
       ) : null}
+
+      <DashboardApiPlansAdmin />
 
       {oauthKey ? (
         <DashboardOAuthClients

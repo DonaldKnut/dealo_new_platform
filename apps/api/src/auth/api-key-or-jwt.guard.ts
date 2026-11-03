@@ -78,7 +78,7 @@ export class ApiKeyOrJwtGuard extends AuthGuard('jwt') implements CanActivate {
       return false;
     }
 
-    this.apiKeysService.enforceRateLimit(
+    await this.apiKeysService.enforceRateLimit(
       principal,
       request.method,
       (request.originalUrl ?? request.url).split('?')[0],

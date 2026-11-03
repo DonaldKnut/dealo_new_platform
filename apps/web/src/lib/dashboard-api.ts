@@ -565,6 +565,90 @@ export function revokeMyApiKey(id: string) {
   return apiFetch<{ id: string; revoked: boolean }>(`/api-keys/mine/${id}`, { method: 'DELETE' });
 }
 
+export type ApiPlanName = 'SANDBOX' | 'PARTNER' | 'ENTERPRISE';
+
+export type ApiPlanInfo = {
+  plan: ApiPlanName;
+  name: string;
+  description: string | null;
+  priceMinor: number;
+  currency: string;
+  periodDays: number;
+  rateLimitPerMin: number;
+  monthlyQuota: number;
+  maxLiveKeys: number;
+  isPurchasable: boolean;
+};
+
+export type MyApiBilling = {
+  activePlan: ApiPlanName;
+  planConfig: ApiPlanInfo | null;
+  subscription: {
+    plan: ApiPlanName;
+    status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+  } | null;
+  requestsThisMonth: number;
+  paymentsEnabled: boolean;
+  invoices: {
+    id: string;
+    reference: string;
+    plan: ApiPlanName;
+    amountMinor: number;
+    currency: string;
+    status: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED';
+    paidAt: string | null;
+    createdAt: string;
+  }[];
+};
+
+export type ApiBillingAdmin = {
+  revenueByCurrency: Record<string, number>;
+  activeSubscriptions: { id: string; email: string; plan: ApiPlanName; currentPeriodEnd: string }[];
+  invoices: (MyApiBilling['invoices'][number] & { email: string; failureReason: string | null })[];
+};
+
+export function formatMinor(amountMinor: number, currency: string) {
+  return new Intl.NumberFormat('en-NG', { style: 'currency', currency, maximumFractionDigits: 0 }).format(
+    amountMinor / 100,
+  );
+}
+
+export function fetchApiPlans() {
+  return apiFetch<{ paymentsEnabled: boolean; plans: ApiPlanInfo[] }>('/billing/api-plans');
+}
+
+export function updateApiPlan(plan: ApiPlanName, payload: Record<string, unknown>) {
+  return apiFetch<ApiPlanInfo>(`/billing/api-plans/${plan}`, { method: 'PATCH', json: payload });
+}
+
+export function fetchMyApiBilling() {
+  return apiFetch<MyApiBilling>('/billing/api/me');
+}
+
+export function startApiCheckout(plan: ApiPlanName) {
+  return apiFetch<{ reference: string; authorizationUrl: string }>('/billing/api/checkout', {
+    method: 'POST',
+    json: { plan },
+  });
+}
+
+export function verifyApiPayment(reference: string) {
+  return apiFetch<{ reference: string; status: string; plan: ApiPlanName; failureReason: string | null }>(
+    '/billing/api/verify',
+    { method: 'POST', json: { reference } },
+  );
+}
+
+export function fetchApiBillingAdmin() {
+  return apiFetch<ApiBillingAdmin>('/billing/api/admin');
+}
+
+export function createLiveApiKey(name: string) {
+  return apiFetch<CreatedApiKey>('/api-keys/live', { method: 'POST', json: { name } });
+}
+
 export type OAuthClientRow = {
   id: string;
   name: string;

@@ -189,6 +189,47 @@ async function main(): Promise<void> {
     }
   }
 
+  console.log('Ensuring API plan configs (existing admin edits are kept)...');
+  const API_PLAN_DEFAULTS = [
+    {
+      plan: 'SANDBOX',
+      name: 'Sandbox',
+      description: 'Free test keys for building and evaluating an integration.',
+      priceMinor: 0,
+      rateLimitPerMin: 30,
+      monthlyQuota: 1_000,
+      maxLiveKeys: 0,
+      isPurchasable: false,
+    },
+    {
+      plan: 'PARTNER',
+      name: 'Partner',
+      description: 'Production access for a single integration.',
+      priceMinor: 5_000_000,
+      rateLimitPerMin: 120,
+      monthlyQuota: 50_000,
+      maxLiveKeys: 3,
+      isPurchasable: true,
+    },
+    {
+      plan: 'ENTERPRISE',
+      name: 'Enterprise',
+      description: 'High-volume production access with priority support.',
+      priceMinor: 25_000_000,
+      rateLimitPerMin: 600,
+      monthlyQuota: 500_000,
+      maxLiveKeys: 10,
+      isPurchasable: true,
+    },
+  ] as const;
+  for (const config of API_PLAN_DEFAULTS) {
+    await prisma.apiPlanConfig.upsert({
+      where: { plan: config.plan },
+      update: {},
+      create: { ...config, currency: 'NGN', periodDays: 30 },
+    });
+  }
+
   const adminEmail = process.env.SUPER_ADMIN_EMAIL;
   const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
 

@@ -11,7 +11,7 @@ import { API_SCOPES } from '@dealo/shared';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   const config = app.get(ConfigService);
   const logger = app.get(Logger);
 
@@ -97,6 +97,7 @@ async function bootstrap(): Promise<void> {
     .addTag('hire-inquiries', 'Hiring intake and pipeline')
     .addTag('api-keys', 'Partner API key administration')
     .addTag('webhooks', 'Signed outbound event delivery')
+    .addTag('billing', 'API plans, Paystack checkout and invoices')
     .addTag('blog', 'Public content')
     .build();
 

@@ -9,14 +9,16 @@ import { createHash, randomBytes } from 'crypto';
 import {
   SANDBOX_KEY_POLICY,
   type CreateApiKeyInput,
+  type CreateLiveApiKeyInput,
   type CreateSandboxApiKeyInput,
   type UpdateApiKeyInput,
 } from '@dealo/shared';
-import { ApiKeyEnvironment, ApiKeyPlan, type ApiKey } from '@prisma/client';
+import { ApiKeyEnvironment, ApiKeyPlan, ApiSubscriptionStatus, type ApiKey } from '@prisma/client';
 
 import type { AuthUser } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiKeyRateLimiter } from './api-key-rate-limiter';
+import { ApiPlansService } from './api-plans.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_USAGE_ROWS = 20_000;
@@ -37,6 +39,7 @@ export class ApiKeysService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rateLimiter: ApiKeyRateLimiter,
+    private readonly plans: ApiPlansService,
   ) {}
 
   create(input: CreateApiKeyInput, actor: AuthUser) {
@@ -73,6 +76,44 @@ export class ApiKeysService {
       plan: ApiKeyPlan.SANDBOX,
       scopes: [...SANDBOX_KEY_POLICY.scopes],
       rateLimitPerMin: SANDBOX_KEY_POLICY.rateLimitPerMin,
+      expiresAt: null,
+      organizationId: membership?.organizationId ?? null,
+      createdByUserId: actor.id,
+    });
+  }
+
+  async createLive(input: CreateLiveApiKeyInput, actor: AuthUser) {
+    const subscription = await this.prisma.apiSubscription.findUnique({ where: { userId: actor.id } });
+    if (
+      !subscription ||
+      subscription.status !== ApiSubscriptionStatus.ACTIVE ||
+      subscription.currentPeriodEnd.getTime() < Date.now()
+    ) {
+      throw new ForbiddenException('An active paid API plan is required for live keys');
+    }
+
+    const config = await this.plans.getConfig(subscription.plan);
+    const maxLiveKeys = config?.maxLiveKeys ?? 0;
+    const activeLiveKeys = await this.prisma.apiKey.count({
+      where: { createdByUserId: actor.id, environment: ApiKeyEnvironment.LIVE, isActive: true },
+    });
+    if (activeLiveKeys >= maxLiveKeys) {
+      throw new ForbiddenException(
+        `Your ${config?.name ?? subscription.plan} plan allows ${maxLiveKeys} active live key(s). Revoke one first.`,
+      );
+    }
+
+    const membership = await this.prisma.organizationMember.findFirst({
+      where: { userId: actor.id },
+      select: { organizationId: true },
+    });
+
+    return this.issue({
+      name: input.name,
+      environment: ApiKeyEnvironment.LIVE,
+      plan: subscription.plan,
+      scopes: [...SANDBOX_KEY_POLICY.scopes],
+      rateLimitPerMin: config?.rateLimitPerMin ?? SANDBOX_KEY_POLICY.rateLimitPerMin,
       expiresAt: null,
       organizationId: membership?.organizationId ?? null,
       createdByUserId: actor.id,
@@ -236,13 +277,16 @@ export class ApiKeysService {
     };
   }
 
-  /** Applies the per-key sliding window; rejected calls are still metered. */
-  enforceRateLimit(principal: AuthUser, method: string, path: string) {
+  /** Applies the per-key sliding window and monthly plan quota; rejected calls are still metered. */
+  async enforceRateLimit(principal: AuthUser, method: string, path: string) {
     if (!principal.apiKeyId || !principal.rateLimitPerMin) {
       return;
     }
     try {
       this.rateLimiter.consume(principal.apiKeyId, principal.rateLimitPerMin);
+      if (principal.apiKeyPlan) {
+        await this.plans.enforceMonthlyQuota(principal.apiKeyId, principal.apiKeyPlan as ApiKeyPlan);
+      }
     } catch (error) {
       if (error instanceof HttpException) {
         void this.logUsage({

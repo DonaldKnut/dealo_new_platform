@@ -191,8 +191,35 @@ Respond with any `2xx` within 10 seconds. Otherwise Dealo retries after 30s, 2m,
 | PATCH | `/api/v1/api-keys/:id` | Admin JWT | Update key |
 | DELETE | `/api/v1/api-keys/:id` | Admin JWT | Revoke key |
 
+## Plans and billing (Paystack)
+
+| Plan | Default price / 30 days | Rate limit | Monthly quota per key | Live keys |
+|---|---|---|---|---|
+| Sandbox | Free | 30/min | 1,000 | 0 (test only) |
+| Partner | ₦50,000 | 120/min | 50,000 | 3 |
+| Enterprise | ₦250,000 | 600/min | 500,000 | 10 |
+
+Defaults are seeded once; admins edit prices and limits in **Dashboard → API keys → API plans & revenue** (`PATCH /api/v1/billing/api-plans/:plan`). Amounts are stored as integer minor units (kobo).
+
+Flow:
+1. Employer clicks **Upgrade with Paystack** in Dashboard → Developer API (`POST /api/v1/billing/api/checkout`) and pays on Paystack.
+2. Paystack redirects back; the dashboard calls `POST /api/v1/billing/api/verify`. Paystack also calls `POST /api/v1/billing/paystack/webhook` (HMAC-SHA512 signed). Both paths re-verify the transaction with Paystack, check amount and currency, and are idempotent per reference.
+3. The plan activates for `periodDays`; paying again while active extends the period. The user can then create `dk_live_` keys (`POST /api/v1/api-keys/live`) up to the plan's limit.
+4. When a period lapses, live keys fall back to Sandbox limits until the next payment.
+
+Monthly quota exhaustion returns `429` with a "Monthly quota … is used up" message.
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/v1/billing/api-plans` | Public | Plan catalogue |
+| GET | `/api/v1/billing/api/me` | Employer/staff JWT | Your plan, usage, invoices |
+| POST | `/api/v1/billing/api/checkout` | Employer/staff JWT | Start Paystack checkout |
+| POST | `/api/v1/billing/api/verify` | Employer/staff JWT | Confirm after redirect |
+| POST | `/api/v1/api-keys/live` | Paid plan | Self-serve live key |
+| GET | `/api/v1/billing/api/admin` | Admin/finance JWT | Revenue, subscriptions, invoices |
+| PATCH | `/api/v1/billing/api-plans/:plan` | Admin JWT (`pricing.manage`) | Edit plan |
+
 ## Commercial notes
 
-- API access is sold with support (sandbox → partner → enterprise plans on the key record).  
-- Stripe metering and self-serve signup are Phase 2.  
+- API access is sold with support (sandbox → partner → enterprise plans).
 - Do not expose admin mail, audit, or support queues via API keys.
