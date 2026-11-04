@@ -585,6 +585,92 @@
     max-width: min(280px, calc(100vw - 1rem));
   }
 
+  /* Long-form article body (blog). */
+  .prose-dealo {
+    color: var(--foreground);
+    font-size: 1.0625rem;
+    line-height: 1.8;
+    overflow-wrap: break-word;
+  }
+
+  .prose-dealo > * + * {
+    margin-top: 1.1em;
+  }
+
+  .prose-dealo h2 {
+    margin-top: 2em;
+    font-family: var(--font-display), serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .prose-dealo h3 {
+    margin-top: 1.6em;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .prose-dealo p,
+  .prose-dealo li {
+    color: color-mix(in srgb, var(--foreground) 86%, var(--muted));
+  }
+
+  .prose-dealo ul,
+  .prose-dealo ol {
+    padding-left: 1.25rem;
+  }
+
+  .prose-dealo ul {
+    list-style: disc;
+  }
+
+  .prose-dealo ol {
+    list-style: decimal;
+  }
+
+  .prose-dealo li + li {
+    margin-top: 0.4em;
+  }
+
+  .prose-dealo li::marker {
+    color: var(--brand);
+  }
+
+  .prose-dealo strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+
+  .prose-dealo a {
+    color: var(--brand);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  .prose-dealo blockquote {
+    margin-top: 2em;
+    border-left: 3px solid var(--brand);
+    border-radius: 0 1rem 1rem 0;
+    background: color-mix(in srgb, var(--brand-soft) 45%, transparent);
+    padding: 1rem 1.25rem;
+    font-weight: 500;
+    color: var(--foreground);
+  }
+
+  @media (max-width: 359px) {
+    .prose-dealo {
+      font-size: 0.975rem;
+    }
+
+    .prose-dealo h2 {
+      font-size: 1.25rem;
+    }
+  }
+
   /* Bottom sheets / drawers respect the iOS home indicator. */
   .safe-bottom {
     padding-bottom: max(0.75rem, var(--safe-bottom));

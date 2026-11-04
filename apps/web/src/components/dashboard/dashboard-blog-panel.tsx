@@ -1,5 +1,6 @@
 'use client';
 
+import { BLOG_CATEGORIES } from '@dealo/shared';
 import { LoaderCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -36,6 +37,10 @@ export function DashboardBlogPanel() {
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED' | 'ARCHIVED'>('DRAFT');
+  const [coverImage, setCoverImage] = useState('');
+  const [category, setCategory] = useState('');
+  const [tags, setTags] = useState('');
+  const [featured, setFeatured] = useState(false);
 
   const refresh = async () => {
     setPosts(await fetchBlogAdmin());
@@ -67,6 +72,10 @@ export function DashboardBlogPanel() {
     setSeoTitle('');
     setSeoDescription('');
     setStatus('DRAFT');
+    setCoverImage('');
+    setCategory('');
+    setTags('');
+    setFeatured(false);
   };
 
   const fillForm = (post: BlogPost) => {
@@ -78,6 +87,10 @@ export function DashboardBlogPanel() {
     setSeoTitle(post.seoTitle ?? '');
     setSeoDescription(post.seoDescription ?? '');
     setStatus(post.status);
+    setCoverImage(post.coverImage ?? '');
+    setCategory(post.category ?? '');
+    setTags((post.tags ?? []).join(', '));
+    setFeatured(Boolean(post.featured));
   };
 
   if (loading) {
@@ -113,10 +126,17 @@ export function DashboardBlogPanel() {
             slug: slug || slugify(title),
             excerpt,
             content,
-            coverImage: '',
+            coverImage: coverImage.trim(),
             seoTitle,
             seoDescription,
             status,
+            category,
+            tags: tags
+              .split(',')
+              .map((tag) => tag.trim())
+              .filter(Boolean)
+              .slice(0, 12),
+            featured,
           };
           try {
             if (editingId) {
@@ -177,6 +197,41 @@ export function DashboardBlogPanel() {
           value={seoDescription}
           onChange={(e) => setSeoDescription(e.target.value)}
         />
+        <input
+          className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
+          placeholder="Cover image URL (https://…)"
+          type="url"
+          value={coverImage}
+          onChange={(e) => setCoverImage(e.target.value)}
+        />
+        {coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={coverImage} alt="Cover preview" className="h-32 w-full rounded-xl border border-border object-cover" />
+        ) : null}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <select
+            className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option value="">No category</option>
+            {BLOG_CATEGORIES.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+          <input
+            className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
+            placeholder="Tags, separated by commas"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} />
+          Feature this post at the top of the blog
+        </label>
         <select
           className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
           value={status}

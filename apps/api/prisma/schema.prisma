@@ -263,6 +263,9 @@ model BlogPost {
   seoTitle       String?
   seoDescription String?
   status         BlogPostStatus @default(DRAFT)
+  category       String?
+  tags           String[]
+  featured       Boolean        @default(false)
   publishedAt    DateTime?
   authorId       String?        @db.ObjectId
   createdAt      DateTime       @default(now())

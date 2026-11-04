@@ -218,6 +218,9 @@ export type BlogPost = {
   seoTitle: string | null;
   seoDescription: string | null;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  category?: string | null;
+  tags?: string[];
+  featured?: boolean;
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;

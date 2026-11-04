@@ -19,7 +19,7 @@ export class BlogService {
   listPublic() {
     return this.prisma.blogPost.findMany({
       where: { status: BlogPostStatus.PUBLISHED },
-      orderBy: { publishedAt: 'desc' },
+      orderBy: [{ featured: 'desc' }, { publishedAt: 'desc' }],
       take: 100,
     });
   }
@@ -57,6 +57,9 @@ export class BlogService {
         coverImage: emptyToNull(input.coverImage),
         seoTitle: emptyToNull(input.seoTitle),
         seoDescription: emptyToNull(input.seoDescription),
+        category: emptyToNull(input.category),
+        tags: input.tags,
+        featured: input.featured,
         status: input.status,
         publishedAt: published ? new Date() : null,
         authorId,
@@ -93,6 +96,9 @@ export class BlogService {
         coverImage: emptyToNull(input.coverImage),
         seoTitle: emptyToNull(input.seoTitle),
         seoDescription: emptyToNull(input.seoDescription),
+        category: emptyToNull(input.category),
+        tags: input.tags,
+        featured: input.featured,
         status: input.status,
         publishedAt: becomingPublished
           ? new Date()

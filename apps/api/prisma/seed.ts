@@ -4,6 +4,8 @@ import * as argon2 from 'argon2';
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 
+import { BLOG_ARTICLES } from './blog-articles';
+
 function loadEnvFile(): void {
   const candidates = [
     resolve(__dirname, '../.env'),
@@ -227,6 +229,21 @@ async function main(): Promise<void> {
       where: { plan: config.plan },
       update: {},
       create: { ...config, currency: 'NGN', periodDays: 30 },
+    });
+  }
+
+  console.log('Adding starter blog articles (existing posts are never changed)...');
+  for (const article of BLOG_ARTICLES) {
+    const exists = await prisma.blogPost.findUnique({ where: { slug: article.slug } });
+    if (exists) continue;
+    const { daysAgo, ...data } = article;
+    await prisma.blogPost.create({
+      data: {
+        ...data,
+        content: data.content.trim(),
+        status: 'PUBLISHED',
+        publishedAt: new Date(Date.now() - daysAgo * 86_400_000),
+      },
     });
   }
 

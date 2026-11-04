@@ -16,6 +16,19 @@ export const blogPostInputSchema = z.object({
   seoTitle: z.string().trim().max(200).optional().or(z.literal('')),
   seoDescription: z.string().trim().max(320).optional().or(z.literal('')),
   status: blogPostStatusSchema.default('DRAFT'),
+  category: z.string().trim().max(60).optional().or(z.literal('')),
+  tags: z.array(z.string().trim().min(1).max(40)).max(12).default([]),
+  featured: z.boolean().default(false),
 });
+
+export const BLOG_CATEGORIES = [
+  'Hiring guides',
+  'Skilled trades',
+  'Pay & the law',
+  'AI in hiring',
+  'Africa trends',
+  'Workforce',
+  'Career tips',
+] as const;
 
 export type BlogPostInput = z.infer<typeof blogPostInputSchema>;
