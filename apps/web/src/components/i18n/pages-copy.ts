@@ -14,14 +14,14 @@ export const pagesEn = {
   'how.stat2v': '2 ways',
   'how.stat2l': 'Hire them yourself, or let Dealo manage them',
   'how.stat3v': '1 place',
-  'how.stat3l': 'Tell us the job, get a short list, hire',
+  'how.stat3l': 'Tell us the job, get a shortlist, hire',
   'how.steps.eyebrow': 'Steps',
   'how.steps.title': 'Made for real hiring',
   'how.steps.body': 'Not a busy job board. Real people help you, with clear prices and rules.',
   'how.s1.title': 'Tell us the job',
   'how.s1.body': 'Tell us the job, how many people you need, where they will work, and your budget.',
   'how.s2.title': 'Find & check',
-  'how.s2.body': 'Dealo finds people and checks them. Then we send you a short list.',
+  'how.s2.body': 'Dealo finds people and checks them. Then we send you a shortlist.',
   'how.s3.title': 'Interview & hire',
   'how.s3.body': 'Meet the people and pick the best one. We stay with you after the hire.',
   'how.vis.eyebrow': 'Easy to follow',
@@ -29,7 +29,7 @@ export const pagesEn = {
   'how.vis.body':
     'From the first chat to after the hire, everyone knows what comes next.',
   'how.vis.1': 'Job details agreed',
-  'how.vis.2': 'Short list ready',
+  'how.vis.2': 'Shortlist ready',
   'how.vis.3': 'Hire done',
   'how.why.eyebrow': 'Why teams pick Dealo',
   'how.why.title': 'Simple steps. Clear prices and rules.',
@@ -38,7 +38,7 @@ export const pagesEn = {
   'how.why.1.title': 'Direct hiring',
   'how.why.1.body':
     'Tell us the job. We find and check people. You interview them and hire them.',
-  'how.why.2.title': 'Managed staff',
+  'how.why.2.title': 'Managed staffing',
   'how.why.2.body': 'You agree the terms. Dealo does the hiring work for you.',
   'how.why.3.title': 'We stay with you',
   'how.why.3.body':
@@ -64,26 +64,26 @@ export const pagesEn = {
   'emp.1.body':
     'With direct hiring, people join your company as your staff. The interview and offer steps are clear.',
   'emp.2.title': 'Managed for you',
-  'emp.2.body': 'With managed staff, Dealo looks after the prices, terms, and follow-up.',
-  'emp.3.title': 'Faster short lists',
+  'emp.2.body': 'With managed staffing, Dealo looks after the prices, terms, and follow-up.',
+  'emp.3.title': 'Faster shortlists',
   'emp.3.body':
     'No need to post jobs and wait. Start with checked people who fit your job.',
   'emp.4.title': 'Everything written down',
   'emp.4.body':
-    'Job needs, short lists, and next steps stay in one place for your team.',
+    'Job needs, shortlists, and next steps stay in one place for your team.',
   'emp.5.title': 'People you can trust',
   'emp.5.body': 'We check everyone who joins. So our workers stay honest and skilled.',
   'emp.6.title': 'Your own dashboard',
   'emp.6.body': 'See your requests, your people, and your next steps in one place.',
   'emp.band.eyebrow': 'Direct hiring',
-  'emp.band.title': 'Job details, search, checks, short list, interviews, hire',
+  'emp.band.title': 'Job details, search, checks, shortlist, interviews, hire',
   'emp.band.body':
     'For companies that want to hire their own staff. Dealo walks you through each step.',
   'emp.band.cta': 'Start direct hiring',
   'emp.step.1': 'Details',
   'emp.step.2': 'Search',
   'emp.step.3': 'Check',
-  'emp.step.4': 'Short list',
+  'emp.step.4': 'Shortlist',
   'emp.step.5': 'Interview',
   'emp.step.6': 'Hire',
 
@@ -113,18 +113,18 @@ export const pagesEn = {
   'pro.4.title': 'Clear interviews',
   'pro.4.body': 'See each interview step in one place. No chasing messages.',
   'pro.5.title': 'Help to get hired',
-  'pro.5.body': 'From short list to job offer, Dealo guides you step by step.',
+  'pro.5.body': 'From shortlist to job offer, Dealo guides you step by step.',
   'pro.6.title': 'Google sign-in',
   'pro.6.body': 'Make an account or sign in fast with Google.',
   'pro.band.eyebrow': 'Your path',
   'pro.band.title': 'Sign up once. Be ready for the right job.',
   'pro.band.body':
-    'Companies tell us the job. Dealo checks people and makes a short list. If you fit, you move on to interviews.',
+    'Companies tell us the job. Dealo checks people and makes a shortlist. If you fit, you move on to interviews.',
   'pro.band.cta': 'Join as a worker',
   'pro.stage': 'Stage',
   'pro.path.1': 'Create profile',
   'pro.path.2': 'Add your papers',
-  'pro.path.3': 'Get on a short list',
+  'pro.path.3': 'Get on a shortlist',
   'pro.path.4': 'Interview & get hired',
 
   'svc.eyebrow': 'Services',
@@ -142,7 +142,7 @@ export const pagesEn = {
   'svc.direct.title': 'Direct hiring',
   'svc.direct.body':
     'We find and check people. You interview them and hire them as your staff.',
-  'svc.managed.title': 'Managed staff',
+  'svc.managed.title': 'Managed staffing',
   'svc.managed.body':
     'Clear prices and rules. Dealo does the hiring work for you.',
   'svc.share.eyebrow': 'Clear steps',
@@ -154,12 +154,12 @@ export const pagesEn = {
   'svc.share.2.body':
     'We check people against your job before you spend time on interviews.',
   'svc.share.3.title': 'Clear prices and rules',
-  'svc.share.3.body': 'Prices, rules, and next steps stay simple. This is true for managed staff too.',
+  'svc.share.3.body': 'Prices, rules, and next steps stay simple. This is true for managed staffing too.',
 
   'direct.eyebrow': 'Direct hiring',
   'direct.title': 'Hiring that starts with your job',
   'direct.body':
-    'For office jobs and skilled trades, when you want to hire your own staff. We find people, check them, and send a short list. You interview and hire.',
+    'For office jobs and skilled trades, when you want to hire your own staff. We find people, check them, and send a shortlist. You interview and hire.',
   'direct.cta': 'Ask for a hire',
   'direct.register': 'Create company account',
   'direct.stat1v': '6 steps',
@@ -169,17 +169,17 @@ export const pagesEn = {
   'direct.stat3v': 'Your staff',
   'direct.stat3l': 'New hires join your company',
 
-  'managed.eyebrow': 'Managed staff',
+  'managed.eyebrow': 'Managed staffing',
   'managed.title': 'Workers Dealo manages for you',
   'managed.body':
     'Agree how many people you need and the terms. Dealo does the hiring, contracts, and paperwork. Your team just does the work.',
-  'managed.cta': 'Ask for managed staff',
+  'managed.cta': 'Ask for managed staffing',
   'managed.register': 'Create company account',
 
   'dev.eyebrow': 'Developers',
   'dev.title': 'Dealo API for apps and partners',
   'dev.body':
-    'Connect your app to Dealo. Send jobs, get short lists, and check hire status. You can buy API access and get help.',
+    'Connect your app to Dealo. Send jobs, get shortlists, and check hire status. You can buy API access and get help.',
   'dev.cta': 'Ask for API access',
   'dev.support': 'Talk to support',
 

@@ -401,7 +401,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     compact?: boolean;
     scope: string;
   }) => {
-    let index = 0;
     const groups: Array<{ tour?: NavItem['tour']; items: NavItem[] }> = [];
     for (const item of nav) {
       const last = groups[groups.length - 1];
@@ -422,7 +421,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 ? 'nav-admin'
                 : undefined;
           const content = group.items.map((item) =>
-            renderNavLink(item, { onNavigate, compact, scope, index: index++ }),
+            renderNavLink(item, { onNavigate, compact, scope, index: nav.indexOf(item) }),
           );
           if (!wrapperTour) {
             return <div key={`nav-group-${index}`}>{content}</div>;

@@ -1,12 +1,13 @@
 'use client';
 
 import { BLOG_CATEGORIES } from '@dealo/shared';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { ApiError } from '@/lib/api';
 import {
+  aiBlogDraft,
   createBlogPost,
   deleteBlogPost,
   fetchBlogAdmin,
@@ -41,6 +42,8 @@ export function DashboardBlogPanel() {
   const [category, setCategory] = useState('');
   const [tags, setTags] = useState('');
   const [featured, setFeatured] = useState(false);
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
 
   const refresh = async () => {
     setPosts(await fetchBlogAdmin());
@@ -154,6 +157,43 @@ export function DashboardBlogPanel() {
         }}
       >
         <h2 className="font-display text-lg">{editingId ? 'Edit post' : 'New post'}</h2>
+        {!editingId ? (
+          <div className="flex flex-col gap-2 rounded-xl border border-dashed border-brand/40 bg-brand-soft/20 p-3 sm:flex-row">
+            <input
+              className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
+              placeholder="Topic for an AI draft, e.g. How to hire a reliable site electrician"
+              value={aiTopic}
+              onChange={(e) => setAiTopic(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn-secondary shrink-0 px-4 py-2 text-sm"
+              disabled={aiBusy || aiTopic.trim().length < 4}
+              onClick={async () => {
+                setAiBusy(true);
+                setError(null);
+                try {
+                  const draft = await aiBlogDraft(aiTopic.trim());
+                  setTitle(draft.title);
+                  setSlug(slugify(draft.title));
+                  setExcerpt(draft.excerpt);
+                  setContent(draft.contentHtml);
+                  setSeoTitle(draft.seoTitle);
+                  setSeoDescription(draft.seoDescription);
+                  setStatus('DRAFT');
+                  setMessage('AI draft added. Read and edit it before publishing.');
+                } catch (err) {
+                  setError(err instanceof ApiError ? err.message : 'AI draft failed.');
+                } finally {
+                  setAiBusy(false);
+                }
+              }}
+            >
+              {aiBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              Draft with AI
+            </button>
+          </div>
+        ) : null}
         <input
           className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
           placeholder="Title"

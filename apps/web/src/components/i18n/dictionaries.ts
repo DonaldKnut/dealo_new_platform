@@ -30,12 +30,12 @@ const enCore = {
 
   'mega.direct.title': 'Direct hiring',
   'mega.direct.desc': 'We find and check people. You hire them as your staff.',
-  'mega.managed.title': 'Managed staff',
+  'mega.managed.title': 'Managed staffing',
   'mega.managed.desc': 'We find and manage the workers for you.',
   'mega.how.title': 'How it works',
   'mega.how.desc': 'See every step, from asking to hiring.',
   'mega.employers.title': 'For companies',
-  'mega.employers.desc': 'Hire office workers or skilled trades from a checked short list.',
+  'mega.employers.desc': 'Hire office workers or skilled trades from a checked shortlist.',
   'mega.professionals.title': 'For job seekers',
   'mega.professionals.desc': 'Make a profile and get matched to jobs.',
   'mega.developers.title': 'Developers & API',
@@ -152,11 +152,11 @@ const enCore = {
   'tour.3.accent': 'Live counts',
   'tour.3.title': 'Your numbers',
   'tour.3.body':
-    'These cards show the numbers that matter to you, like open requests, people, and short lists. They change as the team works. They are not ads.',
+    'These cards show the numbers that matter to you, like open requests, people, and shortlists. They change as the team works. They are not ads.',
   'tour.4.accent': 'Match people to jobs',
   'tour.4.title': 'Requests & workers',
   'tour.4.body':
-    'Hiring requests are forms sent by companies. Short lists are checked people who fit those requests. Admins can change the status. Companies mostly follow their own.',
+    'Hiring requests are forms sent by companies. Shortlists are checked people who fit those requests. Admins can change the status. Companies mostly follow their own.',
   'tour.5.accent': 'Help & languages',
   'tour.5.title': 'Help & language',
   'tour.5.body':

@@ -621,6 +621,56 @@ export function revokeMyApiKey(id: string) {
   return apiFetch<{ id: string; revoked: boolean }>(`/api-keys/mine/${id}`, { method: 'DELETE' });
 }
 
+// ---------------------------------------------------------------------- AI
+
+export type AiProvider = 'gemini' | 'rules';
+export type AiStatus = { provider: AiProvider; model: string; note: string };
+type AiBase = { runId: string; provider: AiProvider };
+
+export type AiScreen = AiBase & {
+  score: number;
+  fit: 'STRONG' | 'POSSIBLE' | 'WEAK';
+  summary: string;
+  strengths: string[];
+  gaps: string[];
+  interviewQuestions: string[];
+};
+
+export type AiVerify = AiBase & {
+  checks: { label: string; status: 'ok' | 'warn' | 'missing'; note: string }[];
+  summary: string;
+  readyForShortlist: boolean;
+};
+
+export type AiSource = AiBase & {
+  keywords: string[];
+  searchString: string;
+  outreachMessage: string;
+  matches: { candidateId: string; fullName: string; roleTitle: string | null; location: string | null; score: number; reasons: string[] }[];
+};
+
+export type AiOpsBrief = AiBase & { headline: string; summary: string; actions: string[] };
+
+export type AiBlogDraft = AiBase & {
+  title: string;
+  excerpt: string;
+  seoTitle: string;
+  seoDescription: string;
+  outline: string[];
+  contentHtml: string;
+};
+
+export const fetchAiStatus = () => apiFetch<AiStatus>('/ai/status');
+export const aiScreen = (payload: { candidateId: string; hireInquiryId?: string; requirements?: string }) =>
+  apiFetch<AiScreen>('/ai/screen', { method: 'POST', json: payload });
+export const aiVerify = (candidateId: string) => apiFetch<AiVerify>(`/ai/verify/${candidateId}`, { method: 'POST' });
+export const aiSource = (hireInquiryId: string) => apiFetch<AiSource>(`/ai/source/${hireInquiryId}`, { method: 'POST' });
+export const aiOpsBrief = (siteId: string) => apiFetch<AiOpsBrief>(`/ai/ops-summary/${siteId}`, { method: 'POST' });
+export const aiBlogDraft = (topic: string, audience: 'employers' | 'professionals' = 'employers') =>
+  apiFetch<AiBlogDraft>('/ai/blog-draft', { method: 'POST', json: { topic, audience } });
+export const reviewAiRun = (runId: string, decision: 'ACCEPTED' | 'DISMISSED', note?: string) =>
+  apiFetch(`/ai/runs/${runId}/review`, { method: 'POST', json: { decision, note } });
+
 // ------------------------------------------------------------ workforce ops
 
 export type WorkSite = {

@@ -17,6 +17,7 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
+  Sparkles,
   Timer,
   UserCheck,
   UserPlus,
@@ -30,10 +31,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DashPanel } from '@/components/dashboard/dashboard-ui';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
+import { AiReviewBar } from '@/components/ai/ai-review-bar';
 import {
   addSiteNote,
   addSitePlacement,
+  aiOpsBrief,
   assignCover,
+  type AiOpsBrief,
   fetchAuthMe,
   fetchSiteConsole,
   fetchStaffTalentProfiles,
@@ -111,6 +115,19 @@ export function WorkforceConsole({ siteId }: { siteId: string }) {
   const [people, setPeople] = useState<StaffTalentRow[] | null>(null);
   const [newPlacement, setNewPlacement] = useState({ candidateId: '', roleTitle: '', isStandby: false });
   const [coverPick, setCoverPick] = useState<Record<string, string>>({});
+  const [brief, setBrief] = useState<AiOpsBrief | null>(null);
+  const [briefBusy, setBriefBusy] = useState(false);
+
+  const onBrief = async () => {
+    setBriefBusy(true);
+    try {
+      setBrief(await aiOpsBrief(siteId));
+    } catch (error) {
+      toast.error('AI brief failed', error instanceof ApiError ? error.message : undefined);
+    } finally {
+      setBriefBusy(false);
+    }
+  };
 
   const fail = useCallback(
     (title: string, error: unknown) => toast.error(title, error instanceof ApiError ? error.message : undefined),
@@ -336,6 +353,43 @@ export function WorkforceConsole({ siteId }: { siteId: string }) {
                   : 'All covered'
             }
           />
+        </div>
+
+        <div className="relative mt-4">
+          {brief ? (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-[#7cff4d]/25 bg-white/[0.05] p-3 backdrop-blur-md"
+            >
+              <p className="flex items-center gap-2 text-sm font-semibold text-[#a8ff70]">
+                <Sparkles className="h-4 w-4" /> {brief.headline}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-white/75">{brief.summary}</p>
+              {brief.actions.length ? (
+                <ul className="mt-2 space-y-1 text-xs text-white/85">
+                  {brief.actions.map((action) => (
+                    <li key={action} className="flex gap-1.5">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#7cff4d]" /> {action}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <div className="mt-2 [&_*]:text-white/80 [&_button]:text-white">
+                <AiReviewBar runId={brief.runId} provider={brief.provider} className="border-white/10" />
+              </div>
+            </motion.div>
+          ) : (
+            <button
+              type="button"
+              disabled={briefBusy}
+              onClick={() => void onBrief()}
+              className="inline-flex items-center gap-2 rounded-full border border-[#7cff4d]/40 bg-[#7cff4d]/10 px-3.5 py-2 text-xs font-semibold text-[#a8ff70] transition hover:bg-[#7cff4d]/20"
+            >
+              {briefBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {briefBusy ? 'Writing brief…' : 'AI brief for this site'}
+            </button>
+          )}
         </div>
       </section>
 

@@ -17,6 +17,8 @@
 | `SUPER_ADMIN_EMAIL` | Optional | Seed bootstrap admin |
 | `SUPER_ADMIN_PASSWORD` | Optional | Seed bootstrap admin |
 | `CLOUDINARY_*` | For uploads | Talent documents and blog cover images |
+| `GEMINI_API_KEY` | Optional | Turns on Gemini for the AI agents. Without it they use built-in rules; blog drafting needs it |
+| `GEMINI_MODEL` | Optional | Defaults to `gemini-2.5-flash` |
 | `PAYSTACK_SECRET_KEY` | For paid API plans | Enables checkout; also verifies webhook signatures. Set webhook URL in Paystack to `<API_URL>/api/v1/billing/paystack/webhook` |
 | `PAYSTACK_PUBLIC_KEY` | Optional | Reserved for inline checkout |
 

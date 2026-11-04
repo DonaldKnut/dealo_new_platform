@@ -146,12 +146,12 @@ const STEPS = [
 const FIELD_HELP = {
   companyName: 'The name of your company.',
   contactName: 'Who should we talk to about this hire?',
-  email: 'We send updates and short lists here.',
+  email: 'We send updates and shortlists here.',
   phone: 'We call this number for quick questions.',
   roleFamily:
     'Office jobs: admin, money, tech, and more. Skilled trades: bricklaying, electrical, plumbing, welding, carpentry, and site leads. Trade jobs are often short contracts.',
   serviceType:
-    'Direct hiring: they join your company as your staff. Managed staff: Dealo finds and manages the workers for you. This works well for trade teams and projects.',
+    'Direct hiring: they join your company as your staff. Managed staffing: Dealo finds and manages the workers for you. This works well for trade teams and projects.',
   roleTitle: 'The job name in words only, like Executive Assistant or Bricklayer. No numbers.',
   numberOfProfessionals: 'How many people do you need?',
   location: 'Where will they work? For example, Lagos, Nigeria. Trades often work on site.',

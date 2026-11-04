@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
+import { CandidateAiPanel } from '@/components/ai/candidate-ai-panel';
 import { DashHero, DashPanel, StatusChip } from '@/components/dashboard/dashboard-ui';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
@@ -128,6 +129,8 @@ function ProfileDrawer({ id, onClose }: { id: string; onClose: () => void }) {
             </div>
 
             <ScoreBar score={profile.completeness.score} />
+
+            <CandidateAiPanel candidateId={profile.id} />
 
             <div className="grid grid-cols-1 gap-2 text-sm min-[400px]:grid-cols-2">
               <a href={`mailto:${profile.email}`} className="flex min-w-0 items-center gap-2 text-foreground hover:text-brand">

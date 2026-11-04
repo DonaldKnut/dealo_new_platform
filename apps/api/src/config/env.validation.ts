@@ -60,6 +60,11 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
+  GEMINI_API_KEY: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
+  GEMINI_MODEL: z.string().default('gemini-2.5-flash'),
   PAYSTACK_PUBLIC_KEY: z
     .string()
     .optional()

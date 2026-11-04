@@ -595,6 +595,29 @@ model ApiInvoice {
   @@index([status])
 }
 
+// ---------------------------------------------------------------------- AI
+
+/// Every AI suggestion is stored so a person can review it and we can audit it.
+model AiRun {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  feature      String
+  subjectType  String
+  subjectId    String?
+  provider     String
+  model        String?
+  output       Json
+  latencyMs    Int
+  status       String    @default("SUGGESTED")
+  reviewedById String?   @db.ObjectId
+  reviewedAt   DateTime?
+  reviewNote   String?
+  createdById  String    @db.ObjectId
+  createdAt    DateTime  @default(now())
+
+  @@index([subjectType, subjectId, createdAt])
+  @@index([feature, createdAt])
+}
+
 // ---------------------------------------------------------------- workforce ops
 
 enum PlacementStatus {

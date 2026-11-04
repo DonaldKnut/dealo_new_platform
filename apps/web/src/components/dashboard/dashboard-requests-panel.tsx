@@ -1,8 +1,10 @@
 'use client';
 
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+
+import { SourcingPanel } from '@/components/ai/sourcing-panel';
 
 import { isStaffRole } from '@/hooks/use-auth-session';
 import { ApiError } from '@/lib/api';
@@ -29,6 +31,8 @@ export function DashboardRequestsPanel() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [sourcing, setSourcing] = useState<{ id: string; title: string } | null>(null);
+  const closeSourcing = useCallback(() => setSourcing(null), []);
 
   const load = async () => {
     const [data, me] = await Promise.all([fetchDashboardRequests(), fetchAuthMe()]);
@@ -98,6 +102,10 @@ export function DashboardRequestsPanel() {
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 
+      {sourcing ? (
+        <SourcingPanel hireInquiryId={sourcing.id} title={sourcing.title} onClose={closeSourcing} />
+      ) : null}
+
       <div className="overflow-hidden rounded-2xl border border-border">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
@@ -130,6 +138,15 @@ export function DashboardRequestsPanel() {
                     </td>
                     <td className="px-3 py-3.5 text-foreground min-[340px]:px-4">
                       {row.roleTitle}
+                      {isAdmin ? (
+                        <button
+                          type="button"
+                          onClick={() => setSourcing({ id: row.id, title: `${row.roleTitle} · ${row.companyName}` })}
+                          className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-brand hover:underline"
+                        >
+                          <Sparkles className="h-3 w-3" /> Find people with AI
+                        </button>
+                      ) : null}
                     </td>
                     <td className="hidden px-4 py-3.5 text-muted min-[480px]:table-cell">
                       {row.serviceType.replaceAll('_', ' ')}

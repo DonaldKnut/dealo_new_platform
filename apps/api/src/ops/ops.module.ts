@@ -8,5 +8,6 @@ import { OpsService } from './ops.service';
   imports: [CandidatesModule],
   controllers: [OpsController],
   providers: [OpsService],
+  exports: [OpsService],
 })
 export class OpsModule {}
