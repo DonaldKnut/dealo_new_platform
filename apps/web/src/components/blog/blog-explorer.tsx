@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowRight, ArrowUpRight, Clock3, Search, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { ExternalRead } from '@/lib/blog-reading';
 import { cn } from '@/lib/utils';
@@ -65,6 +65,12 @@ function Meta({ post, light = false }: { post: BlogCard; light?: boolean }) {
 export function BlogExplorer({ posts, reading }: { posts: BlogCard[]; reading: ExternalRead[] }) {
   const [category, setCategory] = useState('All');
   const [query, setQuery] = useState('');
+
+  // Supports /blog?q=… (used by the site-search structured data).
+  useEffect(() => {
+    const initial = new URLSearchParams(window.location.search).get('q');
+    if (initial) setQuery(initial.slice(0, 100));
+  }, []);
 
   const categories = useMemo(
     () => ['All', ...Array.from(new Set(posts.map((post) => post.category).filter(Boolean) as string[]))],

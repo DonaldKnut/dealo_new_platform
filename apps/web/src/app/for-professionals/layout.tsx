@@ -1,15 +1,21 @@
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Join as talent — Office & skilled trades roles in Nigeria',
+import { BreadcrumbsJsonLd } from '@/components/seo/breadcrumbs-json-ld';
+import { pageMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = pageMetadata({
+  path: '/for-professionals',
+  title: 'Find office & skilled trade jobs in Nigeria — join free',
   description:
-    'Build a checked profile and get matched to office and skilled trades jobs with Dealo across Nigeria and Africa.',
-  openGraph: {
-    title: 'Join Dealo as a professional',
-    description: 'Matched roles for office talent and skilled trades across Nigeria and Africa.',
-  },
-};
+    'Build a free profile, upload your CV and get matched to checked employers for office and skilled trade jobs across Nigeria and Africa.',
+  keywords: ['jobs in Lagos', 'electrician jobs Nigeria', 'office jobs Nigeria', 'skilled trade jobs Africa'],
+});
 
 export default function ForProfessionalsLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <BreadcrumbsJsonLd items={[{ name: 'For professionals', path: '/for-professionals' }]} />
+      {children}
+    </>
+  );
 }

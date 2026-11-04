@@ -6,6 +6,7 @@ import { ResetPasswordForm } from '@/components/forms/reset-password-form';
 export const metadata: Metadata = {
   title: 'Reset password',
   description: 'Choose a new password for your Dealo account.',
+  robots: { index: false, follow: false },
 };
 
 export default async function ResetPasswordPage({

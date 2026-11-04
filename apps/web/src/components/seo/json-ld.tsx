@@ -8,7 +8,13 @@ export function OrganizationJsonLd() {
         '@type': 'Organization',
         '@id': `${APP_URL}/#organization`,
         name: 'Dealo',
+        alternateName: 'Dealo Talent Network',
         url: APP_URL,
+        logo: {
+          '@type': 'ImageObject',
+          url: 'https://res.cloudinary.com/dyaetoldv/image/upload/v1793397172/Dealo_Talent_Network_Logo_psqwch.png',
+        },
+        knowsAbout: ['Recruitment', 'Managed staffing', 'Skilled trades', 'AI-assisted hiring', 'Workforce management'],
         description:
           'Dealo helps businesses hire checked office talent and skilled trades in Nigeria, across Africa, and for inbound global recruitment.',
         areaServed: [
@@ -19,7 +25,7 @@ export function OrganizationJsonLd() {
         contactPoint: {
           '@type': 'ContactPoint',
           contactType: 'sales',
-          availableLanguage: ['en'],
+          availableLanguage: ['en', 'fr', 'zh', 'ko'],
           url: `${APP_URL}/contact`,
         },
       },

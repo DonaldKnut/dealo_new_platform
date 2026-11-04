@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 
 import { OpenModalOnMount } from '@/components/open-modal-on-mount';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Request talent',
-  description: 'Tell Dealo who you need to hire.',
-};
+export const metadata: Metadata = pageMetadata({
+  path: '/hire',
+  title: 'Request a hire — get a checked shortlist in 48 hours',
+  description:
+    'Tell Dealo who you need: office staff or skilled trades. Fill a 3-minute form and get checked candidates, usually within 48 hours.',
+});
 
 export default function HirePage() {
   return (

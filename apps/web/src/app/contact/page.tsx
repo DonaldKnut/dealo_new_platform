@@ -1,4 +1,13 @@
+import type { Metadata } from 'next';
+
 import { OpenModalOnMount } from '@/components/open-modal-on-mount';
+import { pageMetadata } from '@/lib/seo';
+
+export const metadata: Metadata = pageMetadata({
+  path: '/contact',
+  title: 'Contact Dealo — talk to our hiring team',
+  description: 'Questions about hiring, jobs, the Dealo API or our AI tools? Send a message and a real person will reply.',
+});
 
 export default function ContactPage() {
   return (

@@ -4,6 +4,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Terms of Service',
   description: 'Terms governing use of the Dealo Talent Network platform and services.',
+  alternates: { canonical: '/terms' },
 };
 
 const updated = '30 October 2026';

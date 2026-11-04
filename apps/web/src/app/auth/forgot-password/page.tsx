@@ -6,6 +6,7 @@ import { ForgotPasswordForm } from '@/components/forms/forgot-password-form';
 export const metadata: Metadata = {
   title: 'Forgot password',
   description: 'Reset your Dealo account password.',
+  robots: { index: false, follow: true },
 };
 
 export default function ForgotPasswordPage() {

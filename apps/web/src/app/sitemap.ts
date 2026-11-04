@@ -31,7 +31,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${APP_URL}${path}`,
     lastModified: now,
     changeFrequency: path === '/' || path === '/blog' ? 'weekly' : 'monthly',
-    priority: path === '/' ? 1 : path === '/hire' || path === '/blog' ? 0.9 : 0.7,
+    priority:
+      path === '/'
+        ? 1
+        : ['/hire', '/blog', '/services', '/for-employers'].includes(path)
+          ? 0.9
+          : path.startsWith('/auth')
+            ? 0.3
+            : 0.7,
   }));
 
   const blogEntries: MetadataRoute.Sitemap = posts.map((post) => ({

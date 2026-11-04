@@ -5,7 +5,8 @@ import { RegisterForm } from '@/components/forms/register-form';
 
 export const metadata: Metadata = {
   title: 'Create account',
-  description: 'Join Dealo as a company or a professional.',
+  description: 'Join Dealo as a company or a professional. Free for professionals.',
+  alternates: { canonical: '/auth/register' },
 };
 
 export default function RegisterPage() {

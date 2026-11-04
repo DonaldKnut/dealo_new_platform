@@ -4,6 +4,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'How Dealo Talent Network collects, uses, stores, and protects personal data.',
+  alternates: { canonical: '/privacy' },
 };
 
 const updated = '30 October 2026';

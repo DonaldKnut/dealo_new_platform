@@ -30,7 +30,6 @@ export const metadata: Metadata = {
   description:
     'Hire checked office staff and skilled trades in Nigeria and across Africa. Dealo shortlists talent for Lagos employers and inbound global hiring.',
   metadataBase: new URL(APP_URL),
-  alternates: { canonical: APP_URL },
   keywords: [
     'hire talent Nigeria',
     'skilled trades staffing Africa',
@@ -52,6 +51,7 @@ export const metadata: Metadata = {
     title: 'Dealo — Hire talent in Nigeria & Africa',
     description:
       'Checked shortlists for office professionals and skilled trades across Nigeria and Africa.',
+    images: ['/opengraph-image'],
   },
   icons: {
     icon: [{ url: FAVICON_LOGO, type: 'image/png' }],
