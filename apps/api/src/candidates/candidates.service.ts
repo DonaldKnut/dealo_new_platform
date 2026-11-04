@@ -50,7 +50,16 @@ export class CandidatesService {
     if (linked) return linked;
 
     const email = normalizeEmail(user.email);
-    const fullName = `${user.firstName} ${user.lastName}`.trim() || email;
+    // Session tokens carry no names, so fall back to the stored user record.
+    let fullName = `${user.firstName} ${user.lastName}`.trim();
+    if (!fullName) {
+      const account = await this.prisma.user.findUnique({
+        where: { id: user.id },
+        select: { firstName: true, lastName: true },
+      });
+      fullName = `${account?.firstName ?? ''} ${account?.lastName ?? ''}`.trim();
+    }
+    fullName ||= email;
     const unlinked = await this.prisma.candidate.findFirst({
       where: { email, userId: null },
       orderBy: { createdAt: 'asc' },

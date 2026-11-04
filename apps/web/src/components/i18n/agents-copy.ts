@@ -1,5 +1,7 @@
 export const agentsEn = {
   'nav.faq': 'FAQ',
+  'dash.nav.workforce': 'Workforce',
+  'dash.nav.checkIn': 'Check in',
   'dash.nav.profile': 'My profile',
   'dash.nav.professionals': 'Professionals',
   'nav.ai': 'AI',
@@ -72,6 +74,8 @@ type AgentsKey = keyof typeof agentsEn;
 
 export const agentsFr: Record<AgentsKey, string> = {
   'nav.faq': 'FAQ',
+  'dash.nav.workforce': 'Équipes',
+  'dash.nav.checkIn': 'Pointage',
   'dash.nav.profile': 'Mon profil',
   'dash.nav.professionals': 'Professionnels',
   'nav.ai': 'IA',
@@ -142,6 +146,8 @@ export const agentsFr: Record<AgentsKey, string> = {
 
 export const agentsZh: Record<AgentsKey, string> = {
   'nav.faq': '常见问题',
+  'dash.nav.workforce': '现场团队',
+  'dash.nav.checkIn': '签到',
   'dash.nav.profile': '我的资料',
   'dash.nav.professionals': '专业人才',
   'nav.ai': 'AI',
@@ -212,6 +218,8 @@ export const agentsZh: Record<AgentsKey, string> = {
 
 export const agentsKo: Record<AgentsKey, string> = {
   'nav.faq': '자주 묻는 질문',
+  'dash.nav.workforce': '현장 인력',
+  'dash.nav.checkIn': '출근 체크',
   'dash.nav.profile': '내 프로필',
   'dash.nav.professionals': '전문 인재',
   'nav.ai': 'AI',

@@ -16,7 +16,9 @@ import {
   Menu,
   Newspaper,
   PanelLeftClose,
+  MapPinCheck,
   PanelLeftOpen,
+  Radar,
   ScrollText,
   Settings,
   UserRound,
@@ -82,6 +84,13 @@ const adminNav: NavItem[] = [
     labelKey: 'dash.nav.professionals',
     icon: UserSearch,
     help: 'Everyone who signed up as a professional, with their profile and CV.',
+    tour: 'hiring',
+  },
+  {
+    href: '/dashboard/workforce',
+    labelKey: 'dash.nav.workforce',
+    icon: Radar,
+    help: 'Live sites: check-ins, no-shows, standby cover and the placement agent feed.',
     tour: 'hiring',
   },
   {
@@ -198,6 +207,12 @@ const talentNav: NavItem[] = [
     labelKey: 'dash.nav.overview',
     icon: LayoutDashboard,
     help: 'Your talent home — profile health and next steps.',
+  },
+  {
+    href: '/dashboard/check-in',
+    labelKey: 'dash.nav.checkIn',
+    icon: MapPinCheck,
+    help: 'Check in and out at your work site from your phone.',
   },
   {
     href: '/dashboard/profile',

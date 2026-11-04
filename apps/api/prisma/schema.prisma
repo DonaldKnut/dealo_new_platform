@@ -298,6 +298,7 @@ model Candidate {
   user             User?                @relation(fields: [userId], references: [id])
   shortlistEntries ShortlistEntry[]
   documents        CandidateDocument[]
+  placements       Placement[]
 
   @@index([email])
   @@index([screenStatus])
@@ -589,6 +590,135 @@ model ApiInvoice {
 
   @@index([userId, createdAt])
   @@index([status])
+}
+
+// ---------------------------------------------------------------- workforce ops
+
+enum PlacementStatus {
+  ACTIVE
+  ENDED
+}
+
+enum AttendanceKind {
+  CHECK_IN
+  CHECK_OUT
+}
+
+enum CoverRequestStatus {
+  OPEN
+  FILLED
+  CANCELLED
+  BREACHED
+}
+
+/// A place people work at, with a geofence used to validate check-ins.
+model WorkSite {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  address        String?
+  latitude       Float
+  longitude      Float
+  radiusMeters   Int      @default(200)
+  timezone       String   @default("Africa/Lagos")
+  /// Local shift times as "HH:mm".
+  shiftStart     String   @default("07:30")
+  shiftEnd       String   @default("17:30")
+  graceMinutes   Int      @default(15)
+  slaCoverHours  Int      @default(48)
+  isActive       Boolean  @default(true)
+  organizationId String?  @db.ObjectId
+  hireInquiryId  String?  @db.ObjectId
+  createdById    String   @db.ObjectId
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  placements    Placement[]
+  attendance    AttendanceEvent[]
+  coverRequests CoverRequest[]
+  events        OpsEvent[]
+
+  @@index([isActive])
+  @@index([organizationId])
+}
+
+model Placement {
+  id          String          @id @default(auto()) @map("_id") @db.ObjectId
+  siteId      String          @db.ObjectId
+  candidateId String          @db.ObjectId
+  roleTitle   String
+  isStandby   Boolean         @default(false)
+  status      PlacementStatus @default(ACTIVE)
+  startDate   DateTime
+  endDate     DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  site       WorkSite          @relation(fields: [siteId], references: [id])
+  candidate  Candidate         @relation(fields: [candidateId], references: [id])
+  attendance AttendanceEvent[]
+
+  @@index([siteId, status])
+  @@index([candidateId, status])
+}
+
+model AttendanceEvent {
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  placementId    String         @db.ObjectId
+  siteId         String         @db.ObjectId
+  kind           AttendanceKind
+  /// Local calendar date at the site, "YYYY-MM-DD".
+  workDate       String
+  occurredAt     DateTime       @default(now())
+  latitude       Float?
+  longitude      Float?
+  accuracyMeters Float?
+  distanceMeters Int?
+  withinGeofence Boolean
+  lateMinutes    Int            @default(0)
+  source         String         @default("app")
+
+  placement Placement @relation(fields: [placementId], references: [id])
+  site      WorkSite  @relation(fields: [siteId], references: [id])
+
+  @@index([siteId, workDate])
+  @@index([placementId, workDate])
+}
+
+model CoverRequest {
+  id                 String             @id @default(auto()) @map("_id") @db.ObjectId
+  siteId             String             @db.ObjectId
+  absentPlacementId  String             @db.ObjectId
+  standbyPlacementId String?            @db.ObjectId
+  workDate           String
+  reason             String
+  status             CoverRequestStatus @default(OPEN)
+  openedAt           DateTime           @default(now())
+  dueBy              DateTime
+  filledAt           DateTime?
+  filledById         String?            @db.ObjectId
+
+  site WorkSite @relation(fields: [siteId], references: [id])
+
+  @@unique([absentPlacementId, workDate])
+  @@index([siteId, status])
+  @@index([status, dueBy])
+}
+
+/// Human-readable activity feed for a site (agent, staff and worker actions).
+model OpsEvent {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  siteId    String   @db.ObjectId
+  type      String
+  severity  String   @default("info")
+  actor     String   @default("agent")
+  title     String
+  detail    String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  site WorkSite @relation(fields: [siteId], references: [id])
+
+  @@index([siteId, createdAt])
 }
 
 enum WebhookDeliveryStatus {

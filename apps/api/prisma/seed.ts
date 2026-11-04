@@ -230,6 +230,18 @@ async function main(): Promise<void> {
     });
   }
 
+  console.log('Repairing professional names saved as emails...');
+  const misnamed = await prisma.candidate.findMany({
+    where: { userId: { not: null } },
+    select: { id: true, fullName: true, email: true, user: { select: { firstName: true, lastName: true } } },
+  });
+  for (const candidate of misnamed) {
+    const realName = `${candidate.user?.firstName ?? ''} ${candidate.user?.lastName ?? ''}`.trim();
+    if (realName && candidate.fullName === candidate.email) {
+      await prisma.candidate.update({ where: { id: candidate.id }, data: { fullName: realName } });
+    }
+  }
+
   const adminEmail = process.env.SUPER_ADMIN_EMAIL;
   const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
 

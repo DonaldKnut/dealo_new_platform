@@ -618,6 +618,123 @@ export function revokeMyApiKey(id: string) {
   return apiFetch<{ id: string; revoked: boolean }>(`/api-keys/mine/${id}`, { method: 'DELETE' });
 }
 
+// ------------------------------------------------------------ workforce ops
+
+export type WorkSite = {
+  id: string;
+  name: string;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  timezone: string;
+  shiftStart: string;
+  shiftEnd: string;
+  graceMinutes: number;
+  slaCoverHours: number;
+  isActive: boolean;
+  createdAt: string;
+};
+
+export type WorkSiteRow = WorkSite & { crew: number; standby: number; onSiteToday: number; openCovers: number };
+
+export type RosterStatus = 'ON_SITE' | 'LATE' | 'CHECKED_OUT' | 'EXPECTED' | 'NO_SHOW' | 'STANDBY' | 'COVERING';
+
+export type OpsFeedEvent = {
+  id: string;
+  type: string;
+  severity: 'info' | 'success' | 'warn' | 'critical';
+  actor: 'agent' | 'staff' | 'worker';
+  title: string;
+  detail: string | null;
+  createdAt: string;
+};
+
+export type SiteConsole = {
+  site: WorkSite;
+  clock: { workDate: string; now: string; zone: string; graceOver: boolean };
+  metrics: {
+    attendanceRate: number | null;
+    attendanceSample: { present: number; scheduled: number; days: number };
+    avgArrival: string | null;
+    onSite: number;
+    expected: number;
+    standbyActive: number;
+    slaCoverHours: number;
+    openCovers: number;
+    breachedCovers: number;
+  };
+  roster: {
+    placementId: string;
+    candidateId: string;
+    name: string;
+    shortName: string;
+    phone: string | null;
+    roleTitle: string;
+    isStandby: boolean;
+    status: RosterStatus;
+    checkInLocal: string | null;
+    lateMinutes: number;
+    distanceMeters: number | null;
+  }[];
+  covers: {
+    id: string;
+    status: 'OPEN' | 'FILLED' | 'CANCELLED' | 'BREACHED';
+    absentName: string;
+    standbyName: string | null;
+    reason: string;
+    dueBy: string;
+    minutesLeft: number;
+    workDate: string;
+  }[];
+  feed: OpsFeedEvent[];
+};
+
+export type MyPlacement = {
+  placementId: string;
+  roleTitle: string;
+  isStandby: boolean;
+  site: {
+    id: string;
+    name: string;
+    address: string | null;
+    latitude: number;
+    longitude: number;
+    radiusMeters: number;
+    shiftStart: string;
+    shiftEnd: string;
+    zone: string;
+  };
+  today: { workDate: string; checkInAt: string | null; checkOutAt: string | null; lateMinutes: number };
+};
+
+export const fetchWorkSites = () => apiFetch<WorkSiteRow[]>('/ops/sites');
+export const createWorkSite = (payload: Record<string, unknown>) =>
+  apiFetch<WorkSite>('/ops/sites', { method: 'POST', json: payload });
+export const updateWorkSite = (id: string, payload: Record<string, unknown>) =>
+  apiFetch<WorkSite>(`/ops/sites/${id}`, { method: 'PATCH', json: payload });
+export const fetchSiteConsole = (id: string) => apiFetch<SiteConsole>(`/ops/sites/${id}/console`);
+export const addSitePlacement = (id: string, payload: Record<string, unknown>) =>
+  apiFetch(`/ops/sites/${id}/placements`, { method: 'POST', json: payload });
+export const updatePlacement = (id: string, payload: Record<string, unknown>) =>
+  apiFetch(`/ops/placements/${id}`, { method: 'PATCH', json: payload });
+export const runSiteMuster = (id: string) =>
+  apiFetch<{ skipped?: string; noShows: number; onSite?: number; crew?: number }>(`/ops/sites/${id}/muster`, {
+    method: 'POST',
+  });
+export const addSiteNote = (id: string, message: string) =>
+  apiFetch(`/ops/sites/${id}/notes`, { method: 'POST', json: { message } });
+export const assignCover = (coverId: string, standbyPlacementId: string) =>
+  apiFetch(`/ops/covers/${coverId}/assign`, { method: 'POST', json: { standbyPlacementId } });
+export const fetchMyPlacements = () => apiFetch<MyPlacement[]>('/ops/me');
+export const checkInPlacement = (payload: Record<string, unknown>) =>
+  apiFetch<{ ok: boolean; alreadyDone: boolean; distanceMeters: number; lateMinutes?: number }>('/ops/me/check-in', {
+    method: 'POST',
+    json: payload,
+  });
+export const checkOutPlacement = (payload: Record<string, unknown>) =>
+  apiFetch<{ ok: boolean; distanceMeters: number }>('/ops/me/check-out', { method: 'POST', json: payload });
+
 export type ApiPlanName = 'SANDBOX' | 'PARTNER' | 'ENTERPRISE';
 
 export type ApiPlanInfo = {

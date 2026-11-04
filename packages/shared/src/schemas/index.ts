@@ -9,6 +9,7 @@ export * from './hire-inquiry';
 export * from './hire-inquiry-status';
 export * from './mail';
 export * from './newsletter';
+export * from './ops';
 export * from './support';
 export * from './talent';
 export * from './webhook';
