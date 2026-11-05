@@ -1,4 +1,12 @@
-import type { ApplyInput, CreateWorkspaceInput, JobInput, UpdateWorkspaceInput } from '@dealo/shared';
+import type {
+  ApplyInput,
+  CreateWorkspaceInput,
+  JobInput,
+  OfferInput,
+  ScheduleInterviewInput,
+  ScorecardInput,
+  UpdateWorkspaceInput,
+} from '@dealo/shared';
 
 import { apiFetch, apiUpload } from '@/lib/api';
 
@@ -164,6 +172,7 @@ export type ApplicationDetail = {
   application: ApplicationCard & { phone: string | null; coverNote: string | null; aiRunId: string | null };
   job: { id: string; title: string; stages: string[]; status: JobStatus; slug: string };
   myRole: WorkspaceRole;
+  myUserId: string;
   cv: { id: string; fileName: string; mimeType: string; byteSize: number } | null;
   ai: { id: string; status: string; provider: string; model: string | null; output: AiScreenOutput; createdAt: string } | null;
   events: ApplicationEvent[];
@@ -199,6 +208,49 @@ export type PublicJob = Pick<
   | 'publishedAt'
   | 'updatedAt'
 > & { description?: string; summary?: string };
+
+export type InterviewListItem = Interview & {
+  applicant: { id: string; name: string; jobId: string; jobTitle: string };
+  interviewers: string[];
+  mine: boolean;
+};
+
+type Branding = { name: string; logoUrl: string | null; brandColor: string | null };
+
+export type BookingPreview = {
+  organization: Branding;
+  jobTitle: string;
+  firstName: string;
+  kind: Interview['kind'];
+  durationMin: number;
+  location: string | null;
+  status: Interview['status'];
+  startsAt: string | null;
+  options: string[];
+};
+
+export type OfferPreview = {
+  organization: Branding & { website: string | null };
+  jobTitle: string;
+  location: string;
+  firstName: string;
+  payMinor: number;
+  currency: string;
+  payPeriod: string;
+  startDate: string;
+  notes: string | null;
+  status: Offer['status'] | 'EXPIRED';
+  respondedAt: string | null;
+};
+
+export const PERIOD_LABEL: Record<string, string> = { MONTH: 'month', YEAR: 'year', DAY: 'day', WEEK: 'week', PROJECT: 'project' };
+export const KIND_LABEL: Record<string, string> = { VIDEO: 'Video call', PHONE: 'Phone call', IN_PERSON: 'In person' };
+
+export const money = (minor: number, currency = 'NGN') =>
+  new Intl.NumberFormat('en-NG', { style: 'currency', currency, maximumFractionDigits: 0 }).format(minor / 100);
+
+export const whenLabel = (iso: string) =>
+  new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
 
 const W = (orgId: string) => `/ats/workspaces/${orgId}`;
 
@@ -244,6 +296,24 @@ export const atsApi = {
   reviewAi: (orgId: string, id: string, decision: 'ACCEPTED' | 'DISMISSED') =>
     apiFetch(`${W(orgId)}/applications/${id}/ai/review`, { method: 'POST', json: { decision } }),
   fileUrl: (orgId: string, fileId: string) => `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}${W(orgId)}/files/${fileId}`,
+
+  interviews: (orgId: string) => apiFetch<InterviewListItem[]>(`${W(orgId)}/interviews`),
+  schedule: (orgId: string, id: string, input: ScheduleInterviewInput) =>
+    apiFetch<Interview & { bookingLink?: string }>(`${W(orgId)}/applications/${id}/interviews`, { method: 'POST', json: input }),
+  updateInterview: (orgId: string, interviewId: string, input: { status?: 'CANCELLED' | 'COMPLETED'; startsAt?: string }) =>
+    apiFetch(`${W(orgId)}/interviews/${interviewId}`, { method: 'PATCH', json: input }),
+  scorecard: (orgId: string, id: string, input: ScorecardInput) =>
+    apiFetch<Scorecard>(`${W(orgId)}/applications/${id}/scorecards`, { method: 'POST', json: input }),
+  createOffer: (orgId: string, id: string, input: OfferInput) =>
+    apiFetch<Offer & { link?: string }>(`${W(orgId)}/applications/${id}/offers`, { method: 'POST', json: input }),
+  sendOffer: (orgId: string, offerId: string) => apiFetch<Offer & { link: string }>(`${W(orgId)}/offers/${offerId}/send`, { method: 'POST' }),
+  withdrawOffer: (orgId: string, offerId: string) => apiFetch<Offer>(`${W(orgId)}/offers/${offerId}/withdraw`, { method: 'POST' }),
+
+  booking: (token: string) => apiFetch<BookingPreview>(`/book/${token}`),
+  book: (token: string, startsAt: string) => apiFetch<{ startsAt: string; status: string }>(`/book/${token}`, { method: 'POST', json: { startsAt } }),
+  offerPreview: (token: string) => apiFetch<OfferPreview>(`/offer/${token}`),
+  respondOffer: (token: string, decision: 'ACCEPTED' | 'DECLINED', note?: string) =>
+    apiFetch<{ status: string; organization: string }>(`/offer/${token}/respond`, { method: 'POST', json: { decision, note } }),
 
   careers: (orgSlug: string) => apiFetch<{ organization: PublicOrganization; jobs: PublicJob[] }>(`/careers/${orgSlug}`),
   careersJob: (orgSlug: string, jobSlug: string) =>

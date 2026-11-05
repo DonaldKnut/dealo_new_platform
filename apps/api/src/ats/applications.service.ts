@@ -335,6 +335,7 @@ export class ApplicationsService {
       application: rest,
       job: { id: job.id, title: job.title, stages: job.stages, status: job.status, slug: job.slug },
       myRole: access.role,
+      myUserId: access.userId,
       cv,
       ai: aiRun ? { id: aiRun.id, status: aiRun.status, provider: aiRun.provider, model: aiRun.model, output: aiRun.output, createdAt: aiRun.createdAt } : null,
       events,

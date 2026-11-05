@@ -2,8 +2,11 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  CalendarClock,
+  ClipboardCheck,
   Download,
   FileText,
+  Handshake,
   History,
   Loader2,
   Mail,
@@ -18,20 +21,25 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { AiReviewBar } from '@/components/ai/ai-review-bar';
 import { AiBadge } from '@/components/ats/application-card';
+import { Section } from '@/components/ats/drawer-section';
+import { InterviewsSection, OffersSection, ScorecardsSection } from '@/components/ats/hiring-sections';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { atsApi, canManage, type ApplicationDetail } from '@/lib/ats-api';
 import { cn } from '@/lib/utils';
 
-type Tab = 'overview' | 'timeline';
+type Tab = 'overview' | 'interviews' | 'scorecards' | 'offer' | 'timeline';
 
 const TABS: Array<{ id: Tab; label: string; icon: typeof UserRound }> = [
   { id: 'overview', label: 'Overview', icon: UserRound },
+  { id: 'interviews', label: 'Interviews', icon: CalendarClock },
+  { id: 'scorecards', label: 'Scorecards', icon: ClipboardCheck },
+  { id: 'offer', label: 'Offer', icon: Handshake },
   { id: 'timeline', label: 'Timeline', icon: History },
 ];
 
@@ -250,7 +258,8 @@ function DrawerBody({
         <div className="-mb-px flex gap-1 overflow-x-auto">
           {TABS.map((t) => {
             const Icon = t.icon;
-            const count = 0;
+            const count =
+              t.id === 'interviews' ? data.interviews.length : t.id === 'scorecards' ? data.scorecards.length + data.scorecardsHidden : t.id === 'offer' ? data.offers.length : 0;
             return (
               <button
                 key={t.id}
@@ -273,6 +282,9 @@ function DrawerBody({
 
       <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 pb-[calc(1rem+var(--safe-bottom))] min-[340px]:px-5">
         {tab === 'overview' ? <Overview data={data} orgId={orgId} manage={manage} act={act} /> : null}
+        {tab === 'interviews' ? <InterviewsSection data={data} orgId={orgId} manage={manage} reload={load} /> : null}
+        {tab === 'scorecards' ? <ScorecardsSection data={data} orgId={orgId} reload={load} /> : null}
+        {tab === 'offer' ? <OffersSection data={data} orgId={orgId} manage={manage} reload={load} onChanged={onChanged} /> : null}
         {tab === 'timeline' ? <Timeline data={data} orgId={orgId} reload={load} /> : null}
       </div>
     </>
@@ -289,18 +301,6 @@ function CloseButton({ onClose }: { onClose: () => void }) {
     >
       <X className="h-4 w-4" />
     </button>
-  );
-}
-
-export function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
-  return (
-    <section className="rounded-2xl border border-border bg-surface/40 p-3 min-[340px]:p-4">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">{title}</h3>
-        {action}
-      </div>
-      {children}
-    </section>
   );
 }
 

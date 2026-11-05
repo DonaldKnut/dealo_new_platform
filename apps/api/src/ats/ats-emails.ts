@@ -72,6 +72,30 @@ export function interviewInviteEmail(p: {
   };
 }
 
+export function interviewCancelledEmail(p: { to: string; name: string; jobTitle: string; orgName: string; ics?: string }): SendEmailInput {
+  return {
+    to: p.to,
+    subject: `Interview cancelled — ${p.jobTitle}`,
+    html: layout(
+      'Interview cancelled',
+      `<p>Hi ${esc(p.name)},</p><p>Your interview for <strong>${esc(p.jobTitle)}</strong> at ${esc(p.orgName)} has been cancelled. The team will contact you if they set a new time.</p>`,
+    ),
+    text: `Your interview for ${p.jobTitle} at ${p.orgName} has been cancelled.`,
+    attachments: p.ics ? [{ filename: 'cancel.ics', content: p.ics, contentType: 'text/calendar; method=CANCEL' }] : undefined,
+  };
+}
+
+/** Internal notice to a workspace member (interviewer, recruiter). */
+export function teamNoticeEmail(p: { to: string; subject: string; title: string; lines: string[]; link: string; ics?: string }): SendEmailInput {
+  return {
+    to: p.to,
+    subject: p.subject,
+    html: layout(p.title, p.lines.map((line) => `<p>${esc(line)}</p>`).join(''), { label: 'Open in Dealo', href: p.link }),
+    text: `${p.lines.join('\n')}\n${p.link}`,
+    attachments: p.ics ? [{ filename: 'interview.ics', content: p.ics, contentType: 'text/calendar; method=REQUEST' }] : undefined,
+  };
+}
+
 export function offerEmail(p: { to: string; name: string; jobTitle: string; orgName: string; link: string }): SendEmailInput {
   return {
     to: p.to,

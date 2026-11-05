@@ -24,15 +24,24 @@ import {
   inviteMemberSchema,
   jobInputSchema,
   jobStatusSchema,
+  bookSlotSchema,
   moveStageSchema,
+  offerInputSchema,
+  offerResponseSchema,
   rejectApplicationsSchema,
+  scheduleInterviewSchema,
+  scorecardSchema,
   updateApplicationSchema,
+  updateInterviewSchema,
   updateMemberRoleSchema,
   updateWorkspaceSchema,
   type ApplyInput,
   type CreateWorkspaceInput,
   type InviteMemberInput,
   type JobInput,
+  type OfferInput,
+  type ScheduleInterviewInput,
+  type ScorecardInput,
   type UpdateWorkspaceInput,
 } from '@dealo/shared';
 import { JobStatus, UserRole, WorkspaceRole } from '@prisma/client';
@@ -46,6 +55,7 @@ import { Public } from '../common/public.decorator';
 import { Roles } from '../common/roles.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { ApplicationsService, CV_MAX_BYTES } from './applications.service';
+import { HiringService } from './hiring.service';
 import { JobsService } from './jobs.service';
 import { WorkspacesService } from './workspaces.service';
 
@@ -69,6 +79,7 @@ export class AtsController {
     private readonly workspaces: WorkspacesService,
     private readonly jobs: JobsService,
     private readonly applications: ApplicationsService,
+    private readonly hiring: HiringService,
   ) {}
 
   // -------------------------------------------------------------- workspaces
@@ -294,9 +305,108 @@ export class AtsController {
     return this.applications.reviewAi(orgId, id, body.decision, user);
   }
 
+  // ------------------------------------------------------- interviews/offers
+
+  @Get('workspaces/:orgId/interviews')
+  interviews(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string) {
+    return this.hiring.listInterviews(orgId, user);
+  }
+
+  @Post('workspaces/:orgId/applications/:id/interviews')
+  @ApiOperation({ summary: 'Schedule an interview (fixed time) or offer slots for self-booking' })
+  schedule(
+    @CurrentUser() user: AuthUser,
+    @Param('orgId') orgId: string,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(scheduleInterviewSchema)) body: ScheduleInterviewInput,
+  ) {
+    return this.hiring.schedule(orgId, id, body, user);
+  }
+
+  @Patch('workspaces/:orgId/interviews/:interviewId')
+  updateInterview(
+    @CurrentUser() user: AuthUser,
+    @Param('orgId') orgId: string,
+    @Param('interviewId') interviewId: string,
+    @Body(new ZodValidationPipe(updateInterviewSchema)) body: { status?: 'CANCELLED' | 'COMPLETED'; startsAt?: string },
+  ) {
+    return this.hiring.updateInterview(orgId, interviewId, body, user);
+  }
+
+  @Post('workspaces/:orgId/applications/:id/scorecards')
+  scorecard(
+    @CurrentUser() user: AuthUser,
+    @Param('orgId') orgId: string,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(scorecardSchema)) body: ScorecardInput,
+  ) {
+    return this.hiring.submitScorecard(orgId, id, body, user);
+  }
+
+  @Post('workspaces/:orgId/applications/:id/offers')
+  createOffer(
+    @CurrentUser() user: AuthUser,
+    @Param('orgId') orgId: string,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(offerInputSchema)) body: OfferInput,
+  ) {
+    return this.hiring.createOffer(orgId, id, body, user);
+  }
+
+  @Post('workspaces/:orgId/offers/:offerId/send')
+  @HttpCode(200)
+  sendOffer(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string, @Param('offerId') offerId: string) {
+    return this.hiring.sendOffer(orgId, offerId, user);
+  }
+
+  @Post('workspaces/:orgId/offers/:offerId/withdraw')
+  @HttpCode(200)
+  withdrawOffer(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string, @Param('offerId') offerId: string) {
+    return this.hiring.withdrawOffer(orgId, offerId, user);
+  }
+
   @Get('workspaces/:orgId/files/:fileId')
   async file(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string, @Param('fileId') fileId: string, @Res() res: Response) {
     sendFile(res, await this.applications.readFile(orgId, fileId, user));
+  }
+}
+
+@ApiTags('careers')
+@Controller()
+export class CandidateLinksController {
+  constructor(private readonly hiring: HiringService) {}
+
+  @Public()
+  @Get('book/:token')
+  @ApiOperation({ summary: 'Public: interview times offered to a candidate' })
+  booking(@Param('token') token: string) {
+    return this.hiring.bookingPreview(token);
+  }
+
+  @Public()
+  @Post('book/:token')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  book(@Param('token') token: string, @Body(new ZodValidationPipe(bookSlotSchema)) body: { startsAt: string }) {
+    return this.hiring.book(token, body.startsAt);
+  }
+
+  @Public()
+  @Get('offer/:token')
+  @ApiOperation({ summary: 'Public: a job offer sent to a candidate' })
+  offer(@Param('token') token: string) {
+    return this.hiring.offerPreview(token);
+  }
+
+  @Public()
+  @Post('offer/:token/respond')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  respond(
+    @Param('token') token: string,
+    @Body(new ZodValidationPipe(offerResponseSchema)) body: { decision: 'ACCEPTED' | 'DECLINED'; note?: string },
+  ) {
+    return this.hiring.respondToOffer(token, body.decision, body.note);
   }
 }
 

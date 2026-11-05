@@ -22,6 +22,8 @@ import { workspaceInviteEmail } from './ats-emails';
 const INVITE_TTL_MS = 7 * 24 * 3_600_000;
 const MAX_OWNED_WORKSPACES = 3;
 const RESERVED_SLUGS = new Set(['admin', 'api', 'dealo-support', 'careers', 'jobs', 'www', 'app', 'dashboard']);
+/** In MongoDB an optional field that was never set is missing, not null. */
+const NOT_ACCEPTED = { OR: [{ acceptedAt: null }, { acceptedAt: { isSet: false } }] };
 
 const hash = (token: string) => createHash('sha256').update(token).digest('hex');
 
@@ -101,7 +103,7 @@ export class WorkspacesService {
       }),
       AtsAccessService.rank(access.role) >= AtsAccessService.rank(WorkspaceRole.ADMIN)
         ? this.prisma.workspaceInvite.findMany({
-            where: { organizationId: orgId, acceptedAt: null, expiresAt: { gt: new Date() } },
+            where: { organizationId: orgId, ...NOT_ACCEPTED, expiresAt: { gt: new Date() } },
             orderBy: { createdAt: 'desc' },
             select: { id: true, email: true, role: true, expiresAt: true, createdAt: true },
           })
@@ -144,7 +146,7 @@ export class WorkspacesService {
 
     const [members, pending, existingUser] = await Promise.all([
       this.prisma.organizationMember.count({ where: { organizationId: orgId } }),
-      this.prisma.workspaceInvite.count({ where: { organizationId: orgId, acceptedAt: null, expiresAt: { gt: new Date() } } }),
+      this.prisma.workspaceInvite.count({ where: { organizationId: orgId, ...NOT_ACCEPTED, expiresAt: { gt: new Date() } } }),
       this.prisma.user.findUnique({ where: { email }, select: { id: true } }),
     ]);
     if (members + pending >= access.organization.maxSeats) {
@@ -157,7 +159,7 @@ export class WorkspacesService {
       if (already) throw new ConflictException('This person is already in the workspace');
     }
 
-    await this.prisma.workspaceInvite.deleteMany({ where: { organizationId: orgId, email, acceptedAt: null } });
+    await this.prisma.workspaceInvite.deleteMany({ where: { organizationId: orgId, email, ...NOT_ACCEPTED } });
     const token = randomBytes(24).toString('base64url');
     const invite = await this.prisma.workspaceInvite.create({
       data: {

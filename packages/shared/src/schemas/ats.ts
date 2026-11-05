@@ -131,6 +131,13 @@ export type ScheduleInterviewInput = z.infer<typeof scheduleInterviewSchema>;
 
 export const bookSlotSchema = z.object({ startsAt: z.string().datetime() });
 
+export const updateInterviewSchema = z
+  .object({
+    status: z.enum(['CANCELLED', 'COMPLETED']).optional(),
+    startsAt: z.string().datetime().optional(),
+  })
+  .refine((value) => value.status || value.startsAt, { message: 'Nothing to change' });
+
 export const scorecardSchema = z.object({
   rating: z.number().int().min(1).max(5),
   recommendation: z.enum(['YES', 'MAYBE', 'NO']),
@@ -146,6 +153,8 @@ export const offerInputSchema = z.object({
   payPeriod: z.enum(['MONTH', 'YEAR', 'DAY', 'WEEK', 'PROJECT']).default('MONTH'),
   startDate: z.string().trim().min(8),
   notes: z.string().trim().max(3000).optional(),
+  /** Email the offer link straight away (otherwise it is saved as a draft). */
+  send: z.boolean().default(true),
 });
 
 export type OfferInput = z.infer<typeof offerInputSchema>;
