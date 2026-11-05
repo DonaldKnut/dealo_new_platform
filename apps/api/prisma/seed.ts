@@ -344,6 +344,53 @@ async function main(): Promise<void> {
     console.warn('SUPER_ADMIN_EMAIL / SUPER_ADMIN_PASSWORD not set — skipped admin seed');
   }
 
+  console.log('Ensuring workspace owners have the OWNER role...');
+  await prisma.organizationMember.updateMany({
+    where: { isOwner: true, role: { not: 'OWNER' } },
+    data: { role: 'OWNER' },
+  });
+
+  console.log('Ensuring the in-house Dealo hiring workspace...');
+  const dealo =
+    (await prisma.organization.findUnique({ where: { slug: 'dealo' } })) ??
+    (await prisma.organization.create({
+      data: {
+        name: 'Dealo',
+        slug: 'dealo',
+        website: 'https://dealo.africa',
+        about:
+          'Dealo helps companies in Nigeria and across Africa hire office professionals and skilled trades people, then manages them on site.',
+        brandColor: '#0f766e',
+        maxOpenJobs: 200,
+        maxSeats: 100,
+      },
+    }));
+  const staffRoleCodes: Record<string, 'OWNER' | 'ADMIN' | 'RECRUITER'> = {
+    [UserRole.SUPER_ADMIN]: 'OWNER',
+    [UserRole.ADMIN]: 'ADMIN',
+    [UserRole.RECRUITER]: 'RECRUITER',
+    [UserRole.OPERATIONS]: 'RECRUITER',
+  };
+  const staff = await prisma.userRoleAssignment.findMany({
+    where: { role: { code: { in: Object.keys(staffRoleCodes) as UserRole[] } } },
+    include: { role: { select: { code: true } } },
+  });
+  const rank = { OWNER: 3, ADMIN: 2, RECRUITER: 1 } as const;
+  const bestRole = new Map<string, 'OWNER' | 'ADMIN' | 'RECRUITER'>();
+  for (const assignment of staff) {
+    const next = staffRoleCodes[assignment.role.code];
+    const current = bestRole.get(assignment.userId);
+    if (!current || rank[next] > rank[current]) bestRole.set(assignment.userId, next);
+  }
+  for (const [userId, role] of bestRole) {
+    await prisma.organizationMember.upsert({
+      where: { organizationId_userId: { organizationId: dealo.id, userId } },
+      update: {},
+      create: { organizationId: dealo.id, userId, role, isOwner: role === 'OWNER' },
+    });
+  }
+  console.log(`Dealo workspace has ${bestRole.size} staff members`);
+
   console.log('Seed completed');
 }
 

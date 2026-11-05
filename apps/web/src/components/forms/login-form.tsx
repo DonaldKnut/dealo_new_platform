@@ -93,7 +93,9 @@ export function LoginForm({
       if (variant === 'modal') {
         modal.close();
       }
-      router.push(getDashboardHome(result.user?.roles ?? []));
+      const next = new URLSearchParams(window.location.search).get('next');
+      const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+      router.push(safeNext ?? getDashboardHome(result.user?.roles ?? []));
       router.refresh();
     } catch (error) {
       const message = error instanceof ApiError ? error.message : 'We could not sign you in.';

@@ -246,6 +246,20 @@ export class WebhooksService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  /** ATS events go only to the workspace's own endpoints, never to global (Dealo) ones. */
+  dispatchWorkspaceEvent(event: string, organizationId: string, data: Record<string, unknown>) {
+    void (async () => {
+      const endpoints = await this.prisma.webhookEndpoint.findMany({
+        where: { isActive: true, events: { has: event }, organizationId },
+      });
+      if (endpoints.length === 0) return;
+      const deliveries = await this.enqueue(endpoints, event, data);
+      await Promise.all(deliveries.map((delivery) => this.attempt(delivery.id)));
+    })().catch((error: unknown) => {
+      this.logger.error(`Webhook dispatch failed for ${event}: ${String(error)}`);
+    });
+  }
+
   private async enqueue(
     endpoints: Pick<WebhookEndpoint, 'id'>[],
     event: string,

@@ -195,6 +195,80 @@ export class AiService {
     };
   }
 
+  /**
+   * Screens an ATS applicant against a job. Gemini reads the CV (PDF) when available;
+   * otherwise built-in rules use the cover note and details. The result is a suggestion only.
+   */
+  async screenApplicant(params: {
+    applicationId: string;
+    actorId: string;
+    job: { title: string; roleFamily: string; location: string; description: string; mustHaves: string[] };
+    applicant: { location?: string | null; coverNote?: string | null };
+    cv?: { mimeType: string; data: Buffer } | null;
+  }) {
+    const started = Date.now();
+    const jobText = `${params.job.title} ${params.job.mustHaves.join(' ')} ${params.job.description.replace(/<[^>]+>/g, ' ')}`;
+    let result: AiScreenResult;
+    let provider = 'rules';
+
+    if (this.gemini.isConfigured) {
+      const readableCv = params.cv && params.cv.mimeType === 'application/pdf' ? [params.cv] : [];
+      result = await this.gemini.json(
+        `You are a screening agent for a company hiring in Nigeria. ${FAIRNESS_RULES} The CV may contain a name, photo, age or other personal details: ignore them completely. Score against the job's must-haves. Return JSON: {score:0-100, fit:"STRONG"|"POSSIBLE"|"WEAK", summary, strengths:[], gaps:[], interviewQuestions:[]}.`,
+        `JOB:\n${JSON.stringify({ ...params.job, description: params.job.description.replace(/<[^>]+>/g, ' ').slice(0, 4000) })}\n\nAPPLICANT NOTE:\n${(params.applicant.coverNote ?? '').slice(0, 2000)}\nAPPLICANT LOCATION: ${params.applicant.location ?? 'not given'}\n${readableCv.length ? 'The CV is attached.' : 'No readable CV was attached.'}`,
+        aiScreenResultSchema,
+        readableCv,
+      );
+      provider = 'gemini';
+    } else {
+      const wanted = params.job.mustHaves.length
+        ? params.job.mustHaves.flatMap((item) => tokens(item))
+        : topTerms(jobText, 10);
+      const have = new Set(tokens(params.applicant.coverNote ?? ''));
+      const matched = [...new Set(wanted.filter((word) => have.has(word)))];
+      const missing = [...new Set(wanted.filter((word) => !have.has(word)))];
+      const near =
+        params.applicant.location && params.job.location
+          ? tokens(params.job.location).some((word) => tokens(params.applicant.location ?? '').includes(word))
+          : false;
+      const coverage = wanted.length ? matched.length / new Set(wanted).size : 0;
+      const score = Math.round(coverage * 70 + (near ? 20 : 0) + (params.cv ? 10 : 0));
+      const fit = score >= 70 ? 'STRONG' : score >= 40 ? 'POSSIBLE' : 'WEAK';
+      result = {
+        score,
+        fit,
+        summary: `Quick check from the cover note${params.cv ? ' (CV not read in rules mode)' : ''}: ${matched.length} of ${new Set(wanted).size} key terms mentioned. Open the CV to confirm.`,
+        strengths: [
+          matched.length ? `Mentions: ${matched.slice(0, 5).join(', ')}` : null,
+          near ? `Lives near the job (${params.applicant.location})` : null,
+          params.cv ? 'CV attached' : null,
+        ].filter((item): item is string => Boolean(item)),
+        gaps: [
+          missing.length ? `Not mentioned: ${missing.slice(0, 5).join(', ')}` : null,
+          !params.cv ? 'No CV attached' : null,
+        ].filter((item): item is string => Boolean(item)),
+        interviewQuestions: [
+          ...missing.slice(0, 3).map((word) => `Tell me about your experience with ${word}.`),
+          'What did you do in your last job, day to day?',
+        ].slice(0, 5),
+      };
+    }
+
+    const run = await this.prisma.aiRun.create({
+      data: {
+        feature: 'SCREEN',
+        subjectType: 'Application',
+        subjectId: params.applicationId,
+        provider,
+        model: provider === 'gemini' ? this.gemini.model : 'dealo-rules-v1',
+        output: result as Prisma.InputJsonValue,
+        latencyMs: Date.now() - started,
+        createdById: params.actorId,
+      },
+    });
+    return { runId: run.id, provider, ...result };
+  }
+
   // ---------------------------------------------------------- verification
 
   async verify(candidateId: string, actor: AuthUser) {

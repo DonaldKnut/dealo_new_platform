@@ -16,12 +16,14 @@ import {
   UserCheck,
   UsersRound,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { CtaBanner } from '@/components/marketing/cta-banner';
 import { FeatureAdGrid } from '@/components/marketing/feature-ad-grid';
 import { PageHero } from '@/components/marketing/page-hero';
 import { useModal } from '@/components/modals/modal-context';
+import { fetchAuthMe } from '@/lib/dashboard-api';
 
 const COLUMNS = ['Applied', 'AI screened', 'Interview', 'Offer'] as const;
 
@@ -86,17 +88,26 @@ function PipelineDemo() {
 
 export default function AtsPage() {
   const { open } = useModal();
+  const router = useRouter();
+  const startFree = async () => {
+    try {
+      await fetchAuthMe();
+      router.push('/dashboard/ats');
+    } catch {
+      router.push('/auth/register?next=/dashboard/ats');
+    }
+  };
 
   return (
     <div>
       <PageHero
-        eyebrow="Dealo ATS · Early access"
+        eyebrow="Dealo ATS · Free early access"
         title="Hiring software with AI built in"
         description="Post a job, see every candidate on one board, and let AI do the first screen. A person on your team always makes the final call. We built it for our own recruiters first."
         actions={
           <>
-            <button type="button" className="btn-primary" onClick={() => open('contact')}>
-              Get early access
+            <button type="button" className="btn-primary" onClick={() => void startFree()}>
+              Start free
             </button>
             <a href="#how" className="btn-secondary">
               See how it works
@@ -165,11 +176,14 @@ export default function AtsPage() {
             })}
           </div>
           <div className="mt-6 flex flex-col gap-2 min-[400px]:flex-row">
-            <button type="button" className="btn-primary" onClick={() => open('contact')}>
-              Join the early access list
+            <button type="button" className="btn-primary" onClick={() => void startFree()}>
+              Start free
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => open('contact')}>
+              Talk to us
             </button>
             <p className="self-center text-xs text-muted">
-              Early access is free while we finish it. Paid plans come later.
+              Free during early access: up to 10 open jobs and 10 team members. Paid plans come later.
             </p>
           </div>
         </div>

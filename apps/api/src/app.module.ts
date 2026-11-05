@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
 import { AiModule } from './ai/ai.module';
+import { AtsModule } from './ats/ats.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
@@ -72,6 +73,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     BillingModule,
     OpsModule,
     AiModule,
+    AtsModule,
   ],
   providers: [
     {

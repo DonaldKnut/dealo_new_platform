@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 import { fetchPublishedPosts } from '@/lib/blog-public';
+import { fetchCareersIndex } from '@/lib/careers-public';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
@@ -24,7 +25,7 @@ const STATIC_PATHS = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const posts = await fetchPublishedPosts();
+  const [posts, careers] = await Promise.all([fetchPublishedPosts(), fetchCareersIndex()]);
   const now = new Date();
 
   const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.map((path) => ({
@@ -48,5 +49,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticEntries, ...blogEntries];
+  const careerPages: MetadataRoute.Sitemap = [...new Set(careers.map((c) => c.orgSlug))].map((orgSlug) => ({
+    url: `${APP_URL}/careers/${orgSlug}`,
+    lastModified: now,
+    changeFrequency: 'daily',
+    priority: 0.6,
+  }));
+  const jobEntries: MetadataRoute.Sitemap = careers.map((c) => ({
+    url: `${APP_URL}/careers/${c.orgSlug}/${c.jobSlug}`,
+    lastModified: new Date(c.updatedAt),
+    changeFrequency: 'weekly',
+    priority: 0.7,
+  }));
+
+  return [...staticEntries, ...blogEntries, ...careerPages, ...jobEntries];
 }

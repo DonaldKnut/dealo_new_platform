@@ -22,7 +22,12 @@ export class GeminiClient {
     return Boolean(this.apiKey);
   }
 
-  async json<T>(system: string, prompt: string, schema: ZodType<T>): Promise<T> {
+  async json<T>(
+    system: string,
+    prompt: string,
+    schema: ZodType<T>,
+    files: { mimeType: string; data: Buffer }[] = [],
+  ): Promise<T> {
     if (!this.apiKey) {
       throw new ServiceUnavailableException('AI is not configured. Set GEMINI_API_KEY on the API.');
     }
@@ -33,7 +38,15 @@ export class GeminiClient {
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              ...files.map((file) => ({ inlineData: { mimeType: file.mimeType, data: file.data.toString('base64') } })),
+              { text: prompt },
+            ],
+          },
+        ],
         generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
       }),
     });

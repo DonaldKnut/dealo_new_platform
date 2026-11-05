@@ -9,6 +9,7 @@ import {
   FileText,
   Headphones,
   IdCard,
+  Kanban,
   KeyRound,
   LayoutDashboard,
   LogOut,
@@ -64,6 +65,13 @@ const adminNav: NavItem[] = [
     labelKey: 'dash.nav.overview',
     icon: LayoutDashboard,
     help: 'High-level counts and recent activity for the whole platform.',
+  },
+  {
+    href: '/dashboard/ats',
+    labelKey: 'dash.nav.ats',
+    icon: Kanban,
+    help: 'Dealo ATS: jobs, applicants, the hiring board and your team.',
+    tour: 'hiring',
   },
   {
     href: '/dashboard/requests',
@@ -160,6 +168,13 @@ const employerNav: NavItem[] = [
     labelKey: 'dash.nav.overview',
     icon: LayoutDashboard,
     help: 'A simple summary of your hiring pipeline.',
+  },
+  {
+    href: '/dashboard/ats',
+    labelKey: 'dash.nav.ats',
+    icon: Kanban,
+    help: 'Post jobs, get applicants and move them through your hiring steps. Free in early access.',
+    tour: 'hiring',
   },
   {
     href: '/dashboard/requests',
@@ -284,7 +299,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       } catch {
         if (active) {
           toast.error('Session expired', 'Please sign in again.');
-          router.replace('/auth/login');
+          router.replace(`/auth/login?next=${encodeURIComponent(pathname)}`);
         }
       }
     })();

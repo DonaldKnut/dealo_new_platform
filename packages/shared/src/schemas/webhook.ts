@@ -3,6 +3,9 @@ import { z } from 'zod';
 export const WebhookEvent = {
   HIRE_INQUIRY_CREATED: 'hire_inquiry.created',
   HIRE_INQUIRY_STATUS_UPDATED: 'hire_inquiry.status_updated',
+  APPLICATION_CREATED: 'application.created',
+  APPLICATION_STAGE_CHANGED: 'application.stage_changed',
+  OFFER_ACCEPTED: 'offer.accepted',
   PING: 'ping',
 } as const;
 
@@ -11,6 +14,9 @@ export type WebhookEvent = (typeof WebhookEvent)[keyof typeof WebhookEvent];
 export const SUBSCRIBABLE_WEBHOOK_EVENTS = [
   WebhookEvent.HIRE_INQUIRY_CREATED,
   WebhookEvent.HIRE_INQUIRY_STATUS_UPDATED,
+  WebhookEvent.APPLICATION_CREATED,
+  WebhookEvent.APPLICATION_STAGE_CHANGED,
+  WebhookEvent.OFFER_ACCEPTED,
 ] as const;
 
 const webhookEventEnum = z.enum(SUBSCRIBABLE_WEBHOOK_EVENTS);

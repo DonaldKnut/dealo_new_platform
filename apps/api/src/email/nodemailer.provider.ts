@@ -47,6 +47,11 @@ export class NodemailerEmailProvider implements EmailProvider {
       subject: input.subject,
       html: input.html,
       text: input.text,
+      attachments: input.attachments?.map((file) => ({
+        filename: file.filename,
+        content: file.content,
+        contentType: file.contentType,
+      })),
     });
 
     this.logger.debug(`Email sent via SMTP to ${input.to}`);

@@ -9,13 +9,27 @@ import { reviewAiRun, type AiProvider } from '@/lib/dashboard-api';
 import { cn } from '@/lib/utils';
 
 /** Every AI result ends with a person accepting or dismissing it. */
-export function AiReviewBar({ runId, provider, className }: { runId: string; provider: AiProvider; className?: string }) {
+export function AiReviewBar({
+  runId,
+  provider,
+  className,
+  initialStatus,
+  onDecide,
+}: {
+  runId: string;
+  provider: AiProvider;
+  className?: string;
+  initialStatus?: string;
+  onDecide?: (decision: 'ACCEPTED' | 'DISMISSED') => Promise<unknown>;
+}) {
   const toast = useToast();
-  const [state, setState] = useState<'pending' | 'ACCEPTED' | 'DISMISSED'>('pending');
+  const [state, setState] = useState<'pending' | 'ACCEPTED' | 'DISMISSED'>(
+    initialStatus === 'ACCEPTED' || initialStatus === 'DISMISSED' ? initialStatus : 'pending',
+  );
 
   const decide = async (decision: 'ACCEPTED' | 'DISMISSED') => {
     try {
-      await reviewAiRun(runId, decision);
+      await (onDecide ? onDecide(decision) : reviewAiRun(runId, decision));
       setState(decision);
       toast.success(decision === 'ACCEPTED' ? 'Marked as reviewed and accepted' : 'Suggestion dismissed');
     } catch (error) {
@@ -48,7 +62,7 @@ export function AiReviewBar({ runId, provider, className }: { runId: string; pro
         </div>
       ) : (
         <span className={cn('text-xs font-semibold', state === 'ACCEPTED' ? 'text-brand' : 'text-muted')}>
-          {state === 'ACCEPTED' ? 'Accepted by you' : 'Dismissed by you'}
+          {state === 'ACCEPTED' ? 'Accepted' : 'Dismissed'}
         </span>
       )}
     </div>
