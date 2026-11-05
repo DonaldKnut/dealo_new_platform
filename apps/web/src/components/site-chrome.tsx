@@ -13,7 +13,8 @@ export function SiteChrome({ children }: { children: ReactNode }) {
     pathname.startsWith('/employer') ||
     pathname.startsWith('/talent') ||
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/auth');
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/resume-builder/');
 
   if (isBareShell) {
     return <>{children}</>;

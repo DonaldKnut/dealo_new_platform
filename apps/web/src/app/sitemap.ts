@@ -16,6 +16,7 @@ const STATIC_PATHS = [
   '/for-professionals',
   '/developers',
   '/ats',
+  '/resume-builder',
   '/faq',
   '/hire',
   '/contact',
@@ -35,7 +36,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority:
       path === '/'
         ? 1
-        : ['/hire', '/blog', '/services', '/for-employers'].includes(path)
+        : ['/hire', '/blog', '/services', '/for-employers', '/resume-builder'].includes(path)
           ? 0.9
           : path.startsWith('/auth')
             ? 0.3

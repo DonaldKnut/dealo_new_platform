@@ -11,6 +11,7 @@ import { HomeStats } from '@/components/marketing/home-stats';
 import { MarqueeStrip } from '@/components/marketing/marquee-strip';
 import { PricingPackages } from '@/components/marketing/pricing-packages';
 import { ProcessRail } from '@/components/marketing/process-rail';
+import { ResumeBuilderPromo } from '@/components/marketing/resume-builder-promo';
 import { ServiceSpotlight } from '@/components/marketing/service-spotlight';
 import { TalentShowcaseGrid } from '@/components/marketing/talent-showcase-grid';
 
@@ -32,6 +33,7 @@ export default function HomePage() {
       <MarqueeStrip />
       <HomeStats />
       <AiAgentsShowcase />
+      <ResumeBuilderPromo />
       <CoverageScope />
       <ServiceSpotlight />
       <TalentShowcaseGrid />

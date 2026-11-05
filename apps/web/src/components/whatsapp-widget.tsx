@@ -19,7 +19,7 @@ export function WhatsAppWidget() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  if (!number || pathname.startsWith('/dashboard')) return null;
+  if (!number || pathname.startsWith('/dashboard') || pathname.startsWith('/resume-builder/')) return null;
 
   const href = `https://wa.me/${number}?text=${encodeURIComponent(t('wa.prefill'))}`;
 

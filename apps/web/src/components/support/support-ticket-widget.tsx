@@ -86,7 +86,7 @@ export function SupportTicketWidget() {
     };
   }, [open]);
 
-  if (!user) return null;
+  if (!user || pathname.startsWith('/resume-builder/')) return null;
 
   const close = () => {
     setOpen(false);

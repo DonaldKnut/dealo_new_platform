@@ -52,6 +52,9 @@ export function SiteFooter() {
               <Link href="/for-professionals" className="footer-link">
                 {t('footer.professionals')}
               </Link>
+              <Link href="/resume-builder" className="footer-link">
+                {t('footer.cvBuilder')}
+              </Link>
               <Link href="/auth/register" className="footer-link">
                 {t('footer.createAccount')}
               </Link>

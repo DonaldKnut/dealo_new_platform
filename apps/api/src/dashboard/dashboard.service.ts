@@ -488,6 +488,7 @@ export class DashboardService {
       isEmailVerified: row.isEmailVerified,
       lastLoginAt: row.lastLoginAt,
       createdAt: row.createdAt,
+      premiumUntil: row.premiumUntil && row.premiumUntil > new Date() ? row.premiumUntil : null,
       roles: row.roles.map((assignment) => assignment.role.code),
     }));
   }

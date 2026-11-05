@@ -10,6 +10,7 @@ import {
   Code2,
   CreditCard,
   FileJson,
+  FileText,
   Handshake,
   Kanban,
   KeyRound,
@@ -123,6 +124,12 @@ const offerDefs: MegaItemDef[] = [
 ];
 
 const resourceDefs: MegaItemDef[] = [
+  {
+    href: '/resume-builder',
+    titleKey: 'mega.cv.title',
+    descKey: 'mega.cv.desc',
+    icon: FileText,
+  },
   {
     href: '/blog',
     titleKey: 'mega.blog.title',

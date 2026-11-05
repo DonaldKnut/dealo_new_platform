@@ -205,8 +205,12 @@ export type DashboardUser = {
   isEmailVerified: boolean;
   lastLoginAt: string | null;
   createdAt: string;
+  premiumUntil?: string | null;
   roles: string[];
 };
+
+export const grantResumePremium = (userId: string, days: number) =>
+  apiFetch<{ userId: string; premiumUntil: string | null }>('/resumes/admin/premium', { method: 'POST', json: { userId, days } });
 
 export type BlogPost = {
   id: string;

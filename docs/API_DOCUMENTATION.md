@@ -210,6 +210,21 @@ Workspace webhooks (same signing as above) can subscribe to `application.created
 
 Public, no-login ATS routes: `GET /api/v1/careers/:orgSlug`, `GET /api/v1/careers/:orgSlug/:jobSlug`, `POST /api/v1/careers/:orgSlug/:jobSlug/apply` (multipart, CV in the `cv` field), `GET|POST /api/v1/book/:token` (interview self-booking), `GET /api/v1/offer/:token` and `POST /api/v1/offer/:token/respond`.
 
+## CV builder (signed-in users, cookie JWT)
+
+PDFs are made in the browser; the API stores the CV data. Free accounts keep 1 CV; premium (`User.premiumUntil`) keeps 20 CVs and 20 cover letters and unlocks the AI routes.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/resumes/plan` | Free or premium, limits, usage, AI provider |
+| GET / POST | `/api/v1/resumes` | List (with data for thumbnails) / save a CV or cover letter |
+| GET / PATCH / DELETE | `/api/v1/resumes/:id` | One document (owner only) |
+| POST | `/api/v1/resumes/:id/duplicate` | Copy (counts towards the limit) |
+| POST | `/api/v1/resumes/:id/downloaded` | Download counter |
+| POST | `/api/v1/resumes/:id/share-profile` | Job seekers: copy CV details into their Dealo profile |
+| POST | `/api/v1/resumes/ai/bullets`, `ai/summary`, `ai/tailor`, `ai/cover-letter` | Premium AI writing (Gemini or built-in rules; contact details are never sent) |
+| POST | `/api/v1/resumes/admin/premium` | Admins: add days of premium (`days: 0` removes it) |
+
 ## Plans and billing (Paystack)
 
 | Plan | Default price / 30 days | Rate limit | Monthly quota per key | Live keys |

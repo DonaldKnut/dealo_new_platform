@@ -48,6 +48,7 @@ import {
 import { apiFetch } from '@/lib/api';
 import { logClientAudit } from '@/lib/client-audit';
 import { fetchAuthMe } from '@/lib/dashboard-api';
+import { takeReturnTo } from '@/lib/resume-api';
 import { cn } from '@/lib/utils';
 
 type NavItem = {
@@ -92,6 +93,13 @@ const adminNav: NavItem[] = [
     labelKey: 'dash.nav.professionals',
     icon: UserSearch,
     help: 'Everyone who signed up as a professional, with their profile and CV.',
+    tour: 'hiring',
+  },
+  {
+    href: '/dashboard/resumes',
+    labelKey: 'dash.nav.resumes',
+    icon: FileText,
+    help: 'The CV builder as job seekers see it. Give premium from Users.',
     tour: 'hiring',
   },
   {
@@ -236,6 +244,12 @@ const talentNav: NavItem[] = [
     help: 'Your details, skills and CV. Recruiters use this to match you.',
   },
   {
+    href: '/dashboard/resumes',
+    labelKey: 'dash.nav.resumes',
+    icon: FileText,
+    help: 'Build, edit and download CVs and cover letters.',
+  },
+  {
     href: '/dashboard/matches',
     labelKey: 'dash.nav.matches',
     icon: Briefcase,
@@ -291,6 +305,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         const me = await fetchAuthMe();
         if (!active) return;
         setUser(me);
+        const returnTo = takeReturnTo();
+        if (returnTo) {
+          router.replace(returnTo);
+          return;
+        }
         const home = getDashboardHome(me.roles);
         const group = getRoleGroup(me.roles);
         if (group === 'talent' && pathname === '/dashboard') {

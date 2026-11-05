@@ -9,6 +9,6 @@ import { GeminiClient } from './gemini.client';
   imports: [OpsModule],
   controllers: [AiController],
   providers: [AiService, GeminiClient],
-  exports: [AiService],
+  exports: [AiService, GeminiClient],
 })
 export class AiModule {}
