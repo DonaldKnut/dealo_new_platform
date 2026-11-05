@@ -1,8 +1,9 @@
 'use client';
 
+import { ShieldCheck } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
-import { DashPanel } from '@/components/dashboard/dashboard-ui';
+import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import {
@@ -68,14 +69,7 @@ export function DashboardOAuthClients({
   };
 
   return (
-    <DashPanel
-      title={`OAuth clients · ${keyName}`}
-      action={
-        <button type="button" className="btn-secondary" onClick={onClose}>
-          Close
-        </button>
-      }
-    >
+    <FormModal open onClose={onClose} icon={ShieldCheck} title="OAuth clients" description={`For the key “${keyName}”.`} size="lg">
       <p className="text-sm text-muted">
         Client-credentials clients exchange an ID and secret for 1-hour tokens that carry this key&apos;s
         scopes, plan and rate limit.
@@ -99,7 +93,7 @@ export function DashboardOAuthClients({
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <input
-          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:max-w-sm"
+          className="input-field sm:max-w-sm"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Acme backend service"
@@ -137,6 +131,6 @@ export function DashboardOAuthClients({
           ))
         )}
       </ul>
-    </DashPanel>
+    </FormModal>
   );
 }

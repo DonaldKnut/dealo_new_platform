@@ -29,6 +29,8 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { DashPanel } from '@/components/dashboard/dashboard-ui';
+import { FormField } from '@/components/forms/form-field';
+import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { AiReviewBar } from '@/components/ai/ai-review-bar';
@@ -409,55 +411,67 @@ export function WorkforceConsole({ siteId }: { siteId: string }) {
               </div>
             }
           >
-            <AnimatePresence initial={false}>
-              {showAdd ? (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="mb-4 grid grid-cols-1 gap-2 rounded-2xl border border-dashed border-brand/40 bg-brand-soft/20 p-3 sm:grid-cols-2">
-                    <select
-                      className="input-field sm:col-span-2"
-                      value={newPlacement.candidateId}
-                      onChange={(e) => {
-                        const person = people?.find((p) => p.id === e.target.value);
-                        setNewPlacement((cur) => ({
-                          ...cur,
-                          candidateId: e.target.value,
-                          roleTitle: cur.roleTitle || person?.roleTitle || '',
-                        }));
-                      }}
-                    >
-                      <option value="">{people ? 'Choose a professional' : 'Loading professionals…'}</option>
-                      {placed.map((person) => (
-                        <option key={person.id} value={person.id}>
-                          {person.fullName} · {person.roleTitle || 'no title'}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      className="input-field"
-                      placeholder="Role on this site"
-                      value={newPlacement.roleTitle}
-                      onChange={(e) => setNewPlacement((cur) => ({ ...cur, roleTitle: e.target.value }))}
-                    />
-                    <label className="flex items-center gap-2 rounded-xl border border-border bg-surface-elevated px-3 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={newPlacement.isStandby}
-                        onChange={(e) => setNewPlacement((cur) => ({ ...cur, isStandby: e.target.checked }))}
-                      />
-                      Standby (backup) worker
-                    </label>
-                    <button type="button" className="btn-primary sm:col-span-2" onClick={onAddPlacement}>
-                      <Plus className="h-4 w-4" /> Place on site
-                    </button>
-                  </div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
+            <FormModal
+              open={showAdd}
+              onClose={() => setShowAdd(false)}
+              icon={UserPlus}
+              title="Place a worker"
+              description={`Add someone to ${data.site.name}. They check in from their phone when they arrive.`}
+              footer={
+                <>
+                  <button type="button" className="btn-secondary" onClick={() => setShowAdd(false)}>
+                    Cancel
+                  </button>
+                  <button type="button" className="btn-primary" disabled={!newPlacement.candidateId} onClick={onAddPlacement}>
+                    <Plus className="h-4 w-4" /> Place on site
+                  </button>
+                </>
+              }
+            >
+              <div className="space-y-4">
+                <FormField label="Professional">
+                  <select
+                    className="input-field"
+                    value={newPlacement.candidateId}
+                    onChange={(e) => {
+                      const person = people?.find((p) => p.id === e.target.value);
+                      setNewPlacement((cur) => ({
+                        ...cur,
+                        candidateId: e.target.value,
+                        roleTitle: cur.roleTitle || person?.roleTitle || '',
+                      }));
+                    }}
+                  >
+                    <option value="">{people ? 'Choose a professional' : 'Loading professionals…'}</option>
+                    {placed.map((person) => (
+                      <option key={person.id} value={person.id}>
+                        {person.fullName} · {person.roleTitle || 'no title'}
+                      </option>
+                    ))}
+                  </select>
+                </FormField>
+                <FormField label="Role on this site">
+                  <input
+                    className="input-field"
+                    placeholder="Electrician"
+                    value={newPlacement.roleTitle}
+                    onChange={(e) => setNewPlacement((cur) => ({ ...cur, roleTitle: e.target.value }))}
+                  />
+                </FormField>
+                <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border p-3 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={newPlacement.isStandby}
+                    onChange={(e) => setNewPlacement((cur) => ({ ...cur, isStandby: e.target.checked }))}
+                    className="mt-1 accent-[var(--brand)]"
+                  />
+                  <span>
+                    <span className="font-semibold text-foreground">Standby (backup) worker</span>
+                    <span className="block text-xs text-muted">Called in when someone on the crew does not show up.</span>
+                  </span>
+                </label>
+              </div>
+            </FormModal>
 
             {data.roster.length === 0 ? (
               <p className="text-sm text-muted">No workers placed yet. Tap “Add” to place your first worker.</p>

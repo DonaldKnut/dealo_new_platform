@@ -1,12 +1,14 @@
 'use client';
 
 import { SANDBOX_KEY_POLICY } from '@dealo/shared';
-import { ExternalLink } from 'lucide-react';
+import { Copy, ExternalLink, KeyRound, Plus } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { DashboardApiBillingPanel } from '@/components/dashboard/dashboard-api-billing-panel';
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
 import { DashboardWebhooksPanel } from '@/components/dashboard/dashboard-webhooks-panel';
+import { FormField } from '@/components/forms/form-field';
+import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import {
@@ -30,6 +32,7 @@ export function DashboardDeveloperPanel() {
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
   const [revealed, setRevealed] = useState<CreatedApiKey | null>(null);
+  const [keyOpen, setKeyOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const origin = apiOrigin();
 
@@ -98,49 +101,90 @@ export function DashboardDeveloperPanel() {
         }
       />
 
-      {revealed ? (
-        <DashPanel className="border-brand/40 bg-brand-soft/30">
-          <h2 className="font-display text-lg text-foreground">Copy this key now</h2>
-          <p className="mt-1 text-sm text-muted">It is shown only once. Store it in your secrets manager.</p>
-          <code className="mt-3 block break-all rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground">
-            {revealed.apiKey}
-          </code>
-          <div className="mt-3 flex gap-2">
+      <FormModal
+        open={keyOpen}
+        onClose={() => {
+          setKeyOpen(false);
+          setRevealed(null);
+        }}
+        icon={KeyRound}
+        title={revealed ? 'Copy this key now' : 'Get a sandbox key'}
+        description={revealed ? 'It is shown only once. Store it in your secrets manager.' : `Test keys start with dk_test_ and allow ${SANDBOX_KEY_POLICY.rateLimitPerMin} requests a minute.`}
+        size="sm"
+        footer={
+          revealed ? (
             <button
               type="button"
-              className="btn-secondary"
+              className="btn-primary"
+              onClick={() => {
+                setKeyOpen(false);
+                setRevealed(null);
+              }}
+            >
+              I saved it
+            </button>
+          ) : (
+            <>
+              <button type="button" className="btn-secondary" onClick={() => setKeyOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" form="sandbox-key-form" className="btn-primary" disabled={creating}>
+                {creating ? 'Creating…' : 'Create key'}
+              </button>
+            </>
+          )
+        }
+      >
+        {revealed ? (
+          <div className="space-y-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
+            <code className="block break-all rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-foreground">{revealed.apiKey}</code>
+            <button
+              type="button"
+              className="btn-secondary w-full"
               onClick={async () => {
                 await navigator.clipboard.writeText(revealed.apiKey);
                 toast.success('Copied to clipboard');
               }}
             >
-              Copy
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => setRevealed(null)}>
-              Dismiss
+              <Copy className="h-4 w-4" /> Copy key
             </button>
           </div>
-        </DashPanel>
-      ) : null}
+        ) : (
+          <form
+            id="sandbox-key-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void onCreate();
+            }}
+          >
+            <FormField label="Name" hint="So you remember what uses it.">
+              <input className="input-field" value={name} onChange={(e) => setName(e.target.value)} placeholder="My ATS integration" />
+            </FormField>
+          </form>
+        )}
+      </FormModal>
 
-      <DashPanel title="Create a sandbox key">
+      <DashPanel
+        title="Sandbox keys"
+        action={
+          <button
+            type="button"
+            className="btn-primary px-3 py-2 text-xs"
+            disabled={atLimit}
+            onClick={() => {
+              setRevealed(null);
+              setKeyOpen(true);
+            }}
+          >
+            <Plus className="h-3.5 w-3.5" /> {atLimit ? 'Limit reached' : 'Get a key'}
+          </button>
+        }
+      >
         <p className="text-sm text-muted">
           Sandbox keys use the <code>dk_test_</code> prefix, allow {SANDBOX_KEY_POLICY.rateLimitPerMin} requests per
           minute, and include: {SANDBOX_KEY_POLICY.scopes.join(', ')}. You can hold up to{' '}
           {SANDBOX_KEY_POLICY.maxActiveKeys} active sandbox keys. Contact Dealo for live (production) access.
         </p>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <input
-            className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm sm:max-w-sm"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="My ATS integration"
-            disabled={atLimit}
-          />
-          <button type="button" className="btn-primary" disabled={creating || atLimit} onClick={onCreate}>
-            {creating ? 'Creating…' : atLimit ? 'Key limit reached' : 'Get sandbox key'}
-          </button>
-        </div>
         <pre className="mt-4 overflow-x-auto rounded-xl border border-border bg-surface p-4 text-xs text-foreground">
           {`curl -s ${origin}/api/v1/hire-inquiries \\
   -H "Authorization: Bearer dk_test_YOUR_KEY"`}

@@ -3,8 +3,11 @@
 import { Crown, LoaderCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { FormField } from '@/components/forms/form-field';
+import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { fetchDashboardUsers, grantResumePremium, type DashboardUser } from '@/lib/dashboard-api';
 
 export function DashboardUsersPanel() {
@@ -14,15 +17,21 @@ export function DashboardUsersPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const toast = useToast();
 
+  const [premiumFor, setPremiumFor] = useState<DashboardUser | null>(null);
+  const [days, setDays] = useState(30);
+
+  const premium = (user: DashboardUser) => {
+    setDays(30);
+    setPremiumFor(user);
+  };
+
   /** Days are added to any premium the person already has; 0 removes it. */
-  const premium = async (user: DashboardUser) => {
-    const answer = window.prompt(`CV builder premium for ${user.email}.\nHow many days to add? (0 removes premium)`, user.premiumUntil ? '0' : '30');
-    if (answer === null) return;
-    const days = Number(answer);
+  const applyPremium = async (user: DashboardUser, days: number) => {
     if (!Number.isInteger(days) || days < 0 || days > 3650) {
       toast.error('Enter a whole number of days');
       return;
     }
+    setPremiumFor(null);
     setBusyId(user.id);
     try {
       const result = await grantResumePremium(user.id, days);
@@ -108,7 +117,7 @@ export function DashboardUsersPanel() {
                         <Crown className="h-3.5 w-3.5" /> until {new Date(user.premiumUntil).toLocaleDateString()}
                       </span>
                     ) : null}
-                    <button type="button" className="font-semibold text-brand" disabled={busyId === user.id} onClick={() => void premium(user)}>
+                    <button type="button" className="font-semibold text-brand" disabled={busyId === user.id} onClick={() => premium(user)}>
                       {user.premiumUntil ? 'Change' : 'Give'}
                     </button>
                   </td>
@@ -118,6 +127,53 @@ export function DashboardUsersPanel() {
           </table>
         </div>
       </div>
+
+      <FormModal
+        open={Boolean(premiumFor)}
+        onClose={() => setPremiumFor(null)}
+        icon={Crown}
+        title="CV builder premium"
+        description={premiumFor ? `${premiumFor.email}${premiumFor.premiumUntil ? ` · premium until ${new Date(premiumFor.premiumUntil).toLocaleDateString()}` : ''}` : undefined}
+        size="sm"
+        footer={
+          <>
+            {premiumFor?.premiumUntil ? (
+              <button type="button" className="btn-secondary text-danger" onClick={() => premiumFor && void applyPremium(premiumFor, 0)}>
+                Remove premium
+              </button>
+            ) : (
+              <button type="button" className="btn-secondary" onClick={() => setPremiumFor(null)}>
+                Cancel
+              </button>
+            )}
+            <button type="button" className="btn-primary" onClick={() => premiumFor && void applyPremium(premiumFor, days)}>
+              Add {days} days
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted">Days are added on top of any premium they already have.</p>
+          <div className="grid grid-cols-2 gap-2 min-[340px]:grid-cols-4">
+            {[7, 30, 90, 365].map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDays(d)}
+                className={cn(
+                  'rounded-xl border px-2 py-3 text-sm font-semibold transition',
+                  days === d ? 'border-brand bg-brand-soft text-brand' : 'border-border text-muted hover:border-brand/40',
+                )}
+              >
+                {d === 365 ? '1 year' : `${d} days`}
+              </button>
+            ))}
+          </div>
+          <FormField label="Or any number of days">
+            <input className="input-field" type="number" min={1} max={3650} value={days} onChange={(e) => setDays(Number(e.target.value))} />
+          </FormField>
+        </div>
+      </FormModal>
     </div>
   );
 }

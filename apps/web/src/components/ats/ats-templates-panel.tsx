@@ -1,11 +1,11 @@
 'use client';
 
 import { emailTemplateSchema } from '@dealo/shared';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Mail, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { FormField } from '@/components/forms/form-field';
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { atsApi, type EmailTemplate } from '@/lib/ats-api';
@@ -88,24 +88,40 @@ export function AtsTemplatesPanel({ orgId }: { orgId: string }) {
         <Plus className="h-4 w-4" /> New template
       </button>
 
-      <BottomSheet open={Boolean(draft)} onClose={() => setDraft(null)} title={draft?.id ? 'Edit template' : 'New template'}>
-        {draft ? (
-          <div className="space-y-3 py-2">
-            <FormField label="Name">
-              <input className="input-field" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Trade test invite" maxLength={80} />
-            </FormField>
-            <FormField label="Subject">
-              <input className="input-field" value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} maxLength={160} />
-            </FormField>
-            <FormField label="Message">
-              <textarea className="input-field min-h-[10rem]" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} maxLength={5000} />
-            </FormField>
-            <button type="button" className="btn-primary w-full" disabled={saving} onClick={save}>
+      <FormModal
+        open={Boolean(draft)}
+        onClose={() => setDraft(null)}
+        icon={Mail}
+        title={draft?.id ? 'Edit template' : 'New template'}
+        description="{{firstName}}, {{jobTitle}} and {{company}} are filled in for each person."
+        size="lg"
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setDraft(null)}>
+              Cancel
+            </button>
+            <button type="button" className="btn-primary" disabled={saving} onClick={save}>
               {saving ? 'Saving…' : 'Save template'}
             </button>
+          </>
+        }
+      >
+        {draft ? (
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Name">
+                <input className="input-field" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Trade test invite" maxLength={80} />
+              </FormField>
+              <FormField label="Subject">
+                <input className="input-field" value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} maxLength={160} />
+              </FormField>
+            </div>
+            <FormField label="Message">
+              <textarea className="input-field min-h-[14rem]" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} maxLength={5000} />
+            </FormField>
           </div>
         ) : null}
-      </BottomSheet>
+      </FormModal>
     </div>
   );
 }

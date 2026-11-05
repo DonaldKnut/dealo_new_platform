@@ -7,12 +7,15 @@ import {
   type SupportTicketCreateInput,
   type SupportTicketReplyInput,
 } from '@dealo/shared';
+import { LifeBuoy, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { DashHero, DashPanel, formatStatus } from '@/components/dashboard/dashboard-ui';
-import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { FormField } from '@/components/forms/form-field';
+import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
+import { cn } from '@/lib/utils';
 import { getRoleGroup } from '@/hooks/use-auth-session';
 import { ApiError } from '@/lib/api';
 import { logClientAudit } from '@/lib/client-audit';
@@ -33,6 +36,7 @@ export function DashboardSupportPanel() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<SupportTicketDetail | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const createForm = useForm<SupportTicketCreateInput>({
     resolver: zodResolver(supportTicketCreateSchema),
@@ -102,57 +106,82 @@ export function DashboardSupportPanel() {
         eyebrow="Support"
         title="Support tickets"
         subtitle="Create tickets for user or client issues. Admins are emailed when a new ticket arrives, and can reply here."
+        actions={
+          <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
+            <Plus className="h-4 w-4" /> New ticket
+          </button>
+        }
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <DashPanel>
-          <div className="mb-4 flex items-center gap-2">
-            <h2 className="font-display text-xl">New ticket</h2>
-            <InfoTooltip
-              label="New ticket"
-              content="Anyone signed in can open a ticket. Admins receive an email notification automatically."
-            />
-          </div>
-          <form
-            className="space-y-3"
-            onSubmit={createForm.handleSubmit(async (values) => {
-              try {
-                await createSupportTicket(values);
-                toast.success('Ticket created', 'Admins were notified by email.');
-                logClientAudit({ action: 'SUPPORT_TICKET_CREATED_DASH', entityType: 'SupportTicket' });
-                createForm.reset({
-                  subject: '',
-                  body: '',
-                  priority: 'NORMAL',
-                  category: 'general',
-                });
-                await reload();
-              } catch (error) {
-                toast.error(
-                  'Could not create ticket',
-                  error instanceof ApiError ? error.message : undefined,
-                );
-              }
-            })}
-          >
-            <input className="input-field" placeholder="Subject" {...createForm.register('subject')} />
-            <textarea
-              className="input-field min-h-[6rem]"
-              placeholder="Describe the issue"
-              {...createForm.register('body')}
-            />
-            <select className="input-field" {...createForm.register('priority')}>
-              <option value="LOW">Low</option>
-              <option value="NORMAL">Normal</option>
-              <option value="HIGH">High</option>
-              <option value="URGENT">Urgent</option>
-            </select>
-            <button type="submit" className="btn-primary" disabled={createForm.formState.isSubmitting}>
-              Create ticket
+      <FormModal
+        open={creating}
+        onClose={() => setCreating(false)}
+        icon={LifeBuoy}
+        title="New ticket"
+        description="Anyone signed in can open a ticket. Admins get an email straight away."
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setCreating(false)}>
+              Cancel
             </button>
-          </form>
-        </DashPanel>
+            <button type="submit" form="support-ticket-form" className="btn-primary" disabled={createForm.formState.isSubmitting}>
+              {createForm.formState.isSubmitting ? 'Sending…' : 'Create ticket'}
+            </button>
+          </>
+        }
+      >
+        <form
+          id="support-ticket-form"
+          className="space-y-4"
+          onSubmit={createForm.handleSubmit(async (values) => {
+            try {
+              await createSupportTicket(values);
+              toast.success('Ticket created', 'Admins were notified by email.');
+              logClientAudit({ action: 'SUPPORT_TICKET_CREATED_DASH', entityType: 'SupportTicket' });
+              createForm.reset({ subject: '', body: '', priority: 'NORMAL', category: 'general' });
+              setCreating(false);
+              await reload();
+            } catch (error) {
+              toast.error('Could not create ticket', error instanceof ApiError ? error.message : undefined);
+            }
+          })}
+        >
+          <FormField label="Subject" error={createForm.formState.errors.subject?.message}>
+            <input className="input-field" placeholder="I cannot download my CV" {...createForm.register('subject')} />
+          </FormField>
+          <FormField label="What happened?" error={createForm.formState.errors.body?.message}>
+            <textarea className="input-field min-h-[9rem]" placeholder="Tell us what you tried and what you saw." {...createForm.register('body')} />
+          </FormField>
+          <FormField label="How urgent?">
+            <div className="grid grid-cols-2 gap-2 min-[400px]:grid-cols-4">
+              {(['LOW', 'NORMAL', 'HIGH', 'URGENT'] as const).map((p) => {
+                const active = createForm.watch('priority') === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => createForm.setValue('priority', p)}
+                    className={cn(
+                      'rounded-xl border px-2 py-2.5 text-xs font-semibold transition',
+                      active
+                        ? p === 'URGENT'
+                          ? 'border-danger bg-danger/10 text-danger'
+                          : p === 'HIGH'
+                            ? 'border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                            : 'border-brand bg-brand-soft text-brand'
+                        : 'border-border text-muted hover:border-brand/40',
+                    )}
+                  >
+                    {formatStatus(p)}
+                  </button>
+                );
+              })}
+            </div>
+          </FormField>
+        </form>
+      </FormModal>
 
+      <div className="grid gap-4">
         <DashPanel>
           <h2 className="mb-4 font-display text-xl">Your queue</h2>
           <div className="space-y-2">

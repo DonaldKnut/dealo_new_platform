@@ -1,13 +1,15 @@
 'use client';
 
 import { ApiScope } from '@dealo/shared';
+import { Copy, KeyRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { DashboardApiKeyUsage } from '@/components/dashboard/dashboard-api-key-usage';
 import { DashboardApiPlansAdmin } from '@/components/dashboard/dashboard-api-plans-admin';
 import { DashboardOAuthClients } from '@/components/dashboard/dashboard-oauth-clients';
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
-import { InfoTooltip } from '@/components/ui/info-tooltip';
+import { FormField } from '@/components/forms/form-field';
+import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import {
@@ -33,6 +35,7 @@ export function DashboardApiKeysPanel() {
     ApiScope.HIRE_INQUIRIES_WRITE,
   ]);
   const [creating, setCreating] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [revealed, setRevealed] = useState<CreatedApiKey | null>(null);
   const [usageKeyId, setUsageKeyId] = useState<string | null>(null);
   const [oauthKey, setOauthKey] = useState<ApiKeyRow | null>(null);
@@ -118,98 +121,119 @@ export function DashboardApiKeysPanel() {
         eyebrow="Admin"
         title="API keys"
         subtitle="Issue partner keys for commercial API access. Plaintext secrets are shown once at creation."
-      />
-
-      {revealed ? (
-        <DashPanel className="border-brand/40 bg-brand-soft/30">
-          <h2 className="font-display text-lg text-foreground">Copy this key now</h2>
-          <p className="mt-1 text-sm text-muted">
-            {revealed.name} · {revealed.environment} · shown only once
-          </p>
-          <code className="mt-3 block break-all rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground">
-            {revealed.apiKey}
-          </code>
+        actions={
           <button
             type="button"
-            className="btn-secondary mt-3"
-            onClick={async () => {
-              await navigator.clipboard.writeText(revealed.apiKey);
-              toast.success('Copied to clipboard');
+            className="btn-primary"
+            onClick={() => {
+              setRevealed(null);
+              setCreateOpen(true);
             }}
           >
-            Copy
+            <KeyRound className="h-4 w-4" /> Create key
           </button>
-          <button type="button" className="btn-secondary mt-3 ml-2" onClick={() => setRevealed(null)}>
-            Dismiss
-          </button>
-        </DashPanel>
-      ) : null}
+        }
+      />
 
-      <DashPanel>
-        <div className="mb-4 flex items-center gap-2">
-          <h2 className="font-display text-xl">Create key</h2>
-          <InfoTooltip
-            label="API keys"
-            content="Partners send Authorization: Bearer dk_test_… or dk_live_…. Scopes limit what each key can call."
-          />
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="text-sm">
-            <span className="text-muted">Name</span>
-            <input
-              className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Acme ATS integration"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="text-muted">Environment</span>
-            <select
-              className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2"
-              value={environment}
-              onChange={(e) => setEnvironment(e.target.value as 'TEST' | 'LIVE')}
+      <FormModal
+        open={createOpen}
+        onClose={() => {
+          setCreateOpen(false);
+          setRevealed(null);
+        }}
+        icon={KeyRound}
+        title={revealed ? 'Copy this key now' : 'Create an API key'}
+        description={
+          revealed
+            ? `${revealed.name} · ${revealed.environment} · shown only once`
+            : 'Partners send Authorization: Bearer dk_test_… or dk_live_…. Scopes limit what each key can call.'
+        }
+        size="lg"
+        footer={
+          revealed ? (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => {
+                setCreateOpen(false);
+                setRevealed(null);
+              }}
             >
-              <option value="TEST">TEST (dk_test_)</option>
-              <option value="LIVE">LIVE (dk_live_)</option>
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="text-muted">Plan</span>
-            <select
-              className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2"
-              value={plan}
-              onChange={(e) => setPlan(e.target.value as typeof plan)}
-            >
-              <option value="SANDBOX">Sandbox</option>
-              <option value="PARTNER">Partner</option>
-              <option value="ENTERPRISE">Enterprise</option>
-            </select>
-          </label>
-        </div>
-        <div className="mt-4">
-          <p className="text-sm text-muted">Scopes</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {ALL_SCOPES.map((scope) => (
-              <button
-                key={scope}
-                type="button"
-                onClick={() => toggleScope(scope)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                  scopes.includes(scope)
-                    ? 'border-brand bg-brand text-white dark:text-[#071f14]'
-                    : 'border-border text-muted'
-                }`}
-              >
-                {scope}
+              I saved it
+            </button>
+          ) : (
+            <>
+              <button type="button" className="btn-secondary" onClick={() => setCreateOpen(false)}>
+                Cancel
               </button>
-            ))}
+              <button type="button" className="btn-primary" disabled={creating} onClick={onCreate}>
+                {creating ? 'Creating…' : 'Create API key'}
+              </button>
+            </>
+          )
+        }
+      >
+        {revealed ? (
+          <div className="space-y-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
+            <code className="block break-all rounded-xl border border-border bg-surface px-3 py-2.5 text-sm text-foreground">{revealed.apiKey}</code>
+            <button
+              type="button"
+              className="btn-secondary w-full"
+              onClick={async () => {
+                await navigator.clipboard.writeText(revealed.apiKey);
+                toast.success('Copied to clipboard');
+              }}
+            >
+              <Copy className="h-4 w-4" /> Copy key
+            </button>
           </div>
-        </div>
-        <button type="button" className="btn-primary mt-4" disabled={creating} onClick={onCreate}>
-          {creating ? 'Creating…' : 'Create API key'}
-        </button>
-      </DashPanel>
+        ) : (
+          <div className="space-y-5">
+            <FormField label="Name">
+              <input className="input-field" value={name} onChange={(e) => setName(e.target.value)} placeholder="Acme ATS integration" />
+            </FormField>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Environment">
+                <div className="grid grid-cols-2 gap-1 rounded-xl border border-border p-1">
+                  {(['TEST', 'LIVE'] as const).map((env) => (
+                    <button
+                      key={env}
+                      type="button"
+                      onClick={() => setEnvironment(env)}
+                      className={`rounded-lg px-2 py-2 text-xs font-semibold transition ${environment === env ? 'bg-brand text-white dark:text-[#071f14]' : 'text-muted hover:text-foreground'}`}
+                    >
+                      {env === 'TEST' ? 'Test (dk_test_)' : 'Live (dk_live_)'}
+                    </button>
+                  ))}
+                </div>
+              </FormField>
+              <FormField label="Plan">
+                <select className="input-field" value={plan} onChange={(e) => setPlan(e.target.value as typeof plan)}>
+                  <option value="SANDBOX">Sandbox</option>
+                  <option value="PARTNER">Partner</option>
+                  <option value="ENTERPRISE">Enterprise</option>
+                </select>
+              </FormField>
+            </div>
+            <FormField label="Scopes" hint="What this key is allowed to do.">
+              <div className="flex flex-wrap gap-2">
+                {ALL_SCOPES.map((scope) => (
+                  <button
+                    key={scope}
+                    type="button"
+                    onClick={() => toggleScope(scope)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      scopes.includes(scope) ? 'border-brand bg-brand text-white dark:text-[#071f14]' : 'border-border text-muted hover:border-brand/40'
+                    }`}
+                  >
+                    {scope}
+                  </button>
+                ))}
+              </div>
+            </FormField>
+          </div>
+        )}
+      </FormModal>
 
       <DashPanel>
         <h2 className="mb-4 font-display text-xl">Issued keys</h2>

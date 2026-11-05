@@ -1,8 +1,11 @@
 'use client';
 
-import { LoaderCircle } from 'lucide-react';
+import { ListChecks, ListPlus, LoaderCircle, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { DashHero } from '@/components/dashboard/dashboard-ui';
+import { FormField } from '@/components/forms/form-field';
+import { FormModal } from '@/components/ui/form-modal';
 import { isStaffRole } from '@/hooks/use-auth-session';
 import { RoleAutocomplete } from '@/components/ui/role-autocomplete';
 import { useToast } from '@/components/ui/toast';
@@ -40,6 +43,7 @@ export function DashboardCandidatesPanel() {
   const [hireInquiryId, setHireInquiryId] = useState('');
   const [selectedShortlistId, setSelectedShortlistId] = useState('');
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
+  const [modal, setModal] = useState<'candidate' | 'shortlist' | 'entry' | null>(null);
 
   const refresh = async () => {
     const [me, cand, lists, reqs] = await Promise.all([
@@ -87,103 +91,121 @@ export function DashboardCandidatesPanel() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="eyebrow">{isAdmin ? 'Screening' : 'Shortlists'}</p>
-        <h1 className="display-title mt-2 text-[1.65rem] min-[340px]:text-3xl">
-          {isAdmin ? 'Candidates & shortlists' : 'Your shortlists'}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted">
-          {isAdmin
+    <div className="space-y-6">
+      <DashHero
+        eyebrow={isAdmin ? 'Screening' : 'Shortlists'}
+        title={isAdmin ? 'Candidates & shortlists' : 'Your shortlists'}
+        subtitle={
+          isAdmin
             ? 'Add candidates, mark screening status, and rank shortlists against hire requests.'
-            : 'Review candidates shortlisted against your hiring requests.'}
-        </p>
-      </div>
+            : 'Review candidates shortlisted against your hiring requests.'
+        }
+        actions={
+          isAdmin ? (
+            <>
+              <button type="button" className="btn-primary text-sm" onClick={() => setModal('candidate')}>
+                <UserPlus className="h-4 w-4" /> Add candidate
+              </button>
+              <button type="button" className="btn-secondary text-sm" onClick={() => setModal('shortlist')}>
+                <ListPlus className="h-4 w-4" /> New shortlist
+              </button>
+              {shortlists.length > 0 && candidates.length > 0 ? (
+                <button type="button" className="btn-secondary text-sm" onClick={() => setModal('entry')}>
+                  <ListChecks className="h-4 w-4" /> Add to shortlist
+                </button>
+              ) : null}
+            </>
+          ) : null
+        }
+      />
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
       {message ? <p className="text-sm text-brand">{message}</p> : null}
 
-      {isAdmin ? (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <form
-            className="space-y-3 rounded-2xl border border-border p-4"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              setError(null);
-              setMessage(null);
-              try {
-                await createCandidate({
-                  fullName,
-                  email,
-                  roleTitle,
-                  screenStatus: 'NEW',
-                });
-                setFullName('');
-                setEmail('');
-                setRoleTitle('');
-                setMessage('Candidate added.');
-                toast.success('Candidate added');
-                await refresh();
-              } catch (err) {
-                const msg = err instanceof ApiError ? err.message : 'Unable to add candidate.';
-                setError(msg);
-                toast.error('Could not add candidate', msg);
-              }
-            }}
-          >
-            <h2 className="font-display text-lg">Add candidate</h2>
-            <input
-              className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
-              placeholder="Full name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-            <input
-              className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
-              placeholder="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <RoleAutocomplete
-              value={roleTitle}
-              onChange={setRoleTitle}
-              placeholder="Role title — start typing for suggestions"
-              className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
-            />
-            <button type="submit" className="btn-primary">
+      <FormModal
+        open={modal === 'candidate'}
+        onClose={() => setModal(null)}
+        icon={UserPlus}
+        title="Add candidate"
+        description="They start as New. Mark screening progress from the table."
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setModal(null)}>
+              Cancel
+            </button>
+            <button type="submit" form="candidate-form" className="btn-primary">
               Save candidate
             </button>
-          </form>
+          </>
+        }
+      >
+        <form
+          id="candidate-form"
+          className="space-y-4"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setError(null);
+            setMessage(null);
+            try {
+              await createCandidate({ fullName, email, roleTitle, screenStatus: 'NEW' });
+              setFullName('');
+              setEmail('');
+              setRoleTitle('');
+              toast.success('Candidate added');
+              setModal(null);
+              await refresh();
+            } catch (err) {
+              toast.error('Could not add candidate', err instanceof ApiError ? err.message : 'Unable to add candidate.');
+            }
+          }}
+        >
+          <FormField label="Full name">
+            <input className="input-field" placeholder="Adaeze Okafor" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+          </FormField>
+          <FormField label="Email">
+            <input className="input-field" placeholder="adaeze@email.com" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </FormField>
+          <FormField label="Role" hint="Start typing for suggestions.">
+            <RoleAutocomplete value={roleTitle} onChange={setRoleTitle} placeholder="Site electrician" className="input-field" />
+          </FormField>
+        </form>
+      </FormModal>
 
-          <form
-            className="space-y-3 rounded-2xl border border-border p-4"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              setError(null);
-              setMessage(null);
-              try {
-                await createShortlist({
-                  hireInquiryId,
-                  title: shortlistTitle || 'Shortlist',
-                });
-                setShortlistTitle('');
-                setMessage('Shortlist created.');
-                await refresh();
-              } catch (err) {
-                setError(err instanceof ApiError ? err.message : 'Unable to create shortlist.');
-              }
-            }}
-          >
-            <h2 className="font-display text-lg">Create shortlist</h2>
-            <select
-              className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
-              value={hireInquiryId}
-              onChange={(e) => setHireInquiryId(e.target.value)}
-              required
-            >
+      <FormModal
+        open={modal === 'shortlist'}
+        onClose={() => setModal(null)}
+        icon={ListPlus}
+        title="New shortlist"
+        description="A ranked list of people for one hiring request. The client sees it in their dashboard."
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setModal(null)}>
+              Cancel
+            </button>
+            <button type="submit" form="shortlist-form" className="btn-primary" disabled={!hireInquiryId}>
+              Create shortlist
+            </button>
+          </>
+        }
+      >
+        <form
+          id="shortlist-form"
+          className="space-y-4"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            try {
+              await createShortlist({ hireInquiryId, title: shortlistTitle || 'Shortlist' });
+              setShortlistTitle('');
+              toast.success('Shortlist created');
+              setModal(null);
+              await refresh();
+            } catch (err) {
+              toast.error('Could not create shortlist', err instanceof ApiError ? err.message : '');
+            }
+          }}
+        >
+          <FormField label="Hiring request">
+            <select className="input-field" value={hireInquiryId} onChange={(e) => setHireInquiryId(e.target.value)} required>
               <option value="">Select hire request</option>
               {requests.map((req) => (
                 <option key={req.id} value={req.id}>
@@ -191,72 +213,64 @@ export function DashboardCandidatesPanel() {
                 </option>
               ))}
             </select>
-            <input
-              className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
-              placeholder="Shortlist title"
-              value={shortlistTitle}
-              onChange={(e) => setShortlistTitle(e.target.value)}
-              required
-            />
-            <button type="submit" className="btn-primary" disabled={!hireInquiryId}>
-              Create shortlist
-            </button>
-          </form>
-        </div>
-      ) : null}
+          </FormField>
+          <FormField label="Title">
+            <input className="input-field" placeholder="Electricians · first round" value={shortlistTitle} onChange={(e) => setShortlistTitle(e.target.value)} required />
+          </FormField>
+        </form>
+      </FormModal>
 
-      {isAdmin && shortlists.length > 0 ? (
+      <FormModal
+        open={modal === 'entry'}
+        onClose={() => setModal(null)}
+        icon={ListChecks}
+        title="Add to shortlist"
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setModal(null)}>
+              Cancel
+            </button>
+            <button type="submit" form="entry-form" className="btn-primary">
+              Add to shortlist
+            </button>
+          </>
+        }
+      >
         <form
-          className="flex flex-col gap-3 rounded-2xl border border-border p-4 sm:flex-row sm:items-end"
+          id="entry-form"
+          className="space-y-4"
           onSubmit={async (event) => {
             event.preventDefault();
-            setError(null);
-            setMessage(null);
             try {
-              await addShortlistEntry(selectedShortlistId, {
-                candidateId: selectedCandidateId,
-                rank: 0,
-              });
-              setMessage('Candidate added to shortlist.');
+              await addShortlistEntry(selectedShortlistId, { candidateId: selectedCandidateId, rank: 0 });
+              toast.success('Added to shortlist');
+              setModal(null);
               await refresh();
             } catch (err) {
-              setError(err instanceof ApiError ? err.message : 'Unable to add to shortlist.');
+              toast.error('Could not add', err instanceof ApiError ? err.message : '');
             }
           }}
         >
-          <div className="flex-1">
-            <label className="text-xs text-muted">Shortlist</label>
-            <select
-              className="mt-1 w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
-              value={selectedShortlistId}
-              onChange={(e) => setSelectedShortlistId(e.target.value)}
-            >
+          <FormField label="Shortlist">
+            <select className="input-field" value={selectedShortlistId} onChange={(e) => setSelectedShortlistId(e.target.value)}>
               {shortlists.map((list) => (
                 <option key={list.id} value={list.id}>
                   {list.title}
                 </option>
               ))}
             </select>
-          </div>
-          <div className="flex-1">
-            <label className="text-xs text-muted">Candidate</label>
-            <select
-              className="mt-1 w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
-              value={selectedCandidateId}
-              onChange={(e) => setSelectedCandidateId(e.target.value)}
-            >
+          </FormField>
+          <FormField label="Candidate">
+            <select className="input-field" value={selectedCandidateId} onChange={(e) => setSelectedCandidateId(e.target.value)}>
               {candidates.map((candidate) => (
                 <option key={candidate.id} value={candidate.id}>
                   {candidate.fullName}
                 </option>
               ))}
             </select>
-          </div>
-          <button type="submit" className="btn-secondary">
-            Add to shortlist
-          </button>
+          </FormField>
         </form>
-      ) : null}
+      </FormModal>
 
       <section className="overflow-hidden rounded-2xl border border-border">
         <div className="border-b border-border px-4 py-3">

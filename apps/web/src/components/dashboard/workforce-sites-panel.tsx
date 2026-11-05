@@ -1,12 +1,13 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { AlertTriangle, ArrowRight, Crosshair, Loader2, MapPin, Plus, Radar, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
 import { FormField } from '@/components/forms/form-field';
+import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { createWorkSite, fetchWorkSites, type WorkSiteRow } from '@/lib/dashboard-api';
@@ -99,22 +100,32 @@ export function WorkforceSitesPanel() {
         title="Sites and placed workers"
         subtitle="Track who is on site, catch no-shows early, and send standby cover before work stops."
         actions={
-          <button type="button" className="btn-primary" onClick={() => setShowForm((value) => !value)}>
+          <button type="button" className="btn-primary" onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4" />
             New site
           </button>
         }
       />
 
-      <AnimatePresence initial={false}>
-        {showForm ? (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <DashPanel title="New site">
+      <FormModal
+        open={showForm}
+        onClose={() => setShowForm(false)}
+        icon={Radar}
+        title="New site"
+        description="Workers check in from their phones when they are inside the site circle."
+        size="lg"
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
+              Cancel
+            </button>
+            <button type="button" className="btn-primary" disabled={saving} onClick={onCreate}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Create site
+            </button>
+          </>
+        }
+      >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormField label="Site name">
                   <input
@@ -193,19 +204,7 @@ export function WorkforceSitesPanel() {
                   />
                 </FormField>
               </div>
-              <div className="mt-5 flex flex-col gap-2 min-[400px]:flex-row">
-                <button type="button" className="btn-primary" disabled={saving} onClick={onCreate}>
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Create site
-                </button>
-                <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
-                  Cancel
-                </button>
-              </div>
-            </DashPanel>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      </FormModal>
 
       {sites === null ? (
         <p className="flex items-center gap-2 text-sm text-muted">

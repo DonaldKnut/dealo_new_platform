@@ -2,7 +2,7 @@
 
 import { DEFAULT_JOB_STAGES, EMPLOYMENT_TYPES, jobInputSchema, type JobInput } from '@dealo/shared';
 import { AnimatePresence, Reorder, motion } from 'framer-motion';
-import { ArrowLeft, Bold, GripVertical, List, Loader2, Plus, X } from 'lucide-react';
+import { ArrowLeft, Bold, Briefcase, GripVertical, List, Loader2, Plus, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -11,6 +11,7 @@ import { useAtsWorkspace } from '@/components/ats/ats-workspace';
 import { JobDescription } from '@/components/ats/job-description';
 import { FormField } from '@/components/forms/form-field';
 import { DashPanel } from '@/components/dashboard/dashboard-ui';
+import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { EMPLOYMENT_LABEL, atsApi, type AtsJob } from '@/lib/ats-api';
@@ -61,7 +62,32 @@ const fromJob = (job: AtsJob): Draft => ({
   hiringManagerIds: job.hiringManagerIds,
 });
 
-export function AtsJobEditor({ jobId }: { jobId?: string }) {
+function ModalSection({ title, children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      {title ? <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{title}</h3> : null}
+      {children}
+    </section>
+  );
+}
+
+export type JobEditorState = { status: AtsJob['status']; saving: false | 'draft' | 'publish'; loaded: boolean };
+
+export function AtsJobEditor({
+  jobId,
+  variant = 'page',
+  formId = 'ats-job-form',
+  onSaved,
+  onState,
+}: {
+  jobId?: string;
+  /** "modal": no back link or action panel; the modal footer submits the form (value="publish" publishes). */
+  variant?: 'page' | 'modal';
+  formId?: string;
+  onSaved?: (job: AtsJob, published: boolean) => void;
+  onState?: (state: JobEditorState) => void;
+}) {
+  const modal = variant === 'modal';
   const router = useRouter();
   const toast = useToast();
   const { orgId, current, reloadDetail } = useAtsWorkspace();
@@ -84,6 +110,10 @@ export function AtsJobEditor({ jobId }: { jobId?: string }) {
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Could not load the job'));
   }, [jobId, orgId]);
+
+  useEffect(() => {
+    onState?.({ status, saving, loaded: Boolean(draft) });
+  }, [status, saving, draft, onState]);
 
   if (!draft) {
     return (
@@ -155,7 +185,8 @@ export function AtsJobEditor({ jobId }: { jobId?: string }) {
       if (publish && job.status !== 'OPEN') await atsApi.setJobStatus(orgId, job.id, 'OPEN');
       await reloadDetail();
       toast.success(publish ? 'Job is live' : 'Saved', publish ? 'Share the apply link to start getting applicants.' : undefined);
-      router.push(`/dashboard/ats/jobs/${job.id}`);
+      if (onSaved) onSaved(job, publish);
+      else router.push(`/dashboard/ats/jobs/${job.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save the job');
     } finally {
@@ -164,14 +195,11 @@ export function AtsJobEditor({ jobId }: { jobId?: string }) {
   };
 
   const managers = current?.members ?? [];
+  const Box = modal ? ModalSection : DashPanel;
 
-  return (
-    <div className="space-y-4">
-      <Link href={jobId ? `/dashboard/ats/jobs/${jobId}` : '/dashboard/ats'} className="inline-flex items-center gap-1 text-sm text-muted hover:text-brand">
-        <ArrowLeft className="h-4 w-4" /> Back
-      </Link>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <DashPanel title={jobId ? 'Edit job' : 'New job'}>
+  const body = (
+    <div className={cn('grid gap-4', modal ? 'gap-8 lg:grid-cols-[minmax(0,1fr)_17rem]' : 'xl:grid-cols-[minmax(0,1fr)_20rem]')}>
+        <Box title={modal ? 'The job' : jobId ? 'Edit job' : 'New job'}>
           <div className="space-y-4">
             <FormField label="Job title">
               <input className="input-field" value={draft.title} onChange={(e) => set('title', e.target.value)} placeholder="Site electrician" maxLength={140} />
@@ -293,10 +321,10 @@ export function AtsJobEditor({ jobId }: { jobId?: string }) {
               </div>
             </FormField>
           </div>
-        </DashPanel>
+        </Box>
 
-        <div className="space-y-4">
-          <DashPanel title="Hiring steps">
+        <div className={cn(modal ? 'space-y-8 lg:border-l lg:border-border lg:pl-6' : 'space-y-4')}>
+          <Box title="Hiring steps">
             <p className="mb-3 text-xs leading-relaxed text-muted">Drag to reorder. Everyone starts in the first step. &ldquo;Hired&rdquo; is always last.</p>
             <Reorder.Group axis="y" values={draft.stages} onReorder={(stages) => set('stages', stages)} className="space-y-1.5">
               {draft.stages.map((stage) => (
@@ -337,10 +365,10 @@ export function AtsJobEditor({ jobId }: { jobId?: string }) {
                 <Plus className="h-4 w-4" />
               </button>
             </div>
-          </DashPanel>
+          </Box>
 
           {managers.length > 1 ? (
-            <DashPanel title="Hiring managers">
+            <Box title="Hiring managers">
               <p className="mb-3 text-xs text-muted">Hiring managers only see the jobs you add them to.</p>
               <div className="space-y-1">
                 {managers.map((m) => {
@@ -360,25 +388,98 @@ export function AtsJobEditor({ jobId }: { jobId?: string }) {
                   );
                 })}
               </div>
-            </DashPanel>
+            </Box>
           ) : null}
 
-          <DashPanel>
-            {error ? <p className="mb-3 text-sm text-danger">{error}</p> : null}
-            <div className="grid gap-2">
-              {status !== 'OPEN' ? (
-                <button type="button" className="btn-primary w-full" disabled={Boolean(saving)} onClick={() => save(true)}>
-                  {saving === 'publish' ? 'Publishing…' : 'Save and publish'}
+          {modal ? null : (
+            <DashPanel>
+              {error ? <p className="mb-3 text-sm text-danger">{error}</p> : null}
+              <div className="grid gap-2">
+                {status !== 'OPEN' ? (
+                  <button type="button" className="btn-primary w-full" disabled={Boolean(saving)} onClick={() => save(true)}>
+                    {saving === 'publish' ? 'Publishing…' : 'Save and publish'}
+                  </button>
+                ) : null}
+                <button type="button" className={cn(status === 'OPEN' ? 'btn-primary' : 'btn-secondary', 'w-full')} disabled={Boolean(saving)} onClick={() => save(false)}>
+                  {saving === 'draft' ? 'Saving…' : status === 'OPEN' ? 'Save changes' : 'Save as draft'}
                 </button>
-              ) : null}
-              <button type="button" className={cn(status === 'OPEN' ? 'btn-primary' : 'btn-secondary', 'w-full')} disabled={Boolean(saving)} onClick={() => save(false)}>
-                {saving === 'draft' ? 'Saving…' : status === 'OPEN' ? 'Save changes' : 'Save as draft'}
-              </button>
-            </div>
-          </DashPanel>
+              </div>
+            </DashPanel>
+          )}
         </div>
-      </div>
     </div>
+  );
+
+  if (modal) {
+    return (
+      <form
+        id={formId}
+        noValidate
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') e.preventDefault();
+        }}
+        onSubmit={(e) => {
+          e.preventDefault();
+          const intent = ((e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)?.value;
+          void save(intent === 'publish');
+        }}
+      >
+        {error ? <p className="mb-4 rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p> : null}
+        {body}
+      </form>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Link href={jobId ? `/dashboard/ats/jobs/${jobId}` : '/dashboard/ats'} className="inline-flex items-center gap-1 text-sm text-muted hover:text-brand">
+        <ArrowLeft className="h-4 w-4" /> Back
+      </Link>
+      {body}
+    </div>
+  );
+}
+
+/** New or edit job in a large modal. */
+export function JobEditorModal({
+  open,
+  jobId,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  jobId?: string | null;
+  onClose: () => void;
+  onSaved: (job: AtsJob, published: boolean) => void;
+}) {
+  const [state, setState] = useState<JobEditorState>({ status: 'DRAFT', saving: false, loaded: false });
+  const formId = jobId ? `job-form-${jobId}` : 'job-form-new';
+  return (
+    <FormModal
+      open={open}
+      onClose={onClose}
+      size="xl"
+      icon={Briefcase}
+      title={jobId ? 'Edit job' : 'New job'}
+      description={jobId ? 'Changes go live on your careers page as soon as you save.' : 'Write it once. Save as a draft or publish it straight to your careers page.'}
+      footer={
+        <>
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          {state.status !== 'OPEN' ? (
+            <button type="submit" form={formId} value="draft" className="btn-secondary" disabled={Boolean(state.saving) || !state.loaded}>
+              {state.saving === 'draft' ? 'Saving…' : 'Save as draft'}
+            </button>
+          ) : null}
+          <button type="submit" form={formId} value={state.status === 'OPEN' ? 'draft' : 'publish'} className="btn-primary" disabled={Boolean(state.saving) || !state.loaded}>
+            {state.saving ? 'Saving…' : state.status === 'OPEN' ? 'Save changes' : 'Save and publish'}
+          </button>
+        </>
+      }
+    >
+      <AtsJobEditor key={jobId ?? 'new'} jobId={jobId ?? undefined} variant="modal" formId={formId} onState={setState} onSaved={onSaved} />
+    </FormModal>
   );
 }
 

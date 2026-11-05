@@ -1,9 +1,14 @@
 'use client';
 
-import { LoaderCircle, Trash2 } from 'lucide-react';
+import { FileCheck2, LoaderCircle, Trash2, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { DashHero } from '@/components/dashboard/dashboard-ui';
+import { FormField } from '@/components/forms/form-field';
+import { FormModal } from '@/components/ui/form-modal';
+import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import {
   deleteTalentDocument,
   fetchTalentDocuments,
@@ -33,6 +38,8 @@ export function TalentDocumentsPanel() {
   const [message, setMessage] = useState<string | null>(null);
   const [kind, setKind] = useState<(typeof KINDS)[number]['value']>('CV');
   const [file, setFile] = useState<File | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const toast = useToast();
 
   const refresh = async () => {
     const [me, list] = await Promise.all([fetchTalentMe(), fetchTalentDocuments()]);
@@ -70,13 +77,25 @@ export function TalentDocumentsPanel() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="eyebrow">Documents</p>
-        <h1 className="display-title mt-2 text-3xl">Your documents</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted">
-          Upload a CV or certificates (PDF, PNG, JPG, WebP — max 8MB) for recruiter screening.
-        </p>
-      </div>
+      <DashHero
+        eyebrow="Documents"
+        title="Your documents"
+        subtitle="Upload a CV or certificates (PDF, PNG, JPG, WebP — max 8 MB) for recruiter screening."
+        actions={
+          uploadsConfigured ? (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => {
+                setFile(null);
+                setUploadOpen(true);
+              }}
+            >
+              <Upload className="h-4 w-4" /> Upload
+            </button>
+          ) : null
+        }
+      />
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
       {message ? <p className="text-sm text-brand">{message}</p> : null}
@@ -86,15 +105,31 @@ export function TalentDocumentsPanel() {
           Document uploads are not configured on the server yet. Ask an admin to set Cloudinary
           credentials, then try again.
         </div>
-      ) : (
+      ) : null}
+
+      <FormModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        icon={Upload}
+        title="Upload a document"
+        description="Recruiters see it when they review your profile."
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setUploadOpen(false)}>
+              Cancel
+            </button>
+            <button type="submit" form="doc-upload-form" className="btn-primary" disabled={uploading || !file}>
+              {uploading ? 'Uploading…' : 'Upload'}
+            </button>
+          </>
+        }
+      >
         <form
-          className="space-y-3 rounded-2xl border border-border p-4 sm:p-5"
+          id="doc-upload-form"
+          className="space-y-4"
           onSubmit={(event) => {
             event.preventDefault();
-            if (!file) {
-              setError('Choose a file to upload.');
-              return;
-            }
+            if (!file) return;
             void (async () => {
               setUploading(true);
               setError(null);
@@ -102,39 +137,54 @@ export function TalentDocumentsPanel() {
               try {
                 await uploadTalentDocument(file, kind);
                 setFile(null);
-                setMessage('Document uploaded.');
+                setUploadOpen(false);
+                toast.success('Document uploaded');
                 await refresh();
               } catch (err) {
-                setError(err instanceof ApiError ? err.message : 'Upload failed.');
+                toast.error('Upload failed', err instanceof ApiError ? err.message : '');
               } finally {
                 setUploading(false);
               }
             })();
           }}
         >
-          <h2 className="font-display text-lg">Upload</h2>
-          <select
-            className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
-            value={kind}
-            onChange={(e) => setKind(e.target.value as typeof kind)}
-          >
-            {KINDS.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-          <input
-            type="file"
-            accept=".pdf,image/png,image/jpeg,image/webp"
-            className="w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-brand-soft file:px-3 file:py-2 file:text-sm file:font-semibold file:text-brand"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
-          <button type="submit" className="btn-primary" disabled={uploading || !file}>
-            {uploading ? 'Uploading…' : 'Upload document'}
-          </button>
+          <FormField label="What is it?">
+            <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-3">
+              {KINDS.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setKind(item.value)}
+                  className={cn(
+                    'rounded-xl border px-3 py-2.5 text-sm font-semibold transition',
+                    kind === item.value ? 'border-brand bg-brand-soft text-brand' : 'border-border text-muted hover:border-brand/40',
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </FormField>
+          <FormField label="File">
+            <label
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                setFile(e.dataTransfer.files?.[0] ?? null);
+              }}
+              className={cn(
+                'flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed px-3 py-8 text-center text-sm transition',
+                file ? 'border-brand bg-brand-soft/50 text-brand' : 'border-border text-muted hover:border-brand hover:text-brand',
+              )}
+            >
+              <input type="file" accept=".pdf,image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              {file ? <FileCheck2 className="h-6 w-6" /> : <Upload className="h-6 w-6" />}
+              <span className="max-w-full break-all font-semibold">{file ? file.name : 'Tap to choose a file'}</span>
+              <span className="text-xs">{file ? formatBytes(file.size) : 'or drag it here · PDF or image, up to 8 MB'}</span>
+            </label>
+          </FormField>
         </form>
-      )}
+      </FormModal>
 
       <section className="space-y-3">
         <h2 className="font-display text-xl">Uploaded files</h2>

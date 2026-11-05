@@ -17,7 +17,18 @@ const SOURCES = [
   { id: 'other', label: 'Other' },
 ];
 
-export function AddApplicantForm({ orgId, jobId, onAdded }: { orgId: string; jobId: string; onAdded: () => void }) {
+export function AddApplicantForm({
+  orgId,
+  jobId,
+  onAdded,
+  formId,
+}: {
+  orgId: string;
+  jobId: string;
+  onAdded: () => void;
+  /** When set, the submit button lives outside (e.g. in a modal footer). */
+  formId?: string;
+}) {
   const toast = useToast();
   const [values, setValues] = useState({ name: '', email: '', phone: '', location: '', coverNote: '' });
   const [source, setSource] = useState('referral');
@@ -54,7 +65,7 @@ export function AddApplicantForm({ orgId, jobId, onAdded }: { orgId: string; job
   });
 
   return (
-    <form onSubmit={submit} className="space-y-3 py-2">
+    <form id={formId} onSubmit={submit} className="space-y-3" aria-busy={saving}>
       <FormField label="Full name">
         <input className="input-field" {...field('name')} maxLength={140} />
       </FormField>
@@ -90,9 +101,12 @@ export function AddApplicantForm({ orgId, jobId, onAdded }: { orgId: string; job
         />
       </FormField>
       {error ? <p className="text-sm text-danger">{error}</p> : null}
-      <button type="submit" className="btn-primary w-full" disabled={saving}>
-        {saving ? 'Adding…' : 'Add to job'}
-      </button>
+      {saving ? <p className="text-xs text-muted">Adding…</p> : null}
+      {formId ? null : (
+        <button type="submit" className="btn-primary w-full" disabled={saving}>
+          {saving ? 'Adding…' : 'Add to job'}
+        </button>
+      )}
     </form>
   );
 }

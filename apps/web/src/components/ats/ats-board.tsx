@@ -8,6 +8,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApplicantDrawer } from '@/components/ats/applicant-drawer';
 import { ApplicationCardView } from '@/components/ats/application-card';
 import { AddApplicantForm } from '@/components/ats/add-applicant-form';
+import { JobEditorModal } from '@/components/ats/ats-job-editor';
+import { FormModal } from '@/components/ui/form-modal';
 import { useAtsWorkspace } from '@/components/ats/ats-workspace';
 import { EmailComposeSheet } from '@/components/ats/email-compose-sheet';
 import { StatusChip } from '@/components/dashboard/dashboard-ui';
@@ -36,6 +38,7 @@ export function AtsBoard({ jobId }: { jobId: string }) {
   const [rejectTarget, setRejectTarget] = useState<string[] | null>(null);
   const [emailTarget, setEmailTarget] = useState<string[] | null>(null);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const manage = canManage(role);
@@ -186,9 +189,9 @@ export function AtsBoard({ jobId }: { jobId: string }) {
             ) : null}
             {manage ? (
               <>
-                <Link href={`/dashboard/ats/jobs/${job.id}/edit`} className="btn-secondary flex-1 text-sm sm:flex-none">
+                <button type="button" onClick={() => setEditing(true)} className="btn-secondary flex-1 text-sm sm:flex-none">
                   <Pencil className="h-4 w-4" /> Edit
-                </Link>
+                </button>
                 <button type="button" onClick={() => setAdding(true)} className="btn-primary flex-1 text-sm sm:flex-none">
                   <UserPlus className="h-4 w-4" /> Add person
                 </button>
@@ -399,18 +402,45 @@ export function AtsBoard({ jobId }: { jobId: string }) {
         />
       ) : null}
 
-      <BottomSheet open={adding} onClose={() => setAdding(false)} title="Add a person to this job">
+      <FormModal
+        open={adding}
+        onClose={() => setAdding(false)}
+        icon={UserPlus}
+        title="Add a person"
+        description={`Referral, walk-in or someone you found yourself. They join “${job.title}” in the first step and AI screens them.`}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setAdding(false)}>
+              Cancel
+            </button>
+            <button type="submit" form="add-applicant-form" className="btn-primary">
+              <UserPlus className="h-4 w-4" /> Add to job
+            </button>
+          </>
+        }
+      >
         {orgId ? (
           <AddApplicantForm
             orgId={orgId}
             jobId={job.id}
+            formId="add-applicant-form"
             onAdded={() => {
               setAdding(false);
               void load();
             }}
           />
         ) : null}
-      </BottomSheet>
+      </FormModal>
+
+      <JobEditorModal
+        open={editing}
+        jobId={job.id}
+        onClose={() => setEditing(false)}
+        onSaved={() => {
+          setEditing(false);
+          void load();
+        }}
+      />
 
       {orgId ? (
         <ApplicantDrawer

@@ -1,9 +1,12 @@
 'use client';
 
 import { SUBSCRIBABLE_WEBHOOK_EVENTS } from '@dealo/shared';
+import { Copy, KeyRound, Plus, Webhook } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { DashPanel } from '@/components/dashboard/dashboard-ui';
+import { FormField } from '@/components/forms/form-field';
+import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import {
@@ -34,6 +37,7 @@ export function DashboardWebhooksPanel({ canCreateGlobal = false }: { canCreateG
   const [isGlobal, setIsGlobal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [secret, setSecret] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [deliveries, setDeliveries] = useState<WebhookDeliveryRow[]>([]);
 
@@ -67,7 +71,7 @@ export function DashboardWebhooksPanel({ canCreateGlobal = false }: { canCreateG
   const onCreate = async () => {
     if (!url.trim() || events.length === 0) {
       toast.error('A URL and at least one event are required');
-      return;
+      return false;
     }
     setSaving(true);
     try {
@@ -76,8 +80,10 @@ export function DashboardWebhooksPanel({ canCreateGlobal = false }: { canCreateG
       setUrl('');
       await load();
       toast.success('Webhook added — copy the signing secret now');
+      return true;
     } catch (error) {
       fail('Could not add webhook', error);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -138,69 +144,110 @@ export function DashboardWebhooksPanel({ canCreateGlobal = false }: { canCreateG
   };
 
   return (
-    <DashPanel title="Webhooks">
+    <DashPanel
+      title="Webhooks"
+      action={
+        <button
+          type="button"
+          className="btn-primary px-3 py-2 text-xs"
+          onClick={() => {
+            setUrl('');
+            setAddOpen(true);
+          }}
+        >
+          <Plus className="h-3.5 w-3.5" /> Add endpoint
+        </button>
+      }
+    >
       <p className="text-sm text-muted">
         Dealo POSTs signed JSON to your URL when hiring requests are created or change status. Failed
         deliveries retry with backoff for about an hour.
       </p>
 
-      {secret ? (
-        <div className="mt-4 rounded-xl border border-brand/40 bg-brand-soft/30 p-3">
-          <p className="text-sm font-semibold text-foreground">Signing secret (shown once)</p>
-          <code className="mt-2 block break-all text-xs text-foreground">{secret}</code>
-          <div className="mt-2 flex gap-2">
+      <FormModal
+        open={Boolean(secret)}
+        onClose={() => setSecret(null)}
+        icon={KeyRound}
+        title="Signing secret"
+        description="Shown only once. Use it to check the signature header on each delivery."
+        size="sm"
+        footer={
+          <button type="button" className="btn-primary" onClick={() => setSecret(null)}>
+            I saved it
+          </button>
+        }
+      >
+        <div className="space-y-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
+          <code className="block break-all rounded-xl border border-border bg-surface px-3 py-2.5 text-xs text-foreground">{secret}</code>
+          <button
+            type="button"
+            className="btn-secondary w-full"
+            onClick={async () => {
+              if (secret) await navigator.clipboard.writeText(secret);
+              toast.success('Copied');
+            }}
+          >
+            <Copy className="h-4 w-4" /> Copy secret
+          </button>
+        </div>
+      </FormModal>
+
+      <FormModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        icon={Webhook}
+        title="Add a webhook endpoint"
+        description="Dealo sends a signed POST to this link for each event you pick."
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setAddOpen(false)}>
+              Cancel
+            </button>
             <button
               type="button"
-              className="btn-secondary"
+              className="btn-primary"
+              disabled={saving}
               onClick={async () => {
-                await navigator.clipboard.writeText(secret);
-                toast.success('Copied');
+                const ok = await onCreate();
+                if (ok) setAddOpen(false);
               }}
             >
-              Copy
+              {saving ? 'Adding…' : 'Add endpoint'}
             </button>
-            <button type="button" className="btn-secondary" onClick={() => setSecret(null)}>
-              Dismiss
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="mt-4 grid gap-3">
-        <input
-          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://example.com/dealo/webhooks"
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          {SUBSCRIBABLE_WEBHOOK_EVENTS.map((event) => (
-            <button
-              key={event}
-              type="button"
-              onClick={() =>
-                setEvents((current) =>
-                  current.includes(event) ? current.filter((e) => e !== event) : [...current, event],
-                )
-              }
-              className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                events.includes(event) ? 'border-brand bg-brand text-white dark:text-[#071f14]' : 'border-border text-muted'
-              }`}
-            >
-              {event}
-            </button>
-          ))}
+          </>
+        }
+      >
+        <div className="space-y-5">
+          <FormField label="Your link (https)">
+            <input className="input-field" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com/dealo/webhooks" />
+          </FormField>
+          <FormField label="Events">
+            <div className="flex flex-wrap gap-2">
+              {SUBSCRIBABLE_WEBHOOK_EVENTS.map((event) => (
+                <button
+                  key={event}
+                  type="button"
+                  onClick={() => setEvents((current) => (current.includes(event) ? current.filter((e) => e !== event) : [...current, event]))}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                    events.includes(event) ? 'border-brand bg-brand text-white dark:text-[#071f14]' : 'border-border text-muted hover:border-brand/40'
+                  }`}
+                >
+                  {event}
+                </button>
+              ))}
+            </div>
+          </FormField>
           {canCreateGlobal ? (
-            <label className="ml-2 flex items-center gap-2 text-xs text-muted">
-              <input type="checkbox" checked={isGlobal} onChange={(e) => setIsGlobal(e.target.checked)} />
-              Global (all inquiries)
+            <label className="flex items-start gap-3 rounded-2xl border border-border p-3 text-sm">
+              <input type="checkbox" checked={isGlobal} onChange={(e) => setIsGlobal(e.target.checked)} className="mt-1 accent-[var(--brand)]" />
+              <span>
+                <span className="font-semibold text-foreground">Global</span>
+                <span className="block text-xs text-muted">Receive events for every hiring request on the platform (admins only).</span>
+              </span>
             </label>
           ) : null}
         </div>
-        <button type="button" className="btn-primary w-fit" disabled={saving} onClick={onCreate}>
-          {saving ? 'Adding…' : 'Add endpoint'}
-        </button>
-      </div>
+      </FormModal>
 
       <div className="mt-6">
         {loading ? (

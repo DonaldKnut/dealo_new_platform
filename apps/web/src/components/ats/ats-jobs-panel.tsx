@@ -3,8 +3,10 @@
 import { motion } from 'framer-motion';
 import { Copy, Link2, MapPin, MoreHorizontal, Pause, Pencil, Play, Plus, Users, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { JobEditorModal } from '@/components/ats/ats-job-editor';
 import { AtsLimitBanner } from '@/components/ats/ats-usage';
 import { useAtsWorkspace } from '@/components/ats/ats-workspace';
 import { DashPanel, StatusChip } from '@/components/dashboard/dashboard-ui';
@@ -28,6 +30,8 @@ export function AtsJobsPanel() {
   const [jobs, setJobs] = useState<AtsJob[] | null>(null);
   const [filter, setFilter] = useState<'ALL' | JobStatus>('OPEN');
   const [menuJob, setMenuJob] = useState<AtsJob | null>(null);
+  const [editor, setEditor] = useState<{ jobId: string | null } | null>(null);
+  const router = useRouter();
   const manage = canManage(current?.myRole);
 
   const load = useCallback(async () => {
@@ -89,9 +93,9 @@ export function AtsJobsPanel() {
           })}
         </div>
         {manage ? (
-          <Link href="/dashboard/ats/jobs/new" className="btn-primary w-full text-sm sm:w-auto">
+          <button type="button" onClick={() => setEditor({ jobId: null })} className="btn-primary w-full text-sm sm:w-auto">
             <Plus className="h-4 w-4" /> New job
-          </Link>
+          </button>
         ) : null}
       </div>
 
@@ -111,9 +115,9 @@ export function AtsJobsPanel() {
                 : 'Write the job once. Dealo gives you a careers page link to share, collects CVs, and screens each applicant with AI.'}
             </p>
             {!jobs.length && manage ? (
-              <Link href="/dashboard/ats/jobs/new" className="btn-primary mt-4 inline-flex text-sm">
+              <button type="button" onClick={() => setEditor({ jobId: null })} className="btn-primary mt-4 inline-flex text-sm">
                 <Plus className="h-4 w-4" /> New job
-              </Link>
+              </button>
             ) : null}
           </div>
         </DashPanel>
@@ -192,7 +196,14 @@ export function AtsJobsPanel() {
       <BottomSheet open={Boolean(menuJob)} onClose={() => setMenuJob(null)} title={menuJob?.title}>
         {menuJob && orgId ? (
           <div className="grid gap-1 py-2">
-            <SheetAction icon={Pencil} label="Edit job" href={`/dashboard/ats/jobs/${menuJob.id}/edit`} />
+            <SheetAction
+              icon={Pencil}
+              label="Edit job"
+              onClick={() => {
+                setEditor({ jobId: menuJob.id });
+                setMenuJob(null);
+              }}
+            />
             {menuJob.status !== 'OPEN' ? (
               <SheetAction
                 icon={Play}
@@ -212,6 +223,18 @@ export function AtsJobsPanel() {
           </div>
         ) : null}
       </BottomSheet>
+
+      <JobEditorModal
+        open={Boolean(editor)}
+        jobId={editor?.jobId}
+        onClose={() => setEditor(null)}
+        onSaved={(job) => {
+          const isNew = !editor?.jobId;
+          setEditor(null);
+          void Promise.all([load(), reloadDetail()]);
+          if (isNew) router.push(`/dashboard/ats/jobs/${job.id}`);
+        }}
+      />
     </div>
   );
 }

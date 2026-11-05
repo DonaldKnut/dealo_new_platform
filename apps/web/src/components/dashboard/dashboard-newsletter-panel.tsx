@@ -1,8 +1,13 @@
 'use client';
 
-import { LoaderCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Briefcase, LoaderCircle, Mail, Newspaper, Plus, Send, UserRound, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { DashHero, StatusChip } from '@/components/dashboard/dashboard-ui';
+import { FormField } from '@/components/forms/form-field';
+import { FormModal } from '@/components/ui/form-modal';
+import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import {
   createNewsletterCampaign,
@@ -10,12 +15,21 @@ import {
   sendNewsletterCampaign,
   type NewsletterCampaign,
 } from '@/lib/dashboard-api';
+import { cn } from '@/lib/utils';
+
+const SEGMENTS = [
+  { id: 'ALL', label: 'Everyone', hint: 'Subscribers and users', icon: Users },
+  { id: 'EMPLOYER', label: 'Employers', hint: 'Companies hiring', icon: Briefcase },
+  { id: 'TALENT', label: 'Job seekers', hint: 'Professionals and trades', icon: UserRound },
+];
 
 export function DashboardNewsletterPanel() {
+  const toast = useToast();
   const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [composing, setComposing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [subject, setSubject] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
   const [segment, setSegment] = useState('ALL');
@@ -32,9 +46,7 @@ export function DashboardNewsletterPanel() {
         await refresh();
         if (active) setError(null);
       } catch (err) {
-        if (active) {
-          setError(err instanceof ApiError ? err.message : 'Unable to load campaigns.');
-        }
+        if (active) setError(err instanceof ApiError ? err.message : 'Unable to load campaigns.');
       } finally {
         if (active) setLoading(false);
       }
@@ -43,6 +55,37 @@ export function DashboardNewsletterPanel() {
       active = false;
     };
   }, []);
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      await createNewsletterCampaign({ subject, bodyHtml, bodyText: '', segment });
+      setSubject('');
+      setBodyHtml('');
+      setComposing(false);
+      toast.success('Campaign saved', 'It is a draft until you press Send.');
+      await refresh();
+    } catch (err) {
+      toast.error('Could not save', err instanceof ApiError ? err.message : '');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const send = async (campaign: NewsletterCampaign) => {
+    if (!window.confirm(`Send “${campaign.subject}” now?`)) return;
+    setSendingId(campaign.id);
+    try {
+      const result = await sendNewsletterCampaign(campaign.id);
+      toast.success('Campaign sent', `Sent ${result.sent} of ${result.recipientCount}${result.failed ? ` (${result.failed} failed)` : ''}`);
+      await refresh();
+    } catch (err) {
+      toast.error('Send failed', err instanceof ApiError ? err.message : '');
+    } finally {
+      setSendingId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -54,109 +97,107 @@ export function DashboardNewsletterPanel() {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="eyebrow">Outreach</p>
-        <h1 className="display-title mt-2 text-[1.65rem] min-[340px]:text-3xl">Newsletter</h1>
-        <p className="mt-2 text-sm text-muted">
-          Compose and send email blasts to subscribers and verified users by segment.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <DashHero
+        eyebrow="Outreach"
+        title="Newsletter"
+        subtitle="Write a campaign, save it as a draft, then send it to subscribers and verified users."
+        actions={
+          <button type="button" className="btn-primary" onClick={() => setComposing(true)}>
+            <Plus className="h-4 w-4" /> New campaign
+          </button>
+        }
+      />
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
-      {message ? <p className="text-sm text-brand">{message}</p> : null}
-
-      <form
-        className="space-y-3 rounded-2xl border border-border p-4"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          setError(null);
-          setMessage(null);
-          try {
-            await createNewsletterCampaign({ subject, bodyHtml, bodyText: '', segment });
-            setSubject('');
-            setBodyHtml('');
-            setMessage('Campaign saved as draft.');
-            await refresh();
-          } catch (err) {
-            setError(err instanceof ApiError ? err.message : 'Unable to create campaign.');
-          }
-        }}
-      >
-        <h2 className="font-display text-lg">Compose campaign</h2>
-        <input
-          className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
-          placeholder="Subject"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          required
-        />
-        <textarea
-          className="min-h-[10rem] w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
-          placeholder="HTML body"
-          value={bodyHtml}
-          onChange={(e) => setBodyHtml(e.target.value)}
-          required
-        />
-        <select
-          className="w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-sm"
-          value={segment}
-          onChange={(e) => setSegment(e.target.value)}
-        >
-          <option value="ALL">All</option>
-          <option value="EMPLOYER">Employers</option>
-          <option value="TALENT">Talent</option>
-        </select>
-        <button type="submit" className="btn-primary">
-          Save campaign
-        </button>
-      </form>
 
       <section className="space-y-3">
         {campaigns.length === 0 ? (
-          <p className="text-sm text-muted">No campaigns yet.</p>
+          <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+            <Newspaper className="mx-auto h-7 w-7 text-muted" />
+            <p className="mt-2 font-display text-lg text-foreground">No campaigns yet</p>
+            <button type="button" className="btn-primary mt-4 inline-flex text-sm" onClick={() => setComposing(true)}>
+              <Plus className="h-4 w-4" /> New campaign
+            </button>
+          </div>
         ) : (
-          campaigns.map((campaign) => (
-            <article
+          campaigns.map((campaign, i) => (
+            <motion.article
               key={campaign.id}
-              className="flex flex-col gap-3 rounded-2xl border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.03 }}
+              className="flex flex-col gap-3 rounded-2xl border border-border bg-surface-elevated p-4 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div>
-                <p className="font-medium text-foreground">{campaign.subject}</p>
-                <p className="mt-1 text-xs text-muted">
-                  {campaign.segment} · {campaign.status}
+              <div className="min-w-0">
+                <p className="break-words font-medium text-foreground">{campaign.subject}</p>
+                <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <StatusChip status={campaign.status} />
+                  {SEGMENTS.find((s) => s.id === campaign.segment)?.label ?? campaign.segment}
                   {campaign._count ? ` · ${campaign._count.sends} sends` : ''}
                 </p>
               </div>
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={sendingId === campaign.id}
-                onClick={() => {
-                  void (async () => {
-                    setSendingId(campaign.id);
-                    setError(null);
-                    setMessage(null);
-                    try {
-                      const result = await sendNewsletterCampaign(campaign.id);
-                      setMessage(
-                        `Sent ${result.sent}/${result.recipientCount} (failed ${result.failed}).`,
-                      );
-                      await refresh();
-                    } catch (err) {
-                      setError(err instanceof ApiError ? err.message : 'Send failed.');
-                    } finally {
-                      setSendingId(null);
-                    }
-                  })();
-                }}
-              >
-                {sendingId === campaign.id ? 'Sending…' : 'Send now'}
+              <button type="button" className="btn-secondary shrink-0 text-sm" disabled={sendingId === campaign.id} onClick={() => void send(campaign)}>
+                <Send className="h-4 w-4" /> {sendingId === campaign.id ? 'Sending…' : 'Send now'}
               </button>
-            </article>
+            </motion.article>
           ))
         )}
       </section>
+
+      <FormModal
+        open={composing}
+        onClose={() => setComposing(false)}
+        icon={Mail}
+        title="New campaign"
+        description="Saved as a draft. Nothing goes out until you press Send now."
+        size="lg"
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setComposing(false)}>
+              Cancel
+            </button>
+            <button type="submit" form="newsletter-form" className="btn-primary" disabled={saving}>
+              {saving ? 'Saving…' : 'Save campaign'}
+            </button>
+          </>
+        }
+      >
+        <form id="newsletter-form" onSubmit={save} className="space-y-5">
+          <FormField label="Audience">
+            <div className="grid grid-cols-1 gap-2 min-[340px]:grid-cols-3">
+              {SEGMENTS.map((s) => {
+                const active = segment === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setSegment(s.id)}
+                    className={cn(
+                      'flex items-start gap-2.5 rounded-2xl border p-3 text-left transition',
+                      active ? 'border-brand bg-brand-soft shadow-md shadow-brand/10' : 'border-border hover:border-brand/40',
+                    )}
+                  >
+                    <span className={cn('inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', active ? 'bg-brand text-white dark:text-[#071f14]' : 'bg-surface text-muted')}>
+                      <s.icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className={cn('block text-sm font-semibold', active ? 'text-brand' : 'text-foreground')}>{s.label}</span>
+                      <span className="block text-[11px] text-muted">{s.hint}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </FormField>
+          <FormField label="Subject">
+            <input className="input-field" placeholder="This month at Dealo" value={subject} onChange={(e) => setSubject(e.target.value)} required />
+          </FormField>
+          <FormField label="Message" hint="Plain text or simple HTML.">
+            <textarea className="input-field min-h-[14rem]" placeholder="Hello," value={bodyHtml} onChange={(e) => setBodyHtml(e.target.value)} required />
+          </FormField>
+        </form>
+      </FormModal>
     </div>
   );
 }
