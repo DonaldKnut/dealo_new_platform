@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
 import {
+  ATS_API_SCOPES,
   SANDBOX_KEY_POLICY,
   type CreateApiKeyInput,
   type CreateLiveApiKeyInput,
@@ -21,6 +22,7 @@ import { ApiKeyRateLimiter } from './api-key-rate-limiter';
 import { ApiPlansService } from './api-plans.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const MAX_WORKSPACE_KEYS = 3;
 const MAX_USAGE_ROWS = 20_000;
 
 function hashApiKey(plaintext: string): string {
@@ -57,7 +59,12 @@ export class ApiKeysService {
 
   async createSandbox(input: CreateSandboxApiKeyInput, actor: AuthUser) {
     const activeSandboxKeys = await this.prisma.apiKey.count({
-      where: { createdByUserId: actor.id, plan: ApiKeyPlan.SANDBOX, isActive: true },
+      where: {
+        createdByUserId: actor.id,
+        plan: ApiKeyPlan.SANDBOX,
+        isActive: true,
+        NOT: { scopes: { hasSome: [...ATS_API_SCOPES] } },
+      },
     });
     if (activeSandboxKeys >= SANDBOX_KEY_POLICY.maxActiveKeys) {
       throw new ForbiddenException(
@@ -118,6 +125,40 @@ export class ApiKeysService {
       organizationId: membership?.organizationId ?? null,
       createdByUserId: actor.id,
     });
+  }
+
+  /** ATS workspace key: only ATS scopes, bound to one workspace. Caller must already be a workspace admin. */
+  async createWorkspaceKey(organizationId: string, name: string, actorUserId: string) {
+    const active = await this.prisma.apiKey.count({
+      where: { organizationId, isActive: true, scopes: { hasSome: [...ATS_API_SCOPES] } },
+    });
+    if (active >= MAX_WORKSPACE_KEYS) {
+      throw new ForbiddenException(`A workspace can have ${MAX_WORKSPACE_KEYS} active API keys. Revoke one first.`);
+    }
+    return this.issue({
+      name,
+      environment: ApiKeyEnvironment.LIVE,
+      plan: ApiKeyPlan.SANDBOX,
+      scopes: [...ATS_API_SCOPES],
+      rateLimitPerMin: SANDBOX_KEY_POLICY.rateLimitPerMin,
+      expiresAt: null,
+      organizationId,
+      createdByUserId: actorUserId,
+    });
+  }
+
+  listWorkspaceKeys(organizationId: string) {
+    return this.prisma.apiKey.findMany({
+      where: { organizationId, scopes: { hasSome: [...ATS_API_SCOPES] } },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, name: true, keyPrefix: true, scopes: true, isActive: true, lastUsedAt: true, createdAt: true },
+    });
+  }
+
+  async revokeWorkspaceKey(organizationId: string, id: string) {
+    const existing = await this.prisma.apiKey.findFirst({ where: { id, organizationId } });
+    if (!existing) throw new NotFoundException('API key not found');
+    return this.revoke(id);
   }
 
   listMine(actor: AuthUser) {

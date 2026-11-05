@@ -159,6 +159,57 @@ export const offerInputSchema = z.object({
 
 export type OfferInput = z.infer<typeof offerInputSchema>;
 
+export const emailTemplateSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  subject: z.string().trim().min(2).max(160),
+  body: z.string().trim().min(5).max(5000),
+});
+
+export type EmailTemplateInput = z.infer<typeof emailTemplateSchema>;
+
+export const bulkEmailSchema = z.object({
+  applicationIds: z.array(z.string().trim().min(1)).min(1).max(200),
+  subject: z.string().trim().min(2).max(160),
+  body: z.string().trim().min(5).max(5000),
+});
+
+export type BulkEmailInput = z.infer<typeof bulkEmailSchema>;
+
+export const placementFromApplicationSchema = z.object({
+  siteId: z.string().trim().min(1, 'Pick a site'),
+  roleTitle: z.string().trim().min(2).max(120).optional(),
+  isStandby: z.boolean().default(false),
+  startDate: z.string().trim().min(8).optional(),
+});
+
+export type PlacementFromApplicationInput = z.infer<typeof placementFromApplicationSchema>;
+
+export const workspaceApiKeySchema = z.object({ name: z.string().trim().min(2).max(80) });
+
+export const ATS_WEBHOOK_EVENTS = ['application.created', 'application.stage_changed', 'offer.accepted'] as const;
+
+export const workspaceWebhookSchema = z.object({
+  url: z.string().trim().url().max(2048),
+  description: z.string().trim().max(200).optional(),
+  events: z.array(z.enum(ATS_WEBHOOK_EVENTS)).min(1),
+});
+
+export type WorkspaceWebhookInput = z.infer<typeof workspaceWebhookSchema>;
+
+/** Partner API: add an applicant without a CV upload. */
+export const apiApplicationSchema = z.object({
+  name: z.string().trim().min(2).max(140),
+  email: z.string().trim().email().max(255),
+  phone: z.string().trim().max(30).optional(),
+  location: z.string().trim().max(140).optional(),
+  coverNote: z.string().trim().max(3000).optional(),
+  source: z.string().trim().min(2).max(40).default('api'),
+});
+
+export type ApiApplicationInput = z.infer<typeof apiApplicationSchema>;
+
+export const apiMoveStageSchema = z.object({ stage: z.string().trim().min(1).max(40) });
+
 export const offerResponseSchema = z.object({
   decision: z.enum(['ACCEPTED', 'DECLINED']),
   note: z.string().trim().max(1000).optional(),

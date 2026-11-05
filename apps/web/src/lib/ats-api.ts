@@ -243,6 +243,33 @@ export type OfferPreview = {
   respondedAt: string | null;
 };
 
+export type AtsReport = {
+  days: number;
+  totals: { applications: number; inProgress: number; hired: number; rejected: number; openJobs: number; avgAiScore: number | null };
+  funnel: { step: string; count: number }[];
+  timeToHire: { averageDays: number | null; medianDays: number | null };
+  offers: { sent: number; accepted: number };
+  sources: { source: string; applied: number; hired: number }[];
+  weekly: { weekStart: string; applications: number }[];
+  jobs: { id: string; title: string; status: JobStatus; applications: number; inProgress: number; hired: number; daysOpen: number | null }[];
+  limits: { openJobs: number; maxOpenJobs: number; plan: string };
+};
+
+export type EmailTemplate = { id: string; name: string; subject: string; body: string; builtIn: boolean };
+
+export type WorkspaceApiKey = { id: string; name: string; keyPrefix: string; scopes: string[]; isActive: boolean; lastUsedAt: string | null; createdAt: string };
+
+export type WorkspaceWebhook = {
+  id: string;
+  url: string;
+  description: string | null;
+  events: string[];
+  isActive: boolean;
+  failureCount: number;
+  lastDeliveryAt: string | null;
+  createdAt: string;
+};
+
 export const PERIOD_LABEL: Record<string, string> = { MONTH: 'month', YEAR: 'year', DAY: 'day', WEEK: 'week', PROJECT: 'project' };
 export const KIND_LABEL: Record<string, string> = { VIDEO: 'Video call', PHONE: 'Phone call', IN_PERSON: 'In person' };
 
@@ -308,6 +335,26 @@ export const atsApi = {
     apiFetch<Offer & { link?: string }>(`${W(orgId)}/applications/${id}/offers`, { method: 'POST', json: input }),
   sendOffer: (orgId: string, offerId: string) => apiFetch<Offer & { link: string }>(`${W(orgId)}/offers/${offerId}/send`, { method: 'POST' }),
   withdrawOffer: (orgId: string, offerId: string) => apiFetch<Offer>(`${W(orgId)}/offers/${offerId}/withdraw`, { method: 'POST' }),
+
+  reports: (orgId: string, days = 90) => apiFetch<AtsReport>(`${W(orgId)}/reports?days=${days}`),
+  templates: (orgId: string) => apiFetch<EmailTemplate[]>(`${W(orgId)}/email-templates`),
+  createTemplate: (orgId: string, input: Pick<EmailTemplate, 'name' | 'subject' | 'body'>) =>
+    apiFetch<EmailTemplate>(`${W(orgId)}/email-templates`, { method: 'POST', json: input }),
+  updateTemplate: (orgId: string, id: string, input: Pick<EmailTemplate, 'name' | 'subject' | 'body'>) =>
+    apiFetch<EmailTemplate>(`${W(orgId)}/email-templates/${id}`, { method: 'PATCH', json: input }),
+  deleteTemplate: (orgId: string, id: string) => apiFetch(`${W(orgId)}/email-templates/${id}`, { method: 'DELETE' }),
+  bulkEmail: (orgId: string, applicationIds: string[], subject: string, body: string) =>
+    apiFetch<{ sent: number }>(`${W(orgId)}/applications/email`, { method: 'POST', json: { applicationIds, subject, body } }),
+  placeHire: (orgId: string, id: string, input: { siteId: string; roleTitle?: string; isStandby: boolean; startDate?: string }) =>
+    apiFetch<{ placementId: string }>(`${W(orgId)}/applications/${id}/placement`, { method: 'POST', json: input }),
+  integrations: (orgId: string) => apiFetch<{ keys: WorkspaceApiKey[]; webhooks: WorkspaceWebhook[] }>(`${W(orgId)}/integrations`),
+  createKey: (orgId: string, name: string) => apiFetch<WorkspaceApiKey & { apiKey: string }>(`${W(orgId)}/api-keys`, { method: 'POST', json: { name } }),
+  revokeKey: (orgId: string, id: string) => apiFetch(`${W(orgId)}/api-keys/${id}`, { method: 'DELETE' }),
+  createWebhook: (orgId: string, input: { url: string; description?: string; events: string[] }) =>
+    apiFetch<WorkspaceWebhook & { secret: string }>(`${W(orgId)}/webhooks`, { method: 'POST', json: input }),
+  removeWebhook: (orgId: string, id: string) => apiFetch(`${W(orgId)}/webhooks/${id}`, { method: 'DELETE' }),
+  testWebhook: (orgId: string, id: string) =>
+    apiFetch<{ status: string; responseCode: number | null; error: string | null }>(`${W(orgId)}/webhooks/${id}/test`, { method: 'POST' }),
 
   booking: (token: string) => apiFetch<BookingPreview>(`/book/${token}`),
   book: (token: string, startsAt: string) => apiFetch<{ startsAt: string; status: string }>(`/book/${token}`, { method: 'POST', json: { startsAt } }),

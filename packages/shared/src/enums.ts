@@ -143,7 +143,13 @@ export const ApiScope = {
   CANDIDATES_READ: 'candidates:read',
   BLOG_READ: 'blog:read',
   HEALTH_READ: 'health:read',
+  JOBS_READ: 'jobs:read',
+  APPLICATIONS_READ: 'applications:read',
+  APPLICATIONS_WRITE: 'applications:write',
 } as const;
+
+/** Scopes given to keys a workspace creates for its own ATS data. */
+export const ATS_API_SCOPES = ['jobs:read', 'applications:read', 'applications:write'] as const;
 
 export type ApiScope = (typeof ApiScope)[keyof typeof ApiScope];
 

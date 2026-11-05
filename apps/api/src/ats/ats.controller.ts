@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -14,7 +15,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiConsumes, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiConsumes, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import {
   aiReviewSchema,
@@ -43,6 +44,19 @@ import {
   type ScheduleInterviewInput,
   type ScorecardInput,
   type UpdateWorkspaceInput,
+  ApiScope,
+  apiApplicationSchema,
+  apiMoveStageSchema,
+  bulkEmailSchema,
+  emailTemplateSchema,
+  placementFromApplicationSchema,
+  workspaceApiKeySchema,
+  workspaceWebhookSchema,
+  type ApiApplicationInput,
+  type BulkEmailInput,
+  type EmailTemplateInput,
+  type PlacementFromApplicationInput,
+  type WorkspaceWebhookInput,
 } from '@dealo/shared';
 import { JobStatus, UserRole, WorkspaceRole } from '@prisma/client';
 import type { Response } from 'express';
@@ -53,8 +67,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/current-user.decorator';
 import { Public } from '../common/public.decorator';
 import { Roles } from '../common/roles.decorator';
+import { RequireScopes } from '../common/scopes.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { ApplicationsService, CV_MAX_BYTES } from './applications.service';
+import { AtsToolsService } from './ats-tools.service';
 import { HiringService } from './hiring.service';
 import { JobsService } from './jobs.service';
 import { WorkspacesService } from './workspaces.service';
@@ -80,6 +96,7 @@ export class AtsController {
     private readonly jobs: JobsService,
     private readonly applications: ApplicationsService,
     private readonly hiring: HiringService,
+    private readonly tools: AtsToolsService,
   ) {}
 
   // -------------------------------------------------------------- workspaces
@@ -365,9 +382,163 @@ export class AtsController {
     return this.hiring.withdrawOffer(orgId, offerId, user);
   }
 
+  // ------------------------------------------------- reports, email, tools
+
+  @Get('workspaces/:orgId/reports')
+  reports(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string, @Query('days') days?: string) {
+    return this.tools.reports(orgId, user, Number(days) || 90);
+  }
+
+  @Get('workspaces/:orgId/email-templates')
+  templates(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string) {
+    return this.tools.templates(orgId, user);
+  }
+
+  @Post('workspaces/:orgId/email-templates')
+  createTemplate(
+    @CurrentUser() user: AuthUser,
+    @Param('orgId') orgId: string,
+    @Body(new ZodValidationPipe(emailTemplateSchema)) body: EmailTemplateInput,
+  ) {
+    return this.tools.createTemplate(orgId, body, user);
+  }
+
+  @Patch('workspaces/:orgId/email-templates/:id')
+  updateTemplate(
+    @CurrentUser() user: AuthUser,
+    @Param('orgId') orgId: string,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(emailTemplateSchema)) body: EmailTemplateInput,
+  ) {
+    return this.tools.updateTemplate(orgId, id, body, user);
+  }
+
+  @Delete('workspaces/:orgId/email-templates/:id')
+  deleteTemplate(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string, @Param('id') id: string) {
+    return this.tools.deleteTemplate(orgId, id, user);
+  }
+
+  @Post('workspaces/:orgId/applications/email')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Email many applicants at once (each gets a personal copy)' })
+  bulkEmail(
+    @CurrentUser() user: AuthUser,
+    @Param('orgId') orgId: string,
+    @Body(new ZodValidationPipe(bulkEmailSchema)) body: BulkEmailInput,
+  ) {
+    return this.tools.bulkEmail(orgId, body, user);
+  }
+
+  @Post('workspaces/:orgId/applications/:id/placement')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.RECRUITER, UserRole.OPERATIONS)
+  @ApiOperation({ summary: 'Dealo staff: put a hired applicant on a Workforce site' })
+  placeHire(
+    @CurrentUser() user: AuthUser,
+    @Param('orgId') orgId: string,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(placementFromApplicationSchema)) body: PlacementFromApplicationInput,
+  ) {
+    return this.tools.placeHire(orgId, id, body, user);
+  }
+
+  @Get('workspaces/:orgId/integrations')
+  integrations(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string) {
+    return this.tools.integrations(orgId, user);
+  }
+
+  @Post('workspaces/:orgId/api-keys')
+  createKey(
+    @CurrentUser() user: AuthUser,
+    @Param('orgId') orgId: string,
+    @Body(new ZodValidationPipe(workspaceApiKeySchema)) body: { name: string },
+  ) {
+    return this.tools.createKey(orgId, body.name, user);
+  }
+
+  @Delete('workspaces/:orgId/api-keys/:id')
+  revokeKey(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string, @Param('id') id: string) {
+    return this.tools.revokeKey(orgId, id, user);
+  }
+
+  @Post('workspaces/:orgId/webhooks')
+  createWebhook(
+    @CurrentUser() user: AuthUser,
+    @Param('orgId') orgId: string,
+    @Body(new ZodValidationPipe(workspaceWebhookSchema)) body: WorkspaceWebhookInput,
+  ) {
+    return this.tools.createWebhook(orgId, body, user);
+  }
+
+  @Delete('workspaces/:orgId/webhooks/:id')
+  removeWebhook(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string, @Param('id') id: string) {
+    return this.tools.removeWebhook(orgId, id, user);
+  }
+
+  @Post('workspaces/:orgId/webhooks/:id/test')
+  @HttpCode(200)
+  testWebhook(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string, @Param('id') id: string) {
+    return this.tools.testWebhook(orgId, id, user);
+  }
+
   @Get('workspaces/:orgId/files/:fileId')
   async file(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string, @Param('fileId') fileId: string, @Res() res: Response) {
     sendFile(res, await this.applications.readFile(orgId, fileId, user));
+  }
+}
+
+/** Partner API for a workspace's own ATS data. Call with a workspace API key (Bearer dk_live_…). */
+@ApiTags('ats-api')
+@ApiBearerAuth()
+@Controller('ats-api')
+export class AtsApiController {
+  constructor(
+    private readonly jobs: JobsService,
+    private readonly applications: ApplicationsService,
+  ) {}
+
+  private orgId(user: AuthUser) {
+    if (user.authType !== 'api_key' || !user.organizationId) throw new NotFoundException('Use a workspace API key');
+    return user.organizationId;
+  }
+
+  @Get('jobs')
+  @RequireScopes(ApiScope.JOBS_READ)
+  @ApiOperation({ summary: 'List jobs with pipeline counts' })
+  listJobs(@CurrentUser() user: AuthUser) {
+    return this.jobs.list(this.orgId(user), user);
+  }
+
+  @Get('jobs/:jobId/applications')
+  @RequireScopes(ApiScope.APPLICATIONS_READ)
+  @ApiOperation({ summary: 'Applicants for one job (status=ACTIVE|HIRED|REJECTED)' })
+  listApplications(@CurrentUser() user: AuthUser, @Param('jobId') jobId: string, @Query('status') status?: string) {
+    return this.applications.board(this.orgId(user), jobId, user, status ?? 'ACTIVE');
+  }
+
+  @Get('applications/:id')
+  @RequireScopes(ApiScope.APPLICATIONS_READ)
+  getApplication(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.applications.detail(this.orgId(user), id, user);
+  }
+
+  @Post('jobs/:jobId/applications')
+  @RequireScopes(ApiScope.APPLICATIONS_WRITE)
+  @ApiOperation({ summary: 'Add an applicant (JSON, no CV)' })
+  createApplication(
+    @CurrentUser() user: AuthUser,
+    @Param('jobId') jobId: string,
+    @Body(new ZodValidationPipe(apiApplicationSchema)) body: ApiApplicationInput,
+  ) {
+    const { source, ...input } = body;
+    return this.applications.addManual(this.orgId(user), jobId, input, user, undefined, source.toLowerCase().replace(/[^a-z0-9-]/g, '-'));
+  }
+
+  @Post('applications/:id/stage')
+  @HttpCode(200)
+  @RequireScopes(ApiScope.APPLICATIONS_WRITE)
+  moveStage(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body(new ZodValidationPipe(apiMoveStageSchema)) body: { stage: string }) {
+    return this.applications.moveStage(this.orgId(user), [id], body.stage, user);
   }
 }
 

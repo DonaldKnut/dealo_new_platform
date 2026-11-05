@@ -5,12 +5,15 @@ import { ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { AtsIntegrationsPanel } from '@/components/ats/ats-integrations-panel';
+import { AtsTemplatesPanel } from '@/components/ats/ats-templates-panel';
+import { AtsUsageCard } from '@/components/ats/ats-usage';
 import { useAtsWorkspace } from '@/components/ats/ats-workspace';
 import { DashPanel } from '@/components/dashboard/dashboard-ui';
 import { FormField } from '@/components/forms/form-field';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
-import { atsApi, isAdminRole } from '@/lib/ats-api';
+import { atsApi, canManage, isAdminRole } from '@/lib/ats-api';
 
 export function AtsSettingsPanel() {
   const toast = useToast();
@@ -95,15 +98,32 @@ export function AtsSettingsPanel() {
           )}
         </form>
       </DashPanel>
-      <DashPanel title="Your link">
-        <p className="break-all text-sm text-foreground">/careers/{current.workspace.slug}</p>
-        <p className="mt-2 text-xs leading-relaxed text-muted">
-          Put this link on your website, LinkedIn and WhatsApp status. Every open job shows here, and Google can list them in job search.
-        </p>
-        <Link href={`/careers/${current.workspace.slug}`} target="_blank" className="btn-secondary mt-3 w-full text-sm">
-          <ExternalLink className="h-4 w-4" /> Open careers page
-        </Link>
-      </DashPanel>
+      <div className="space-y-4">
+        <DashPanel title="Your link">
+          <p className="break-all text-sm text-foreground">/careers/{current.workspace.slug}</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            Put this link on your website, LinkedIn and WhatsApp status. Every open job shows here, and Google can list them in job search.
+          </p>
+          <Link href={`/careers/${current.workspace.slug}`} target="_blank" className="btn-secondary mt-3 w-full text-sm">
+            <ExternalLink className="h-4 w-4" /> Open careers page
+          </Link>
+        </DashPanel>
+        <DashPanel title="Plan and limits">
+          <AtsUsageCard detail={current} />
+        </DashPanel>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2 xl:col-span-2">
+        {canManage(current.myRole) ? (
+          <DashPanel title="Email templates">
+            <AtsTemplatesPanel orgId={orgId} />
+          </DashPanel>
+        ) : null}
+        {admin ? (
+          <DashPanel title="API and webhooks">
+            <AtsIntegrationsPanel orgId={orgId} />
+          </DashPanel>
+        ) : null}
+      </div>
     </div>
   );
 }

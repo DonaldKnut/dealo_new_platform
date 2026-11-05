@@ -62,6 +62,9 @@ Requests made with an API key only see hire inquiries created by that key (or by
 | `candidates:read` | Reserved for partner candidate reads |
 | `blog:read` | Authenticated partner blog pulls (public list still works anonymously) |
 | `health:read` | Reserved for authenticated health checks |
+| `jobs:read` | Dealo ATS: list a workspace's jobs |
+| `applications:read` | Dealo ATS: list and read a workspace's applicants |
+| `applications:write` | Dealo ATS: add applicants and move them between steps |
 
 Routes that declare `@RequireScopes` accept **either** a staff JWT with the usual roles/permissions **or** an API key that includes those scopes.
 
@@ -190,6 +193,22 @@ Respond with any `2xx` within 10 seconds. Otherwise Dealo retries after 30s, 2m,
 | GET | `/api/v1/api-keys/:id/usage` | Admin JWT | Usage metrics (`days` 1–90) |
 | PATCH | `/api/v1/api-keys/:id` | Admin JWT | Update key |
 | DELETE | `/api/v1/api-keys/:id` | Admin JWT | Revoke key |
+
+## Dealo ATS API (workspace keys)
+
+A workspace owner or admin creates keys in **Dashboard → Hiring (ATS) → Careers page → API and webhooks**. A workspace key carries only the three ATS scopes, sees only that workspace, acts as a recruiter, and stops working if the person who made it leaves the workspace. Up to 3 active keys per workspace.
+
+| Method | Path | Scope | Purpose |
+|---|---|---|---|
+| GET | `/api/v1/ats-api/jobs` | `jobs:read` | Jobs with pipeline counts per step |
+| GET | `/api/v1/ats-api/jobs/:jobId/applications?status=ACTIVE` | `applications:read` | Applicants for a job (`ACTIVE`, `HIRED`, `REJECTED`) |
+| GET | `/api/v1/ats-api/applications/:id` | `applications:read` | One applicant with timeline, interviews, scorecards, offers |
+| POST | `/api/v1/ats-api/jobs/:jobId/applications` | `applications:write` | Add an applicant (`name`, `email`, optional `phone`, `location`, `coverNote`, `source`) |
+| POST | `/api/v1/ats-api/applications/:id/stage` | `applications:write` | Move to a step (`{ "stage": "Interview" }`); the last step marks them hired |
+
+Workspace webhooks (same signing as above) can subscribe to `application.created`, `application.stage_changed` and `offer.accepted`. ATS events go only to that workspace's own webhooks.
+
+Public, no-login ATS routes: `GET /api/v1/careers/:orgSlug`, `GET /api/v1/careers/:orgSlug/:jobSlug`, `POST /api/v1/careers/:orgSlug/:jobSlug/apply` (multipart, CV in the `cv` field), `GET|POST /api/v1/book/:token` (interview self-booking), `GET /api/v1/offer/:token` and `POST /api/v1/offer/:token/respond`.
 
 ## Plans and billing (Paystack)
 

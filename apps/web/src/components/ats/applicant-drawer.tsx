@@ -11,6 +11,7 @@ import {
   Loader2,
   Mail,
   MapPin,
+  MapPinCheck,
   MessageCircle,
   Phone,
   RefreshCw,
@@ -26,8 +27,11 @@ import { createPortal } from 'react-dom';
 
 import { AiReviewBar } from '@/components/ai/ai-review-bar';
 import { AiBadge } from '@/components/ats/application-card';
+import { useAtsWorkspace } from '@/components/ats/ats-workspace';
 import { Section } from '@/components/ats/drawer-section';
+import { EmailComposeSheet } from '@/components/ats/email-compose-sheet';
 import { InterviewsSection, OffersSection, ScorecardsSection } from '@/components/ats/hiring-sections';
+import { PlaceHireSheet } from '@/components/ats/place-hire-sheet';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { atsApi, canManage, type ApplicationDetail } from '@/lib/ats-api';
@@ -113,9 +117,13 @@ function DrawerBody({
   onChanged: () => void;
 }) {
   const toast = useToast();
+  const { current } = useAtsWorkspace();
   const [data, setData] = useState<ApplicationDetail | null>(null);
   const [tab, setTab] = useState<Tab>('overview');
   const [error, setError] = useState<string | null>(null);
+  const [emailing, setEmailing] = useState(false);
+  const [placing, setPlacing] = useState(false);
+  const isDealoWorkspace = current?.workspace.slug === 'dealo';
 
   const load = useCallback(async () => {
     try {
@@ -251,8 +259,34 @@ function DrawerBody({
               </button>
             ) : null
           ) : null}
+          {manage ? (
+            <button type="button" className="btn-secondary py-2 text-xs" onClick={() => setEmailing(true)}>
+              <Mail className="h-3.5 w-3.5" /> Email
+            </button>
+          ) : null}
         </div>
+        {manage && app.status === 'HIRED' && isDealoWorkspace ? (
+          <button
+            type="button"
+            onClick={() => setPlacing(true)}
+            className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-brand/50 px-3 py-2 text-xs font-semibold text-brand"
+          >
+            <MapPinCheck className="h-3.5 w-3.5" /> Put on a Workforce site
+          </button>
+        ) : null}
       </div>
+
+      <EmailComposeSheet orgId={orgId} applicationIds={emailing ? [app.id] : null} onClose={() => setEmailing(false)} onSent={() => void load()} />
+      {isDealoWorkspace ? (
+        <PlaceHireSheet
+          orgId={orgId}
+          applicationId={app.id}
+          defaultRole={job.title}
+          open={placing}
+          onClose={() => setPlacing(false)}
+          onPlaced={() => void load()}
+        />
+      ) : null}
 
       <div className="border-b border-border px-2 min-[340px]:px-4">
         <div className="-mb-px flex gap-1 overflow-x-auto">
@@ -516,6 +550,7 @@ const EVENT_LABEL: Record<string, string> = {
   OFFER_DECLINED: 'Offer declined',
   OFFER_WITHDRAWN: 'Offer withdrawn',
   EMAIL_SENT: 'Email',
+  PLACED: 'Placed on site',
 };
 
 function Timeline({ data, orgId, reload }: { data: ApplicationDetail; orgId: string; reload: () => Promise<void> }) {

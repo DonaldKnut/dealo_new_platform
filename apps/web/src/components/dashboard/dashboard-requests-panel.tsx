@@ -1,13 +1,15 @@
 'use client';
 
-import { LoaderCircle, Sparkles } from 'lucide-react';
+import { Kanban, LoaderCircle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 import { SourcingPanel } from '@/components/ai/sourcing-panel';
-
+import { useToast } from '@/components/ui/toast';
 import { isStaffRole } from '@/hooks/use-auth-session';
 import { ApiError } from '@/lib/api';
+import { atsApi, rememberWorkspace } from '@/lib/ats-api';
 import {
   fetchAuthMe,
   fetchDashboardRequests,
@@ -33,11 +35,35 @@ export function DashboardRequestsPanel() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [sourcing, setSourcing] = useState<{ id: string; title: string } | null>(null);
   const closeSourcing = useCallback(() => setSourcing(null), []);
+  const [dealoWorkspaceId, setDealoWorkspaceId] = useState<string | null>(null);
+  const [jobFor, setJobFor] = useState<string | null>(null);
+  const router = useRouter();
+  const toast = useToast();
 
   const load = async () => {
     const [data, me] = await Promise.all([fetchDashboardRequests(), fetchAuthMe()]);
     setRows(data);
-    setIsAdmin(isStaffRole(me.roles));
+    const staff = isStaffRole(me.roles);
+    setIsAdmin(staff);
+    if (staff) {
+      const workspaces = await atsApi.workspaces().catch(() => []);
+      setDealoWorkspaceId(workspaces.find((w) => w.slug === 'dealo')?.id ?? null);
+    }
+  };
+
+  /** Turns the request into a draft job on Dealo's own hiring board. */
+  const createJob = async (inquiryId: string) => {
+    if (!dealoWorkspaceId) return;
+    setJobFor(inquiryId);
+    try {
+      const job = await atsApi.jobFromInquiry(dealoWorkspaceId, inquiryId);
+      rememberWorkspace(dealoWorkspaceId);
+      toast.success('Draft job ready', 'Check the details, then publish it.');
+      router.push(`/dashboard/ats/jobs/${job.id}/edit`);
+    } catch (err) {
+      toast.error('Could not create the job', err instanceof ApiError ? err.message : '');
+      setJobFor(null);
+    }
   };
 
   useEffect(() => {
@@ -145,6 +171,16 @@ export function DashboardRequestsPanel() {
                           className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-brand hover:underline"
                         >
                           <Sparkles className="h-3 w-3" /> Find people with AI
+                        </button>
+                      ) : null}
+                      {isAdmin && dealoWorkspaceId ? (
+                        <button
+                          type="button"
+                          disabled={jobFor === row.id}
+                          onClick={() => void createJob(row.id)}
+                          className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-brand hover:underline disabled:opacity-60"
+                        >
+                          <Kanban className="h-3 w-3" /> {jobFor === row.id ? 'Creating job…' : 'Make an ATS job'}
                         </button>
                       ) : null}
                     </td>

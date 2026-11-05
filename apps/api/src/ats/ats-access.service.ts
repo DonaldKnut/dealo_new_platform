@@ -29,11 +29,15 @@ export class AtsAccessService {
   constructor(private readonly prisma: PrismaService) {}
 
   async require(orgId: string, user: AuthUser, min: WorkspaceRole = WorkspaceRole.HIRING_MANAGER): Promise<WorkspaceAccess> {
-    if (!isObjectId(orgId) || !user.id || user.authType === 'api_key') {
+    if (!isObjectId(orgId) || !user.id) {
       throw new NotFoundException('Workspace not found');
     }
     const organization = await this.prisma.organization.findUnique({ where: { id: orgId } });
     if (!organization || !organization.isActive) throw new NotFoundException('Workspace not found');
+
+    if (user.authType === 'api_key') {
+      return this.requireApiKey(organization, user, min);
+    }
 
     const member = await this.prisma.organizationMember.findUnique({
       where: { organizationId_userId: { organizationId: orgId, userId: user.id } },
@@ -51,6 +55,27 @@ export class AtsAccessService {
     }
     const userName = `${member.user.firstName} ${member.user.lastName}`.trim() || member.user.email;
     return { organization, role: member.role, memberId: member.id, support: false, userId: user.id, userName };
+  }
+
+  /** Workspace API keys act as a recruiter in their own workspace, and stop working if their creator leaves. */
+  private async requireApiKey(organization: Organization, user: AuthUser, min: WorkspaceRole): Promise<WorkspaceAccess> {
+    if (!user.apiKeyId || user.organizationId !== organization.id) throw new NotFoundException('Workspace not found');
+    const key = await this.prisma.apiKey.findUnique({ where: { id: user.apiKeyId }, select: { createdByUserId: true, name: true } });
+    const creator = key
+      ? await this.prisma.organizationMember.findUnique({
+          where: { organizationId_userId: { organizationId: organization.id, userId: key.createdByUserId } },
+        })
+      : null;
+    if (!key || !creator) throw new NotFoundException('Workspace not found');
+    if (RANK[WorkspaceRole.RECRUITER] < RANK[min]) throw new ForbiddenException('API keys cannot do this');
+    return {
+      organization,
+      role: WorkspaceRole.RECRUITER,
+      memberId: null,
+      support: false,
+      userId: key.createdByUserId,
+      userName: `API · ${key.name}`,
+    };
   }
 
   static canManage(role: WorkspaceRole) {

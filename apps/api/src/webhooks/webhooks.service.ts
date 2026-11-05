@@ -11,6 +11,7 @@ import {
   WebhookEvent,
   type CreateWebhookEndpointInput,
   type UpdateWebhookEndpointInput,
+  type WorkspaceWebhookInput,
 } from '@dealo/shared';
 import { Prisma, UserRole, WebhookDeliveryStatus, type HireInquiry, type WebhookEndpoint } from '@prisma/client';
 import { randomBytes } from 'crypto';
@@ -125,6 +126,48 @@ export class WebhooksService implements OnModuleInit, OnModuleDestroy {
       select: ENDPOINT_SELECT,
     });
     return { ...endpoint, secret };
+  }
+
+  // ------------------------------------------------- ATS workspace endpoints
+
+  /** Caller must already be a workspace admin. */
+  async createForWorkspace(organizationId: string, input: WorkspaceWebhookInput, ownerUserId: string) {
+    await assertSafeWebhookUrl(input.url, this.isProduction);
+    const count = await this.prisma.webhookEndpoint.count({ where: { organizationId, isGlobal: false } });
+    if (count >= 5) throw new ForbiddenException('A workspace can have 5 webhooks');
+    const secret = generateWebhookSecret();
+    const endpoint = await this.prisma.webhookEndpoint.create({
+      data: { url: input.url, description: input.description, events: input.events, isGlobal: false, secret, ownerUserId, organizationId },
+      select: ENDPOINT_SELECT,
+    });
+    return { ...endpoint, secret };
+  }
+
+  listForWorkspace(organizationId: string) {
+    return this.prisma.webhookEndpoint.findMany({
+      where: { organizationId, isGlobal: false },
+      orderBy: { createdAt: 'desc' },
+      select: ENDPOINT_SELECT,
+    });
+  }
+
+  async removeForWorkspace(organizationId: string, id: string) {
+    const endpoint = await this.prisma.webhookEndpoint.findFirst({ where: { id, organizationId, isGlobal: false } });
+    if (!endpoint) throw new NotFoundException('Webhook not found');
+    await this.prisma.webhookDelivery.deleteMany({ where: { endpointId: id } });
+    await this.prisma.webhookEndpoint.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
+  async testForWorkspace(organizationId: string, id: string) {
+    const endpoint = await this.prisma.webhookEndpoint.findFirst({ where: { id, organizationId, isGlobal: false } });
+    if (!endpoint) throw new NotFoundException('Webhook not found');
+    const [delivery] = await this.enqueue([endpoint], WebhookEvent.PING, { message: 'Dealo ATS webhook test', endpointId: endpoint.id });
+    await this.attempt(delivery.id);
+    return this.prisma.webhookDelivery.findUnique({
+      where: { id: delivery.id },
+      select: { id: true, status: true, responseCode: true, error: true, attempts: true },
+    });
   }
 
   async update(id: string, input: UpdateWebhookEndpointInput, user: AuthUser) {

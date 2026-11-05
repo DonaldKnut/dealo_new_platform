@@ -5,6 +5,7 @@ import { Copy, Link2, MapPin, MoreHorizontal, Pause, Pencil, Play, Plus, Users, 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { AtsLimitBanner } from '@/components/ats/ats-usage';
 import { useAtsWorkspace } from '@/components/ats/ats-workspace';
 import { DashPanel, StatusChip } from '@/components/dashboard/dashboard-ui';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -67,6 +68,7 @@ export function AtsJobsPanel() {
 
   return (
     <div className="space-y-4">
+      {current ? <AtsLimitBanner detail={current} /> : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="-mx-1 flex gap-1 overflow-x-auto px-1">
           {FILTERS.map((f) => {
