@@ -2,6 +2,8 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
@@ -20,6 +22,7 @@ import {
 import { AiService } from '../ai/ai.service';
 import type { AuthUser } from '../auth/auth.types';
 import { assertEmailVerified } from '../auth/verified-email';
+import { verifiedMime } from '../common/file-signature';
 import { normalizeEmail } from '../common/normalize-email';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -33,6 +36,9 @@ export const CV_MIME = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]);
 export const CV_MAX_BYTES = 8 * 1024 * 1024;
+/** Caps careers-page applications so one job can't be flooded (and its confirmation emails abused). */
+const MAX_DAILY_APPLICATIONS_PER_JOB = 500;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const PUBLIC_JOB_SELECT = {
   id: true,
@@ -165,6 +171,13 @@ export class ApplicationsService {
     });
     if (!job) throw new NotFoundException('This job is closed or does not exist');
 
+    const today = await this.prisma.application.count({
+      where: { jobId: job.id, source: 'careers', createdAt: { gte: new Date(Date.now() - DAY_MS) } },
+    });
+    if (today >= MAX_DAILY_APPLICATIONS_PER_JOB) {
+      throw new HttpException('This job has had a lot of applications today. Please try again tomorrow.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+
     return this.createApplication(
       { ...org, id: org.id },
       job,
@@ -197,13 +210,14 @@ export class ApplicationsService {
 
     let cvFileId: string | undefined;
     if (file) {
-      if (!CV_MIME.has(file.mimetype)) throw new BadRequestException('Upload your CV as a PDF or Word file');
       if (file.size > CV_MAX_BYTES) throw new BadRequestException('Your CV must be 8 MB or smaller');
+      const mimeType = verifiedMime(file.buffer, CV_MIME);
+      if (!mimeType) throw new BadRequestException('Upload your CV as a PDF or Word file');
       const stored = await this.prisma.atsFile.create({
         data: {
           organizationId: org.id,
           fileName: file.originalname.slice(0, 160),
-          mimeType: file.mimetype,
+          mimeType,
           byteSize: file.size,
           data: new Uint8Array(file.buffer),
         },

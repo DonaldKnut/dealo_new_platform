@@ -19,6 +19,7 @@ import { CandidatesService } from '../candidates/candidates.service';
 import { AuditLogService } from '../common/audit-log.service';
 import type { AppEnv } from '../config/env.validation';
 import { PrismaService } from '../prisma/prisma.service';
+import { verifiedMime } from '../common/file-signature';
 import { CloudinaryService } from './cloudinary.service';
 
 const ALLOWED_MIME = new Set([
@@ -238,11 +239,12 @@ export class TalentService {
     if (!file) {
       throw new BadRequestException('Please choose a file');
     }
-    if (!ALLOWED_MIME.has(file.mimetype)) {
-      throw new BadRequestException('Use a PDF, Word file, or a photo (PNG, JPG, WebP)');
-    }
     if (file.size > MAX_BYTES) {
       throw new BadRequestException('File must be 8MB or smaller');
+    }
+    const mimeType = verifiedMime(file.buffer, ALLOWED_MIME);
+    if (!mimeType) {
+      throw new BadRequestException('Use a PDF, Word file, or a photo (PNG, JPG, WebP)');
     }
 
     const kind = parseKind(kindRaw);
@@ -255,14 +257,14 @@ export class TalentService {
       const uploaded = await this.cloudinary.uploadBuffer(file.buffer, {
         folder: 'dealo/talent-documents',
         filename: `${candidate.id}-${Date.now()}-${safeName}`,
-        mimeType: file.mimetype,
+        mimeType,
       });
       doc = await this.prisma.candidateDocument.create({
         data: {
           candidateId: candidate.id,
           kind,
           fileName,
-          mimeType: file.mimetype,
+          mimeType,
           byteSize: file.size,
           url: uploaded.secure_url,
           publicId: uploaded.public_id,
@@ -276,7 +278,7 @@ export class TalentService {
           candidateId: candidate.id,
           kind,
           fileName,
-          mimeType: file.mimetype,
+          mimeType,
           byteSize: file.size,
           url: '',
           publicId: '',
