@@ -128,8 +128,17 @@ export class AuthController {
   @Public()
   @Post('verify-email')
   @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   verifyEmail(@Query('token') token: string) {
     return this.authService.verifyEmail(token);
+  }
+
+  @Post('resend-verification')
+  @HttpCode(200)
+  @ApiCookieAuth()
+  @Throttle({ default: { limit: 3, ttl: 10 * 60_000 } })
+  resendVerification(@CurrentUser() user: AuthUser) {
+    return this.authService.resendVerification(user.id);
   }
 
   @Public()

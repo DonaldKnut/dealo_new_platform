@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/current-user.decorator';
 import { Public } from '../common/public.decorator';
 import { Roles } from '../common/roles.decorator';
+import { RequireVerifiedEmail } from '../common/verified-email.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { NewsletterService } from './newsletter.service';
 
@@ -59,6 +60,7 @@ export class NewsletterController {
   @Post('campaigns/:id/send')
   @ApiCookieAuth()
   @Roles(...STAFF)
+  @RequireVerifiedEmail()
   sendCampaign(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.newsletterService.sendCampaign(id, user);
   }

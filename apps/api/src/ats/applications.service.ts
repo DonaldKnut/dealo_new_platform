@@ -19,6 +19,7 @@ import {
 
 import { AiService } from '../ai/ai.service';
 import type { AuthUser } from '../auth/auth.types';
+import { assertEmailVerified } from '../auth/verified-email';
 import { normalizeEmail } from '../common/normalize-email';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -385,6 +386,7 @@ export class ApplicationsService {
 
   async reject(orgId: string, applicationIds: string[], notify: boolean, reason: string | undefined, user: AuthUser) {
     const access = await this.access.require(orgId, user, WorkspaceRole.RECRUITER);
+    if (notify) await assertEmailVerified(this.prisma, user);
     const applications = await this.prisma.application.findMany({
       where: { id: { in: applicationIds.filter(isObjectId) }, organizationId: orgId, status: { not: ApplicationStatus.REJECTED } },
       include: { job: { select: { title: true } } },

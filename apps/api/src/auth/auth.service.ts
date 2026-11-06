@@ -51,7 +51,7 @@ export class AuthService {
         passwordHash,
         firstName: input.firstName,
         lastName: input.lastName,
-        emailVerifyToken,
+        emailVerifyToken: this.hashToken(emailVerifyToken),
         roles: {
           create: [{ roleId: role.id }],
         },
@@ -62,13 +62,7 @@ export class AuthService {
       await this.candidatesService.ensureCandidateForUser(user);
     }
 
-    const appUrl = this.config.get('APP_URL', { infer: true });
-    await this.emailService.send({
-      to: email,
-      subject: 'Verify your Dealo account',
-      html: `<p>Welcome to Dealo.</p><p><a href="${appUrl}/auth/verify-email?token=${emailVerifyToken}">Verify your email</a></p>`,
-      text: `Welcome to Dealo. Verify your email: ${appUrl}/auth/verify-email?token=${emailVerifyToken}`,
-    });
+    await this.sendVerificationEmail(email, emailVerifyToken, true);
 
     return {
       id: user.id,
@@ -132,6 +126,7 @@ export class AuthService {
             avatarUrl: profile.avatarUrl,
             authProvider: existingByEmail.passwordHash ? 'local+google' : 'google',
             isEmailVerified: true,
+            emailVerifyToken: null,
             lastLoginAt: new Date(),
           },
         });
@@ -203,17 +198,21 @@ export class AuthService {
     return { success: true };
   }
 
-  async me(userId: string): Promise<AuthUser> {
+  async me(userId: string): Promise<AuthUser & { isEmailVerified: boolean }> {
     const user = await this.usersService.findById(userId);
     if (!user || !user.isActive) {
       throw new UnauthorizedException();
     }
-    return this.toAuthUser(user);
+    return { ...this.toAuthUser(user), isEmailVerified: user.isEmailVerified };
   }
 
   async verifyEmail(token: string) {
+    if (!token) {
+      throw new UnauthorizedException('Invalid or expired verification token');
+    }
+    // Links sent before tokens were hashed still carry the raw value.
     const user = await this.prisma.user.findFirst({
-      where: { emailVerifyToken: token },
+      where: { OR: [{ emailVerifyToken: this.hashToken(token) }, { emailVerifyToken: token }] },
     });
 
     if (!user) {
@@ -229,6 +228,38 @@ export class AuthService {
     });
 
     return { success: true };
+  }
+
+  async resendVerification(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, isEmailVerified: true },
+    });
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    if (user.isEmailVerified) {
+      return { success: true, alreadyVerified: true };
+    }
+
+    const token = randomBytes(32).toString('hex');
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { emailVerifyToken: this.hashToken(token) },
+    });
+    await this.sendVerificationEmail(user.email, token, false);
+    return { success: true, alreadyVerified: false };
+  }
+
+  private async sendVerificationEmail(to: string, token: string, welcome: boolean) {
+    const link = `${this.config.get('APP_URL', { infer: true }).replace(/\/$/, '')}/auth/verify-email?token=${token}`;
+    const intro = welcome ? 'Welcome to Dealo.' : 'Here is a fresh link to confirm your Dealo email address.';
+    await this.emailService.send({
+      to,
+      subject: 'Verify your Dealo account',
+      html: `<p>${intro}</p><p><a href="${link}">Verify your email</a></p><p>If you didn't ask for this, you can ignore this email.</p>`,
+      text: `${intro} Verify your email: ${link}`,
+    });
   }
 
   async forgotPassword(email: string) {

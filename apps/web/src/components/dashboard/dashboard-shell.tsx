@@ -48,6 +48,7 @@ import {
 import { apiFetch } from '@/lib/api';
 import { logClientAudit } from '@/lib/client-audit';
 import { fetchAuthMe } from '@/lib/dashboard-api';
+import { VerifyEmailBanner } from '@/components/dashboard/verify-email-banner';
 import { takeReturnTo } from '@/lib/resume-api';
 import { cn } from '@/lib/utils';
 
@@ -585,6 +586,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="dash-atmosphere flex-1 px-2.5 py-5 min-[230px]:px-3 min-[340px]:px-5 min-[340px]:py-6 sm:px-6 sm:py-8"
           >
+            {user && user.isEmailVerified === false ? (
+              <VerifyEmailBanner
+                email={user.email}
+                onVerified={() => setUser((current) => (current ? { ...current, isEmailVerified: true } : current))}
+              />
+            ) : null}
             {children}
           </motion.main>
           <div className="h-[calc(4.25rem+var(--safe-bottom))] lg:hidden" aria-hidden />

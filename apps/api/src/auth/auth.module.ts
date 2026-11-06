@@ -17,6 +17,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { PermissionsGuard } from './permissions.guard';
 import { RolesGuard } from './roles.guard';
 import { ScopesGuard } from './scopes.guard';
+import { VerifiedEmailGuard } from './verified-email';
 
 @Module({
   imports: [
@@ -53,6 +54,10 @@ import { ScopesGuard } from './scopes.guard';
     {
       provide: APP_GUARD,
       useClass: ScopesGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: VerifiedEmailGuard,
     },
   ],
   exports: [AuthService],

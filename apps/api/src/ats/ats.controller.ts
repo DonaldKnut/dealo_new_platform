@@ -68,6 +68,7 @@ import { CurrentUser } from '../common/current-user.decorator';
 import { Public } from '../common/public.decorator';
 import { Roles } from '../common/roles.decorator';
 import { RequireScopes } from '../common/scopes.decorator';
+import { RequireVerifiedEmail } from '../common/verified-email.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { ApplicationsService, CV_MAX_BYTES } from './applications.service';
 import { AtsToolsService } from './ats-tools.service';
@@ -113,6 +114,7 @@ export class AtsController {
   }
 
   @Post('workspaces')
+  @RequireVerifiedEmail()
   @ApiOperation({ summary: 'Create a hiring workspace (you become the owner)' })
   create(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(createWorkspaceSchema)) body: CreateWorkspaceInput) {
     return this.workspaces.create(body, user);
@@ -133,6 +135,7 @@ export class AtsController {
   }
 
   @Post('workspaces/:orgId/invites')
+  @RequireVerifiedEmail()
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   invite(
     @CurrentUser() user: AuthUser,
@@ -330,6 +333,7 @@ export class AtsController {
   }
 
   @Post('workspaces/:orgId/applications/:id/interviews')
+  @RequireVerifiedEmail()
   @ApiOperation({ summary: 'Schedule an interview (fixed time) or offer slots for self-booking' })
   schedule(
     @CurrentUser() user: AuthUser,
@@ -371,6 +375,7 @@ export class AtsController {
   }
 
   @Post('workspaces/:orgId/offers/:offerId/send')
+  @RequireVerifiedEmail()
   @HttpCode(200)
   sendOffer(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string, @Param('offerId') offerId: string) {
     return this.hiring.sendOffer(orgId, offerId, user);
@@ -419,6 +424,7 @@ export class AtsController {
   }
 
   @Post('workspaces/:orgId/applications/email')
+  @RequireVerifiedEmail()
   @HttpCode(200)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Email many applicants at once (each gets a personal copy)' })

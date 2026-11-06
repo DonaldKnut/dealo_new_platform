@@ -6,7 +6,11 @@ export type DashboardUserCore = {
   firstName: string;
   lastName: string;
   roles: string[];
+  isEmailVerified?: boolean;
 };
+
+export const resendVerificationEmail = () =>
+  apiFetch<{ success: boolean; alreadyVerified: boolean }>('/auth/resend-verification', { method: 'POST' });
 
 export type DashboardRequestSummary = {
   id: string;

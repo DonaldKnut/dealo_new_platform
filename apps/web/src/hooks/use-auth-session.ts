@@ -10,6 +10,7 @@ export type AuthSessionUser = {
   firstName: string;
   lastName: string;
   roles: string[];
+  isEmailVerified?: boolean;
 };
 
 const STAFF_ROLES = new Set([

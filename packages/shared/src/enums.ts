@@ -133,6 +133,9 @@ export const InvoiceStatus = {
 
 export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
 
+/** Error `code` the API returns when an action needs a confirmed email address. */
+export const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED' as const;
+
 export const DEFAULT_CURRENCY = 'NGN' as const;
 export const DEFAULT_TIMEZONE = 'Africa/Lagos' as const;
 

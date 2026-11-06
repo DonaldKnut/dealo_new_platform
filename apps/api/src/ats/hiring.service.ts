@@ -14,6 +14,7 @@ import {
 import { createHash, randomBytes } from 'crypto';
 
 import type { AuthUser } from '../auth/auth.types';
+import { assertEmailVerified } from '../auth/verified-email';
 import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -188,6 +189,7 @@ export class HiringService {
     });
     if (!interview) throw new NotFoundException('Interview not found');
     const app = interview.application;
+    if (input.startsAt || input.status === 'CANCELLED') await assertEmailVerified(this.prisma, user);
 
     if (input.startsAt) {
       const startsAt = new Date(input.startsAt);
@@ -341,6 +343,7 @@ export class HiringService {
     if (application.status !== ApplicationStatus.ACTIVE) throw new BadRequestException('This person is not in the pipeline');
     const startDate = new Date(input.startDate);
     if (Number.isNaN(startDate.getTime())) throw new BadRequestException('Pick a start date');
+    if (input.send) await assertEmailVerified(this.prisma, user);
 
     await this.prisma.offer.updateMany({
       where: { applicationId, status: { in: [OfferStatus.DRAFT, OfferStatus.SENT] } },
