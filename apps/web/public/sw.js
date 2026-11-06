@@ -1,5 +1,5 @@
 /* Dealo service worker: fast repeat loads and an offline page. API calls are never cached. */
-const VERSION = 'dealo-v1';
+const VERSION = 'dealo-v2';
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = '/offline';
@@ -8,7 +8,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(PAGE_CACHE)
-      .then((cache) => cache.addAll([OFFLINE_URL, '/pwa-icon/192']))
+      .then((cache) => cache.addAll([OFFLINE_URL, '/icons/icon-192.png']))
       .then(() => self.skipWaiting()),
   );
 });
@@ -30,7 +30,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   // Hashed build assets never change: cache first.
-  if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/pwa-icon/')) {
+  if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/icons/')) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
         const cached = await cache.match(request);

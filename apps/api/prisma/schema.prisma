@@ -752,6 +752,70 @@ model Resume {
   @@index([userId, kind])
 }
 
+/// Job pulled from a public job feed (Remotive, Jobicy, Arbeitnow). Applying always happens on `url`.
+model ExternalJob {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  source         String
+  sourceId       String
+  title          String
+  company        String
+  companyLogo    String?
+  location       String
+  remote         Boolean  @default(true)
+  employmentType String   @default("FULL_TIME")
+  category       String?
+  tags           String[]
+  salaryText     String?
+  /// Sanitised HTML from the feed.
+  description    String
+  summary        String
+  url            String
+  publishedAt    DateTime
+  fetchedAt      DateTime @default(now())
+
+  @@unique([source, sourceId])
+  @@index([publishedAt])
+}
+
+model JobFeedSync {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  source    String    @unique
+  lastRunAt DateTime?
+  lastOkAt  DateTime?
+  lastCount Int       @default(0)
+  lastError String?
+}
+
+/// `listingId` is "dealo_<jobId>" or "ext_<externalJobId>"; title/company are kept so the entry survives the listing.
+model SavedJob {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  listingId String
+  title     String
+  company   String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+}
+
+model JobApplicationLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  listingId String
+  title     String
+  company   String
+  url       String
+  source    String
+  resumeId  String?  @db.ObjectId
+  status    String   @default("APPLIED")
+  note      String?
+  appliedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, listingId])
+  @@index([userId, appliedAt])
+}
+
 /// Reusable email a workspace sends to applicants. Supports {{firstName}}, {{jobTitle}}, {{company}}.
 model AtsEmailTemplate {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId

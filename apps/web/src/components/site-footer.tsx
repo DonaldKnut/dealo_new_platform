@@ -6,10 +6,13 @@ import { ArrowUpRight, Mail } from 'lucide-react';
 import { BrandLogo } from '@/components/brand-logo';
 import { useLocale } from '@/components/i18n/locale-context';
 import { useModal } from '@/components/modals/modal-context';
+import { WhatsAppIcon } from '@/components/whatsapp-icon';
+import { whatsappHref } from '@/lib/whatsapp';
 
 export function SiteFooter() {
   const { open } = useModal();
   const { t } = useLocale();
+  const whatsapp = whatsappHref(t('wa.prefill'));
 
   return (
     <footer className="relative overflow-hidden border-t border-border">
@@ -30,6 +33,17 @@ export function SiteFooter() {
                 <Mail className="h-4 w-4" />
                 {t('cta.contact')}
               </button>
+              {whatsapp ? (
+                <a
+                  href={whatsapp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-semibold text-[#073b1f] transition hover:brightness-95"
+                >
+                  <WhatsAppIcon className="h-4 w-4" />
+                  {t('wa.cta')}
+                </a>
+              ) : null}
             </div>
           </div>
 

@@ -48,7 +48,7 @@ export function PwaInstall() {
           exit={{ opacity: 0, y: 24 }}
           className="pwa-hide fixed inset-x-2 bottom-[calc(5rem+var(--safe-bottom))] z-[95] mx-auto flex max-w-sm items-center gap-2 rounded-2xl border border-border bg-surface-elevated p-2.5 shadow-[0_18px_40px_rgba(4,47,46,0.25)] min-[340px]:gap-3 min-[340px]:p-3 lg:bottom-6 lg:left-6 lg:right-auto lg:mx-0"
         >
-          <img src="/pwa-icon/192" alt="" className="h-9 w-9 shrink-0 rounded-xl" />
+          <img src="/icons/icon-192.png" alt="Dealo" className="h-10 w-10 shrink-0 rounded-xl border border-border bg-white p-0.5 shadow-sm min-[340px]:h-11 min-[340px]:w-11" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-foreground">Get the Dealo app</p>
             <p className="truncate text-[11px] text-muted">Faster, full screen, works offline</p>

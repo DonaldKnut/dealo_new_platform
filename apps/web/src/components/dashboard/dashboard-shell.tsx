@@ -49,6 +49,8 @@ import { apiFetch } from '@/lib/api';
 import { logClientAudit } from '@/lib/client-audit';
 import { fetchAuthMe } from '@/lib/dashboard-api';
 import { VerifyEmailBanner } from '@/components/dashboard/verify-email-banner';
+import { WhatsAppIcon } from '@/components/whatsapp-icon';
+import { whatsappHref, whatsappMessageFor } from '@/lib/whatsapp';
 import { takeReturnTo } from '@/lib/resume-api';
 import { cn } from '@/lib/utils';
 
@@ -362,6 +364,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     ? `${user.firstName} ${user.lastName}`.trim() || user.email
     : 'Dealo user';
   const homeHref = user ? getDashboardHome(user.roles) : '/dashboard';
+  const whatsapp = whatsappHref(whatsappMessageFor(pathname, t('wa.prefill')));
   const roleGroup = user ? getRoleGroup(user.roles) : 'employer';
   const roleLabel =
     roleGroup === 'admin'
@@ -561,6 +564,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <DashboardTour />
                   <LanguageSwitcher className="hidden md:inline-flex" />
                 </div>
+                {whatsapp ? (
+                  <a
+                    href={whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Chat with us on WhatsApp"
+                    title="Chat with us on WhatsApp"
+                    className="hidden h-9 items-center justify-center gap-1.5 rounded-full bg-[#25D366] px-2.5 text-sm font-semibold text-[#073b1f] transition hover:brightness-95 min-[300px]:inline-flex min-[340px]:h-10 min-[340px]:px-3"
+                  >
+                    <WhatsAppIcon className="h-4 w-4" />
+                    <span className="hidden xl:inline">Chat with us</span>
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   className="hidden h-9 w-9 items-center justify-center rounded-full border border-border min-[280px]:inline-flex min-[340px]:h-10 min-[340px]:w-10"
@@ -685,6 +701,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <NavItems scope="drawer" onNavigate={() => setMobileOpen(false)} />
               </div>
               <div className="mt-3 space-y-1 border-t border-border pt-3">
+                {whatsapp ? (
+                  <a
+                    href={whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground"
+                  >
+                    <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+                    Chat with us on WhatsApp
+                  </a>
+                ) : null}
                 <LanguageSwitcher variant="row" />
                 <button
                   type="button"

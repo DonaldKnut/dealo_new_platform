@@ -4,8 +4,6 @@ import { Fraunces, Manrope } from 'next/font/google';
 import { Providers } from '@/components/providers';
 import { OrganizationJsonLd } from '@/components/seo/json-ld';
 import { SiteChrome } from '@/components/site-chrome';
-import { FAVICON_LOGO } from '@/lib/brand';
-
 import './globals.css';
 
 const display = Fraunces({
@@ -54,9 +52,12 @@ export const metadata: Metadata = {
     images: ['/opengraph-image'],
   },
   icons: {
-    icon: [{ url: FAVICON_LOGO, type: 'image/png' }],
-    shortcut: FAVICON_LOGO,
-    apple: [{ url: '/pwa-icon/192', sizes: '192x192', type: 'image/png' }],
+    icon: [
+      { url: '/icons/icon-64.png', sizes: '64x64', type: 'image/png' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    shortcut: '/icons/icon-64.png',
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
   applicationName: 'Dealo',
   appleWebApp: {

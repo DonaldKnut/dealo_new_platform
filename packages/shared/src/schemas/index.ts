@@ -9,6 +9,7 @@ export * from './candidate';
 export * from './contact';
 export * from './hire-inquiry';
 export * from './hire-inquiry-status';
+export * from './job-board';
 export * from './mail';
 export * from './newsletter';
 export * from './ops';

@@ -67,6 +67,8 @@ const envSchema = z.object({
     .optional()
     .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
   GEMINI_MODEL: z.string().default('gemini-2.5-flash'),
+  /** Pull jobs from Remotive, Jobicy and Arbeitnow for the job board. */
+  JOB_FEEDS_ENABLED: z.enum(['true', 'false']).default('true'),
   PAYSTACK_PUBLIC_KEY: z
     .string()
     .optional()
