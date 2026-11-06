@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   BookOpen,
   Bot,
+  Briefcase,
   Building2,
   ChevronDown,
   Code2,
@@ -52,7 +53,7 @@ const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/ap
 );
 
 const aiDefs: MegaItemDef[] = [
-  { href: '/#ai-agents', titleKey: 'mega.ai.agents.title', descKey: 'mega.ai.agents.desc', icon: Bot },
+  { href: '/hiring-agents', titleKey: 'mega.ai.agents.title', descKey: 'mega.ai.agents.desc', icon: Bot, badge: 'New' },
   { href: '/ats', titleKey: 'mega.ai.ats.title', descKey: 'mega.ai.ats.desc', icon: Kanban, badge: 'New' },
   { href: '/ats#trust', titleKey: 'mega.ai.trust.title', descKey: 'mega.ai.trust.desc', icon: ShieldCheck },
 ];
@@ -124,6 +125,13 @@ const offerDefs: MegaItemDef[] = [
 ];
 
 const resourceDefs: MegaItemDef[] = [
+  {
+    href: '/jobs',
+    titleKey: 'mega.jobs.title',
+    descKey: 'mega.jobs.desc',
+    icon: Briefcase,
+    badge: 'New',
+  },
   {
     href: '/resume-builder',
     titleKey: 'mega.cv.title',

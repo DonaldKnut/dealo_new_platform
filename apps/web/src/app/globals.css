@@ -819,3 +819,53 @@
     transition: none;
   }
 }
+
+/* Job descriptions from partner job boards (sanitised HTML). */
+.job-html {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.job-html > * + * {
+  margin-top: 0.75rem;
+}
+.job-html h3,
+.job-html h4 {
+  margin-top: 1.25rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.job-html h3 {
+  font-size: 1rem;
+}
+.job-html strong,
+.job-html b {
+  font-weight: 600;
+  color: var(--foreground);
+}
+.job-html ul,
+.job-html ol {
+  padding-left: 1.25rem;
+}
+.job-html ul {
+  list-style: disc;
+}
+.job-html ol {
+  list-style: decimal;
+}
+.job-html li + li {
+  margin-top: 0.3rem;
+}
+.job-html li::marker {
+  color: var(--brand);
+}
+.job-html a {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.job-html blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 0.75rem;
+}

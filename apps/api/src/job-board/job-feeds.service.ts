@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 import type { AppEnv } from '../config/env.validation';
 import { PrismaService } from '../prisma/prisma.service';
-import { FEED_FETCHERS, FEED_INFO, type FeedSource } from './job-feeds';
+import { collapseDuplicates, FEED_FETCHERS, FEED_INFO, type FeedSource } from './job-feeds';
 
 const KEEP_DAYS = 30;
 const CHECK_EVERY_MS = 30 * 60_000;
@@ -76,9 +76,13 @@ export class JobFeedsService implements OnModuleInit, OnModuleDestroy {
   private async syncOne(source: FeedSource): Promise<number | string> {
     const now = new Date();
     try {
-      const jobs = await FEED_FETCHERS[source]();
+      const raw = await FEED_FETCHERS[source]();
+      const jobs = collapseDuplicates(raw);
       const unique = [...new Map(jobs.map((job) => [job.sourceId, job])).values()];
       const ids = unique.map((job) => job.sourceId);
+      // Copies merged into another listing (same job posted per city) are removed if stored earlier.
+      const merged = raw.map((job) => job.sourceId).filter((id) => !ids.includes(id));
+      if (merged.length) await this.prisma.externalJob.deleteMany({ where: { source, sourceId: { in: merged } } });
       const known = new Set(
         (await this.prisma.externalJob.findMany({ where: { source, sourceId: { in: ids } }, select: { sourceId: true } })).map((r) => r.sourceId),
       );
@@ -86,6 +90,10 @@ export class JobFeedsService implements OnModuleInit, OnModuleDestroy {
       const fresh = unique.filter((job) => !known.has(job.sourceId));
       if (fresh.length) await this.prisma.externalJob.createMany({ data: fresh.map((job) => ({ ...job, fetchedAt: now })) });
       if (known.size) await this.prisma.externalJob.updateMany({ where: { source, sourceId: { in: [...known] } }, data: { fetchedAt: now } });
+      const rawLocation = new Map(raw.map((job) => [job.sourceId, job.location]));
+      for (const job of unique.filter((j) => known.has(j.sourceId) && j.location !== rawLocation.get(j.sourceId))) {
+        await this.prisma.externalJob.updateMany({ where: { source, sourceId: job.sourceId }, data: { location: job.location, remote: job.remote } });
+      }
       await this.prisma.jobFeedSync.upsert({
         where: { source },
         create: { source, lastRunAt: now, lastOkAt: now, lastCount: jobs.length },

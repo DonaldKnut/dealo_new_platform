@@ -45,6 +45,7 @@ import { useToast } from '@/components/ui/toast';
 import type { AuthSessionUser } from '@/hooks/use-auth-session';
 import { ApiError } from '@/lib/api';
 import { fetchAuthMe } from '@/lib/dashboard-api';
+import { jobsApi } from '@/lib/jobs-api';
 import { DRAFT_KEY, LETTER_DRAFT_KEY, rememberReturnTo, resumeApi, type ResumeKind, type ResumePlan, type SaveBody } from '@/lib/resume-api';
 import { cn } from '@/lib/utils';
 
@@ -99,6 +100,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
   const [downloading, setDownloading] = useState(false);
   const [done, setDone] = useState<Blob | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [jobAdvert, setJobAdvert] = useState('');
   const version = useRef(0);
   const savingRef = useRef(false);
   const pendingDownload = useRef(false);
@@ -169,6 +171,18 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
         pendingDownload.current = params.get('download') === '1';
         const picked = RESUME_TEMPLATES.find((t) => t.id === params.get('template'));
         if (picked) setStyle((s) => ({ ...s, template: picked.id }));
+      }
+      const listingId = new URLSearchParams(window.location.search).get('job');
+      if (listingId && initialKind === 'RESUME') {
+        jobsApi
+          .detail(listingId)
+          .then((job) => {
+            if (!active) return;
+            const text = job.description.replace(/<\/(p|li|h\d)>/gi, '\n').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim();
+            setJobAdvert(`${job.title} at ${job.company}\n\n${[...job.mustHaves.map((m) => `- ${m}`), text].join('\n')}`.slice(0, 8000));
+            setStep('tailor');
+          })
+          .catch(() => undefined);
       }
       setLoaded(true);
     })();
@@ -445,7 +459,9 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
                 {step === 'education' ? <EducationEditor data={data} update={update} /> : null}
                 {step === 'skills' ? <SkillsEditor data={data} update={update} /> : null}
                 {step === 'more' ? <MoreEditor data={data} update={update} /> : null}
-                {step === 'tailor' ? <TailorPanel data={data} update={update} premium={premium} onLocked={ai.onLocked} /> : null}
+                {step === 'tailor' ? (
+                  <TailorPanel key={jobAdvert ? 'job' : 'blank'} data={data} update={update} premium={premium} onLocked={ai.onLocked} initialAdvert={jobAdvert} />
+                ) : null}
                 {step === 'letter' ? (
                   <CoverLetterEditor letter={letter} onChange={setLetter} premium={premium} signedIn={Boolean(me)} onLocked={ai.onLocked} />
                 ) : null}
@@ -529,6 +545,16 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
                 {sharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />} Share with Dealo recruiters
               </button>
             </div>
+          ) : null}
+          {kind === 'RESUME' ? (
+            <Link href="/jobs" className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3 transition hover:border-brand">
+              <Briefcase className="h-5 w-5 shrink-0 text-brand" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-foreground">Find jobs to apply with this CV</span>
+                <span className="block text-xs text-muted">Fresh jobs every day. Dealo jobs take your CV in one tap.</span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted" />
+            </Link>
           ) : null}
           <button type="button" className="btn-secondary w-full text-sm" onClick={() => setDone(null)}>
             Done

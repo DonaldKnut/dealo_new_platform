@@ -16,6 +16,7 @@ const STATIC_PATHS = [
   '/for-professionals',
   '/developers',
   '/ats',
+  '/jobs',
   '/resume-builder',
   '/faq',
   '/hire',
@@ -32,11 +33,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.map((path) => ({
     url: `${APP_URL}${path}`,
     lastModified: now,
-    changeFrequency: path === '/' || path === '/blog' ? 'weekly' : 'monthly',
+    changeFrequency: path === '/jobs' ? 'daily' : path === '/' || path === '/blog' ? 'weekly' : 'monthly',
     priority:
       path === '/'
         ? 1
-        : ['/hire', '/blog', '/services', '/for-employers', '/resume-builder'].includes(path)
+        : ['/hire', '/blog', '/services', '/for-employers', '/resume-builder', '/jobs'].includes(path)
           ? 0.9
           : path.startsWith('/auth')
             ? 0.3

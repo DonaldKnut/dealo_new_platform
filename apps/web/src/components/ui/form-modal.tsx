@@ -32,6 +32,7 @@ export function FormModal({
   mobile = 'full',
   children,
   className,
+  bodyClassName,
 }: {
   open: boolean;
   onClose: () => void;
@@ -45,6 +46,8 @@ export function FormModal({
   mobile?: 'full' | 'auto';
   children: ReactNode;
   className?: string;
+  /** Replaces the padded, scrolling body, e.g. when the content scrolls itself. */
+  bodyClassName?: string;
 }) {
   const [mounted, setMounted] = useState(false);
   const compact = useCompactViewport();
@@ -159,7 +162,7 @@ export function FormModal({
             ) : null}
 
             <motion.div
-              className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 min-[340px]:px-5 sm:px-7 sm:py-6"
+              className={bodyClassName ?? 'relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 min-[340px]:px-5 sm:px-7 sm:py-6'}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08, duration: 0.25 }}

@@ -11,9 +11,22 @@ import { resumeApi } from '@/lib/resume-api';
 import { PremiumBadge } from './editor-parts';
 import type { Update } from './section-editors';
 
-export function TailorPanel({ data, update, premium, onLocked }: { data: ResumeData; update: Update; premium: boolean; onLocked: () => void }) {
+export function TailorPanel({
+  data,
+  update,
+  premium,
+  onLocked,
+  initialAdvert = '',
+}: {
+  data: ResumeData;
+  update: Update;
+  premium: boolean;
+  onLocked: () => void;
+  /** Prefilled when the person came from a job on the Dealo job board. */
+  initialAdvert?: string;
+}) {
   const toast = useToast();
-  const [advert, setAdvert] = useState('');
+  const [advert, setAdvert] = useState(initialAdvert);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<(ResumeAiTailorResult & { provider: string }) | null>(null);
   const [applied, setApplied] = useState<string[]>([]);

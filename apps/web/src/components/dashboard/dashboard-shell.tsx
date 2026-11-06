@@ -21,6 +21,7 @@ import {
   PanelLeftOpen,
   Radar,
   ScrollText,
+  Send,
   Settings,
   UserRound,
   UserSearch,
@@ -251,6 +252,12 @@ const talentNav: NavItem[] = [
     labelKey: 'dash.nav.resumes',
     icon: FileText,
     help: 'Build, edit and download CVs and cover letters.',
+  },
+  {
+    href: '/dashboard/applications',
+    labelKey: 'dash.nav.applications',
+    icon: Send,
+    help: 'Jobs you applied for or saved on the Dealo job board.',
   },
   {
     href: '/dashboard/matches',

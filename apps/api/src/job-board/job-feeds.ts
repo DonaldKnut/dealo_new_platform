@@ -248,6 +248,25 @@ export async function fetchArbeitnow(pages = 2): Promise<FeedJob[]> {
   return out;
 }
 
+/**
+ * Some companies post the same job once per city. Keep one listing (the newest) and
+ * name the other places, so one employer can't fill the whole board.
+ */
+export function collapseDuplicates(jobs: FeedJob[]): FeedJob[] {
+  const groups = new Map<string, FeedJob[]>();
+  for (const job of jobs) {
+    const key = `${job.company.toLowerCase()}|${job.title.toLowerCase()}`;
+    groups.set(key, [...(groups.get(key) ?? []), job]);
+  }
+  return [...groups.values()].map((group) => {
+    if (group.length === 1) return group[0]!;
+    const newest = [...group].sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())[0]!;
+    const places = [...new Set(group.map((j) => j.location))];
+    const location = places.length > 2 ? `${places.slice(0, 2).join(', ')} +${places.length - 2} more` : places.join(', ');
+    return { ...newest, location: location.slice(0, 160), remote: group.some((j) => j.remote) };
+  });
+}
+
 export const FEED_FETCHERS: Record<FeedSource, () => Promise<FeedJob[]>> = {
   remotive: fetchRemotive,
   jobicy: fetchJobicy,
