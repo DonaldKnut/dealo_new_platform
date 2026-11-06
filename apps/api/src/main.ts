@@ -1,8 +1,10 @@
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import type { Request, Response } from 'express';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 
@@ -10,12 +12,22 @@ import { API_SCOPES } from '@dealo/shared';
 
 import { AppModule } from './app.module';
 
+/** "1" = number of proxy hops, "true"/"false", or an Express preset such as "loopback". */
+function parseTrustProxy(value: string): number | boolean | string {
+  if (/^\d+$/.test(value)) return Number(value);
+  if (value === 'true' || value === 'false') return value === 'true';
+  return value;
+}
+
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true, rawBody: true });
   const config = app.get(ConfigService);
   const logger = app.get(Logger);
 
   app.useLogger(logger);
+  // Hosts like Render sit behind a proxy; without this every visitor shares the proxy's IP,
+  // so rate limits and audit IPs would apply to the whole site instead of each person.
+  app.set('trust proxy', parseTrustProxy(config.get<string>('TRUST_PROXY', '1')));
   app.setGlobalPrefix('api/v1', {
     exclude: [
       { path: '/', method: RequestMethod.GET },
@@ -112,8 +124,7 @@ async function bootstrap(): Promise<void> {
     },
   });
 
-  const httpAdapter = app.getHttpAdapter();
-  httpAdapter.get('/api/openapi.json', (_req: unknown, res: { type: (t: string) => void; json: (b: unknown) => void }) => {
+  app.getHttpAdapter().getInstance().get('/api/openapi.json', (_req: Request, res: Response) => {
     res.type('application/json');
     res.json(document);
   });

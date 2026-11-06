@@ -3,6 +3,8 @@ import { z } from 'zod';
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
+  /** Proxy hops in front of the API (Render: 1). Use "false" when the API is exposed directly. */
+  TRUST_PROXY: z.string().trim().default('1'),
   APP_URL: z.string().url(),
   API_URL: z.string().url(),
   CORS_ORIGIN: z.string().min(1),
