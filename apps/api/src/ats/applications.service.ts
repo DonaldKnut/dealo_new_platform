@@ -28,6 +28,7 @@ import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { AtsAccessService, isObjectId, type WorkspaceAccess } from './ats-access.service';
+import { AtsEventsService } from './ats-events.service';
 import { applicationReceivedEmail, rejectionEmail } from './ats-emails';
 
 export const CV_MIME = new Set([
@@ -111,6 +112,7 @@ export class ApplicationsService {
     private readonly email: EmailService,
     private readonly ai: AiService,
     private readonly webhooks: WebhooksService,
+    private readonly events: AtsEventsService,
   ) {}
 
   // ----------------------------------------------------------------- careers
@@ -252,9 +254,9 @@ export class ApplicationsService {
         .catch(() => undefined);
     }
     this.webhooks.dispatchWorkspaceEvent(WebhookEvent.APPLICATION_CREATED, org.id, applicationPayload(application, job));
-    void this.screen(application.id, actorId).catch((error: unknown) =>
-      this.logger.warn(`AI screen failed for application ${application.id}: ${String(error)}`),
-    );
+    void this.screen(application.id, actorId)
+      .catch((error: unknown) => this.logger.warn(`AI screen failed for application ${application.id}: ${String(error)}`))
+      .finally(() => this.events.emit({ type: 'application.created', organizationId: org.id, jobId: job.id, applicationId: application.id }));
 
     return { id: application.id, jobTitle: job.title, organization: org.name };
   }
@@ -393,6 +395,7 @@ export class ApplicationsService {
         ...applicationPayload(updated, application.job),
         previousStage: application.stage,
       });
+      this.events.emit({ type: 'application.stage_changed', organizationId: orgId, jobId: application.jobId, applicationId: application.id, from: application.stage, to: stage, actor: user });
       moved += 1;
     }
     return { moved };

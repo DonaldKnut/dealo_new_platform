@@ -6,6 +6,7 @@ import { LoggerModule } from 'nestjs-pino';
 
 import { AiModule } from './ai/ai.module';
 import { AtsModule } from './ats/ats.module';
+import { HiringAgentsModule } from './hiring-agents/hiring-agents.module';
 import { JobBoardModule } from './job-board/job-board.module';
 import { ResumesModule } from './resumes/resumes.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
@@ -78,6 +79,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     AtsModule,
     ResumesModule,
     JobBoardModule,
+    HiringAgentsModule,
   ],
   providers: [
     {

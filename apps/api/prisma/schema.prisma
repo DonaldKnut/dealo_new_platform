@@ -205,6 +205,9 @@ model Organization {
   plan           String   @default("EARLY_ACCESS")
   maxOpenJobs    Int      @default(10)
   maxSeats       Int      @default(10)
+  /// Hiring Agents plan: FREE or PRO (PRO lapses back to FREE after agentPlanUntil).
+  agentPlan      String    @default("FREE")
+  agentPlanUntil DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -664,6 +667,8 @@ model Job {
   createdById      String          @db.ObjectId
   publishedAt      DateTime?
   closedAt         DateTime?
+  /// Questions and scoring guide from the interview kit agent.
+  interviewKit     Json?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -750,6 +755,76 @@ model Resume {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId, kind])
+}
+
+// -------------------------------------------------------------- hiring agents
+
+model AgentSetting {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String    @db.ObjectId
+  agent          String
+  enabled        Boolean   @default(false)
+  config         Json?
+  lastRunAt      DateTime?
+  updatedById    String?   @db.ObjectId
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([organizationId, agent])
+  @@index([agent, enabled])
+}
+
+/// One piece of agent work: a suggestion or draft waiting for a person, or a finished report.
+model AgentTask {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String    @db.ObjectId
+  agent          String
+  kind           String
+  status         String    @default("PENDING")
+  title          String
+  summary        String
+  payload        Json
+  jobId          String?   @db.ObjectId
+  applicationId  String?   @db.ObjectId
+  trigger        String    @default("on_demand")
+  provider       String    @default("rules")
+  result         String?
+  createdById    String?   @db.ObjectId
+  decidedById    String?   @db.ObjectId
+  decidedByName  String?
+  decidedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, agent, createdAt])
+  @@index([organizationId, jobId, agent, status])
+}
+
+model AgentUsage {
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  organizationId String @db.ObjectId
+  /// "2026-11", in Lagos time.
+  month          String
+  runs           Int    @default(0)
+
+  @@unique([organizationId, month])
+}
+
+model AgentInvoice {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  reference        String    @unique
+  organizationId   String    @db.ObjectId
+  userId           String    @db.ObjectId
+  amountMinor      Int
+  currency         String
+  periodDays       Int
+  status           String    @default("PENDING")
+  authorizationUrl String?
+  failureReason    String?
+  paidAt           DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([organizationId, createdAt])
 }
 
 /// Job pulled from a public job feed (Remotive, Jobicy, Arbeitnow). Applying always happens on `url`.

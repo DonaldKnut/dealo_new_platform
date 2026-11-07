@@ -1,11 +1,13 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
+import { adminUpdateUserSchema, type AdminUpdateUserInput } from '@dealo/shared';
 import { UserRole } from '@prisma/client';
 
 import type { AuthUser } from '../auth/auth.types';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../common/current-user.decorator';
 import { Roles } from '../common/roles.decorator';
+import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { DashboardService } from './dashboard.service';
 
 @ApiTags('dashboard')
@@ -58,6 +60,16 @@ export class DashboardController {
   )
   users(@CurrentUser() user: AuthUser) {
     return this.dashboardService.users(user);
+  }
+
+  @Patch('users/:id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  updateUser(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(adminUpdateUserSchema)) body: AdminUpdateUserInput,
+  ) {
+    return this.dashboardService.updateUser(id, body, user);
   }
 
   @Get('organization')

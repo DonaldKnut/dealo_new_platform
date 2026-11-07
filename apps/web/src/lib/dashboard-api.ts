@@ -205,13 +205,19 @@ export type DashboardUser = {
   email: string;
   firstName: string;
   lastName: string;
+  avatarUrl?: string | null;
+  authProvider?: string | null;
   isActive: boolean;
   isEmailVerified: boolean;
   lastLoginAt: string | null;
   createdAt: string;
   premiumUntil?: string | null;
+  resumes?: number;
   roles: string[];
 };
+
+export const updateDashboardUser = (id: string, body: { isActive?: boolean; isEmailVerified?: true; roles?: string[] }) =>
+  apiFetch<DashboardUser | null>(`/dashboard/users/${id}`, { method: 'PATCH', json: body });
 
 export const grantResumePremium = (userId: string, days: number) =>
   apiFetch<{ userId: string; premiumUntil: string | null }>('/resumes/admin/premium', { method: 'POST', json: { userId, days } });

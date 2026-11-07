@@ -175,6 +175,21 @@ export const grantPremiumSchema = z.object({
   days: z.number().int().min(0).max(3650),
 });
 
+/** Admin changes to someone's account from the users page. */
+export const adminUpdateUserSchema = z
+  .object({
+    isActive: z.boolean().optional(),
+    /** Only marks an email as confirmed; it cannot be un-confirmed here. */
+    isEmailVerified: z.literal(true).optional(),
+    roles: z
+      .array(z.enum(['SUPER_ADMIN', 'ADMIN', 'RECRUITER', 'FINANCE', 'OPERATIONS', 'EMPLOYER', 'TALENT']))
+      .min(1, 'Keep at least one role')
+      .max(7)
+      .optional(),
+  })
+  .refine((v) => v.isActive !== undefined || v.isEmailVerified !== undefined || v.roles !== undefined, 'Nothing to change');
+export type AdminUpdateUserInput = z.infer<typeof adminUpdateUserSchema>;
+
 export function isPremiumTemplate(id: string) {
   return RESUME_TEMPLATES.find((t) => t.id === id)?.premium ?? false;
 }

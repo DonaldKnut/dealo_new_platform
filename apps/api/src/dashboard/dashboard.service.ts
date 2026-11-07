@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import type { AdminUpdateUserInput } from '@dealo/shared';
 import {
   CandidateScreenStatus,
   HireInquiryStatus,
@@ -6,8 +7,11 @@ import {
 } from '@prisma/client';
 
 import type { AuthUser } from '../auth/auth.types';
+import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
 import { PrismaService } from '../prisma/prisma.service';
+
+const STAFF_ROLES: UserRole[] = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.RECRUITER, UserRole.FINANCE, UserRole.OPERATIONS];
 
 const MANAGE_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
@@ -20,7 +24,10 @@ type RoleGroup = 'admin' | 'employer' | 'talent';
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   private canManageAll(user: AuthUser) {
     return user.roles.some((role) => MANAGE_ROLES.includes(role));
@@ -473,9 +480,10 @@ export class DashboardService {
 
     const rows = await this.prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
-      take: 200,
+      take: 1000,
       include: {
         roles: { include: { role: true } },
+        _count: { select: { resumes: true } },
       },
     });
 
@@ -484,13 +492,69 @@ export class DashboardService {
       email: row.email,
       firstName: row.firstName,
       lastName: row.lastName,
+      avatarUrl: row.avatarUrl,
+      authProvider: row.authProvider,
       isActive: row.isActive,
       isEmailVerified: row.isEmailVerified,
       lastLoginAt: row.lastLoginAt,
       createdAt: row.createdAt,
       premiumUntil: row.premiumUntil && row.premiumUntil > new Date() ? row.premiumUntil : null,
+      resumes: row._count.resumes,
       roles: row.roles.map((assignment) => assignment.role.code),
     }));
+  }
+
+  /**
+   * Admins can switch accounts on or off and confirm emails; only super admins change roles
+   * or touch other staff accounts. Nobody can change their own account here.
+   */
+  async updateUser(id: string, input: AdminUpdateUserInput, actor: AuthUser) {
+    const isSuper = actor.roles.includes(UserRole.SUPER_ADMIN);
+    if (!isSuper && !actor.roles.includes(UserRole.ADMIN)) throw new ForbiddenException('Only admins can change accounts');
+    if (!/^[a-f0-9]{24}$/i.test(id)) throw new NotFoundException('User not found');
+    if (id === actor.id) throw new BadRequestException('You cannot change your own account here');
+
+    const target = await this.prisma.user.findUnique({ where: { id }, include: { roles: { include: { role: true } } } });
+    if (!target) throw new NotFoundException('User not found');
+    const current = target.roles.map((r) => r.role.code);
+    const targetIsStaff = current.some((r) => r === UserRole.SUPER_ADMIN || r === UserRole.ADMIN);
+    if (!isSuper && (targetIsStaff || input.roles)) throw new ForbiddenException('Only a super admin can change roles or admin accounts');
+
+    const losesSuper = current.includes(UserRole.SUPER_ADMIN) && ((input.roles && !input.roles.includes(UserRole.SUPER_ADMIN)) || input.isActive === false);
+    if (losesSuper) {
+      const supers = await this.prisma.userRoleAssignment.count({ where: { role: { code: UserRole.SUPER_ADMIN }, user: { isActive: true } } });
+      if (supers <= 1) throw new BadRequestException('Keep at least one active super admin');
+    }
+
+    await this.prisma.user.update({
+      where: { id },
+      data: {
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        ...(input.isEmailVerified ? { isEmailVerified: true, emailVerifyToken: null } : {}),
+      },
+    });
+    if (input.isActive === false) {
+      await this.prisma.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+    }
+    if (input.roles) {
+      const wanted = [...new Set(input.roles)];
+      const roleRows = await this.prisma.role.findMany({ where: { code: { in: wanted as UserRole[] } } });
+      await this.prisma.userRoleAssignment.deleteMany({ where: { userId: id, role: { code: { notIn: wanted as UserRole[] } } } });
+      for (const role of roleRows.filter((r) => !current.includes(r.code))) {
+        await this.prisma.userRoleAssignment.create({ data: { userId: id, roleId: role.id } });
+      }
+      // Old sign-ins carry the old roles, so make them sign in again.
+      await this.prisma.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+    }
+
+    await this.auditLog.record({
+      action: 'ADMIN_USER_UPDATED',
+      entityType: 'User',
+      entityId: id,
+      actorId: actor.id,
+      metadata: { ...input, previousRoles: current, staff: current.some((r) => STAFF_ROLES.includes(r)) },
+    });
+    return (await this.users(actor)).find((u) => u.id === id) ?? null;
   }
 
   async organization(user: AuthUser) {

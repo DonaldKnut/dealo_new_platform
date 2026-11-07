@@ -9,7 +9,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { AnimatedHamburger } from '@/components/animated-hamburger';
@@ -35,6 +35,8 @@ import { apiFetch } from '@/lib/api';
 
 import { ThemeToggle } from './theme-toggle';
 
+const DARK_HERO_PATHS = new Set(['/hiring-agents']);
+
 export function SiteHeader() {
   const { open } = useModal();
   const router = useRouter();
@@ -48,6 +50,9 @@ export function SiteHeader() {
   const [mobileSection, setMobileSection] = useState<string | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+  // Pages that open on a dark hero need the light logo and text until the header gets its own background.
+  const onDark = DARK_HERO_PATHS.has(pathname) && !scrolled && !mobileOpen;
   const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -118,10 +123,10 @@ export function SiteHeader() {
       <div className="container-page flex h-14 items-center justify-between gap-1.5 min-[230px]:gap-2 min-[340px]:h-[4.25rem] min-[340px]:gap-3 sm:h-20 sm:gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-4 min-[340px]:gap-5 xl:gap-8">
           <div className="min-w-0 max-w-[46%] min-[280px]:max-w-[52%] min-[340px]:max-w-none">
-            <BrandLogo priority />
+            <BrandLogo priority force={onDark ? 'dark' : 'auto'} />
           </div>
 
-          <nav className="hidden items-center gap-4 text-sm text-muted xl:gap-6 lg:flex">
+          <nav className={`hidden items-center gap-4 text-sm xl:gap-6 lg:flex ${onDark ? 'text-white/75' : 'text-muted'}`}>
             <HeaderMegaMenu label={t('nav.offer')} />
             <AiMegaMenu label={t('nav.ai')} />
             <ApiMegaMenu label={t('nav.api')} />
@@ -203,7 +208,7 @@ export function SiteHeader() {
             <>
               <Link
                 href="/auth/login"
-                className="link-anim hidden py-1 text-sm font-medium text-muted sm:inline-flex"
+                className={`link-anim hidden py-1 text-sm font-medium sm:inline-flex ${onDark ? 'text-white/80' : 'text-muted'}`}
               >
                 {t('nav.signIn')}
               </Link>
@@ -217,7 +222,9 @@ export function SiteHeader() {
             </>
           )}
 
-          <AnimatedHamburger open={mobileOpen} onToggle={() => setMobileOpen((value) => !value)} />
+          <span className={onDark ? 'inline-flex rounded-full bg-white lg:hidden' : 'contents'}>
+            <AnimatedHamburger open={mobileOpen} onToggle={() => setMobileOpen((value) => !value)} />
+          </span>
         </div>
       </div>
 

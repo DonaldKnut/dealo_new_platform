@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Building2, CalendarClock, ChartColumn, Globe, Kanban, Loader2, Plus, Users } from 'lucide-react';
+import { Bot, Building2, CalendarClock, ChartColumn, Globe, Kanban, Loader2, Plus, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 
 const TABS = [
   { href: '/dashboard/ats', label: 'Jobs', icon: Kanban },
+  { href: '/dashboard/ats/agents', label: 'AI agents', icon: Bot },
   { href: '/dashboard/ats/interviews', label: 'Interviews', icon: CalendarClock },
   { href: '/dashboard/ats/reports', label: 'Reports', icon: ChartColumn },
   { href: '/dashboard/ats/team', label: 'Team', icon: Users },
