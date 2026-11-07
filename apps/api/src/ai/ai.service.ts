@@ -356,7 +356,7 @@ export class AiService {
       where: {
         openToWork: true,
         userId: { not: null },
-        OR: [{ roleFamily: inquiry.roleFamily }, { roleFamily: null }],
+        OR: [{ roleFamily: inquiry.roleFamily }, { roleFamily: null }, { roleFamily: { isSet: false } }],
       },
       take: 300,
       orderBy: { updatedAt: 'desc' },

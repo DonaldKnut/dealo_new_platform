@@ -9,6 +9,7 @@ import type {
 } from '@dealo/shared';
 
 import { apiFetch, apiUpload } from '@/lib/api';
+import { getApiBaseUrl } from '@/lib/api-base';
 
 export type WorkspaceRole = 'OWNER' | 'ADMIN' | 'RECRUITER' | 'HIRING_MANAGER';
 export type JobStatus = 'DRAFT' | 'OPEN' | 'PAUSED' | 'CLOSED';
@@ -322,7 +323,7 @@ export const atsApi = {
   rerunAi: (orgId: string, id: string) => apiFetch(`${W(orgId)}/applications/${id}/ai`, { method: 'POST' }),
   reviewAi: (orgId: string, id: string, decision: 'ACCEPTED' | 'DISMISSED') =>
     apiFetch(`${W(orgId)}/applications/${id}/ai/review`, { method: 'POST', json: { decision } }),
-  fileUrl: (orgId: string, fileId: string) => `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'}${W(orgId)}/files/${fileId}`,
+  fileUrl: (orgId: string, fileId: string) => `${getApiBaseUrl()}${W(orgId)}/files/${fileId}`,
 
   interviews: (orgId: string) => apiFetch<InterviewListItem[]>(`${W(orgId)}/interviews`),
   schedule: (orgId: string, id: string, input: ScheduleInterviewInput) =>

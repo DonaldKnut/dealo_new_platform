@@ -61,7 +61,7 @@ export class CandidatesService {
     }
     fullName ||= email;
     const unlinked = await this.prisma.candidate.findFirst({
-      where: { email, userId: null },
+      where: { email, OR: [{ userId: null }, { userId: { isSet: false } }] },
       orderBy: { createdAt: 'asc' },
     });
 

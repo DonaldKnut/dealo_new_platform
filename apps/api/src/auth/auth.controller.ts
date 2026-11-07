@@ -23,6 +23,7 @@ import {
   type ResetPasswordInput,
 } from '@dealo/shared';
 import { ConfigService } from '@nestjs/config';
+import { randomBytes } from 'crypto';
 import type { Request, Response } from 'express';
 import { Throttle } from '@nestjs/throttler';
 
@@ -34,6 +35,8 @@ import { AuthService } from './auth.service';
 import type { AuthUser } from './auth.types';
 import type { GoogleProfileUser } from './google.strategy';
 import { JwtAuthGuard } from './jwt-auth.guard';
+
+const LINKEDIN_STATE_COOKIE = 'li_oauth_state';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -72,16 +75,13 @@ export class AuthController {
       );
     }
 
-    const apiUrl = this.config.get('API_URL', { infer: true });
     const statePayload =
       role === 'EMPLOYER' || role === 'TALENT'
         ? Buffer.from(JSON.stringify({ role }), 'utf8').toString('base64url')
         : '';
     const params = new URLSearchParams({
       client_id: this.config.get('GOOGLE_CLIENT_ID', { infer: true })!,
-      redirect_uri:
-        this.config.get('GOOGLE_CALLBACK_URL', { infer: true }) ??
-        `${apiUrl}/api/v1/auth/google/callback`,
+      redirect_uri: this.authService.oauthCallbackUrl('google'),
       response_type: 'code',
       scope: 'email profile',
       access_type: 'online',
@@ -105,9 +105,79 @@ export class AuthController {
       throw new ServiceUnavailableException('Google sign-in is not configured');
     }
 
-    await this.authService.loginWithGoogle(req.user, res);
-    const appUrl = this.config.get('APP_URL', { infer: true });
+    const appUrl = this.config.get('APP_URL', { infer: true }).replace(/\/$/, '');
+    try {
+      await this.authService.loginWithGoogle(req.user, res);
+    } catch (err) {
+      return res.redirect(`${appUrl}/auth/login?error=${encodeURIComponent(err instanceof Error ? err.message : 'Google sign-in failed')}`);
+    }
     return res.redirect(`${appUrl}/dashboard`);
+  }
+
+  @Public()
+  @Post('refresh')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOkResponse({ description: 'New sign-in cookies from the refresh cookie' })
+  refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.authService.refresh((req.cookies as Record<string, string> | undefined)?.refresh_token, res);
+  }
+
+  @Public()
+  @Get('providers')
+  @ApiOkResponse({ description: 'Which social sign-in buttons to show' })
+  providers() {
+    return { google: this.authService.isGoogleConfigured(), linkedin: this.authService.isLinkedinConfigured() };
+  }
+
+  @Public()
+  @Get('linkedin')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  linkedinAuth(@Query('role') role: string | undefined, @Res() res: Response) {
+    if (!this.authService.isLinkedinConfigured()) {
+      throw new ServiceUnavailableException('LinkedIn sign-in is not configured. Add LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET.');
+    }
+    const nonce = randomBytes(16).toString('base64url');
+    const state = Buffer.from(JSON.stringify({ n: nonce, role: role === 'EMPLOYER' || role === 'TALENT' ? role : undefined }), 'utf8').toString('base64url');
+    // The nonce must come back with LinkedIn's redirect; it stops someone else's sign-in being forced onto this browser.
+    res.cookie(LINKEDIN_STATE_COOKIE, nonce, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: this.config.get('COOKIE_SECURE', { infer: true }),
+      path: '/',
+      maxAge: 10 * 60_000,
+    });
+    return res.redirect(this.authService.linkedinAuthorizeUrl(state));
+  }
+
+  @Public()
+  @Get('linkedin/callback')
+  async linkedinCallback(
+    @Query('code') code: string | undefined,
+    @Query('state') state: string | undefined,
+    @Query('error') error: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const appUrl = this.config.get('APP_URL', { infer: true }).replace(/\/$/, '');
+    const fail = (reason: string) => res.redirect(`${appUrl}/auth/login?error=${encodeURIComponent(reason)}`);
+    const expected = (req.cookies as Record<string, string> | undefined)?.[LINKEDIN_STATE_COOKIE];
+    res.clearCookie(LINKEDIN_STATE_COOKIE, { path: '/' });
+    if (error) return fail(error === 'user_cancelled_login' || error === 'user_cancelled_authorize' ? 'LinkedIn sign-in was cancelled' : 'LinkedIn sign-in failed');
+    let parsed: { n?: string; role?: 'EMPLOYER' | 'TALENT' } = {};
+    try {
+      parsed = JSON.parse(Buffer.from(state ?? '', 'base64url').toString('utf8')) as typeof parsed;
+    } catch {
+      parsed = {};
+    }
+    if (!code || !expected || parsed.n !== expected) return fail('LinkedIn sign-in expired. Please try again.');
+    try {
+      const profile = await this.authService.linkedinProfile(code);
+      await this.authService.loginWithProvider('linkedin', { ...profile, intendedRole: parsed.role }, res);
+      return res.redirect(`${appUrl}/dashboard`);
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : 'LinkedIn sign-in failed');
+    }
   }
 
   @Public()

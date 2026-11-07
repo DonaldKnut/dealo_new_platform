@@ -103,7 +103,9 @@ model User {
   passwordHash         String?
   firstName            String
   lastName             String
-  googleId             String?   @unique
+  /// Not @unique: MongoDB unique indexes count missing values, so a second password-only account would be refused.
+  googleId             String?
+  linkedinId           String?
   avatarUrl            String?
   authProvider         String    @default("local")
   isEmailVerified      Boolean   @default(false)
@@ -130,6 +132,9 @@ model User {
   webhookEndpoints        WebhookEndpoint[]    @relation("WebhookOwner")
   apiSubscription         ApiSubscription?     @relation("ApiSubscriber")
   apiInvoices             ApiInvoice[]         @relation("ApiInvoiceOwner")
+
+  @@index([googleId])
+  @@index([linkedinId])
 }
 
 model Role {

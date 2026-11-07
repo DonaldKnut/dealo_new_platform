@@ -8,6 +8,7 @@ import { FormField } from '@/components/forms/form-field';
 import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
+import { apiFileHref } from '@/lib/api-base';
 import { cn } from '@/lib/utils';
 import {
   deleteTalentDocument,
@@ -70,7 +71,7 @@ export function TalentDocumentsPanel() {
     return (
       <div className="flex min-h-[30vh] items-center justify-center gap-2 text-sm text-muted">
         <LoaderCircle className="h-4 w-4 animate-spin" />
-        Loading documents…
+        Loading documentsâ€¦
       </div>
     );
   }
@@ -80,7 +81,7 @@ export function TalentDocumentsPanel() {
       <DashHero
         eyebrow="Documents"
         title="Your documents"
-        subtitle="Upload a CV or certificates (PDF, PNG, JPG, WebP — max 8 MB) for recruiter screening."
+        subtitle="Upload a CV or certificates (PDF, PNG, JPG, WebP â€” max 8 MB) for recruiter screening."
         actions={
           uploadsConfigured ? (
             <button
@@ -119,7 +120,7 @@ export function TalentDocumentsPanel() {
               Cancel
             </button>
             <button type="submit" form="doc-upload-form" className="btn-primary" disabled={uploading || !file}>
-              {uploading ? 'Uploading…' : 'Upload'}
+              {uploading ? 'Uploadingâ€¦' : 'Upload'}
             </button>
           </>
         }
@@ -180,7 +181,7 @@ export function TalentDocumentsPanel() {
               <input type="file" accept=".pdf,image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               {file ? <FileCheck2 className="h-6 w-6" /> : <Upload className="h-6 w-6" />}
               <span className="max-w-full break-all font-semibold">{file ? file.name : 'Tap to choose a file'}</span>
-              <span className="text-xs">{file ? formatBytes(file.size) : 'or drag it here · PDF or image, up to 8 MB'}</span>
+              <span className="text-xs">{file ? formatBytes(file.size) : 'or drag it here Â· PDF or image, up to 8 MB'}</span>
             </label>
           </FormField>
         </form>
@@ -199,13 +200,13 @@ export function TalentDocumentsPanel() {
               <div className="min-w-0">
                 <p className="truncate font-medium text-foreground">{doc.fileName}</p>
                 <p className="mt-1 text-xs text-muted">
-                  {doc.kind} · {formatBytes(doc.byteSize)} ·{' '}
+                  {doc.kind} Â· {formatBytes(doc.byteSize)} Â·{' '}
                   {new Date(doc.createdAt).toLocaleDateString('en-NG')}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <a
-                  href={doc.url}
+                  href={apiFileHref(doc.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-secondary"

@@ -6,6 +6,7 @@ import {
   UserRole,
 } from '@prisma/client';
 
+import { NOT_REVOKED } from '../auth/auth.service';
 import type { AuthUser } from '../auth/auth.types';
 import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
@@ -343,7 +344,7 @@ export class DashboardService {
     if (!candidate) {
       const email = normalizeEmail(user.email);
       const unlinked = await this.prisma.candidate.findFirst({
-        where: { email, userId: null },
+        where: { email, OR: [{ userId: null }, { userId: { isSet: false } }] },
       });
       if (unlinked) {
         candidate = await this.prisma.candidate.update({
@@ -534,7 +535,7 @@ export class DashboardService {
       },
     });
     if (input.isActive === false) {
-      await this.prisma.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+      await this.prisma.refreshToken.updateMany({ where: { userId: id, ...NOT_REVOKED }, data: { revokedAt: new Date() } });
     }
     if (input.roles) {
       const wanted = [...new Set(input.roles)];
@@ -544,7 +545,7 @@ export class DashboardService {
         await this.prisma.userRoleAssignment.create({ data: { userId: id, roleId: role.id } });
       }
       // Old sign-ins carry the old roles, so make them sign in again.
-      await this.prisma.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+      await this.prisma.refreshToken.updateMany({ where: { userId: id, ...NOT_REVOKED }, data: { revokedAt: new Date() } });
     }
 
     await this.auditLog.record({

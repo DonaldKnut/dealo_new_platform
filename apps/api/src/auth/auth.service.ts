@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UserRole } from '@prisma/client';
+import { UserRole, type Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 import type { Response } from 'express';
@@ -18,6 +18,9 @@ import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import type { AuthUser, JwtPayload } from './auth.types';
+
+/** MongoDB: a token that was never revoked has no `revokedAt` at all, which `revokedAt: null` does not match. */
+export const NOT_REVOKED = { OR: [{ revokedAt: null }, { revokedAt: { isSet: false } }] } satisfies Prisma.RefreshTokenWhereInput;
 
 @Injectable()
 export class AuthService {
@@ -103,28 +106,39 @@ export class AuthService {
     };
   }
 
-  async loginWithGoogle(
-    profile: {
-      googleId: string;
-      email: string;
-      firstName: string;
-      lastName: string;
-      avatarUrl?: string;
-      intendedRole?: 'EMPLOYER' | 'TALENT';
-    },
+  loginWithGoogle(
+    profile: { googleId: string; email: string; firstName: string; lastName: string; avatarUrl?: string; intendedRole?: 'EMPLOYER' | 'TALENT' },
     res: Response,
   ) {
-    let user = await this.usersService.findByGoogleId(profile.googleId);
+    const { googleId, ...rest } = profile;
+    return this.loginWithProvider('google', { ...rest, providerId: googleId }, res);
+  }
+
+  /**
+   * Signs in (or signs up) with Google or LinkedIn. A provider email is only linked to an existing
+   * Dealo account when the provider says it is verified, so nobody can take over an account.
+   */
+  async loginWithProvider(
+    provider: 'google' | 'linkedin',
+    profile: { providerId: string; email: string; firstName: string; lastName: string; avatarUrl?: string; intendedRole?: 'EMPLOYER' | 'TALENT' },
+    res: Response,
+  ) {
+    const idField = provider === 'google' ? 'googleId' : 'linkedinId';
+    const label = provider === 'google' ? 'Google' : 'LinkedIn';
+    let user = provider === 'google' ? await this.usersService.findByGoogleId(profile.providerId) : await this.usersService.findByLinkedinId(profile.providerId);
 
     if (!user) {
       const existingByEmail = await this.usersService.findByEmail(profile.email);
       if (existingByEmail) {
+        const providers = new Set(existingByEmail.authProvider.split('+'));
+        if (!existingByEmail.passwordHash) providers.delete('local');
+        providers.add(provider);
         await this.prisma.user.update({
           where: { id: existingByEmail.id },
           data: {
-            googleId: profile.googleId,
-            avatarUrl: profile.avatarUrl,
-            authProvider: existingByEmail.passwordHash ? 'local+google' : 'google',
+            [idField]: profile.providerId,
+            avatarUrl: existingByEmail.avatarUrl ?? profile.avatarUrl,
+            authProvider: [...providers].sort().join('+'),
             isEmailVerified: true,
             emailVerifyToken: null,
             lastLoginAt: new Date(),
@@ -143,9 +157,9 @@ export class AuthService {
             email: profile.email,
             firstName: profile.firstName,
             lastName: profile.lastName,
-            googleId: profile.googleId,
+            [idField]: profile.providerId,
             avatarUrl: profile.avatarUrl,
-            authProvider: 'google',
+            authProvider: provider,
             isEmailVerified: true,
             lastLoginAt: new Date(),
             roles: {
@@ -160,14 +174,14 @@ export class AuthService {
         where: { id: user.id },
         data: {
           lastLoginAt: new Date(),
-          avatarUrl: profile.avatarUrl ?? user.avatarUrl,
+          avatarUrl: user.avatarUrl ?? profile.avatarUrl,
         },
       });
       user = await this.usersService.findById(user.id);
     }
 
     if (!user || !user.isActive) {
-      throw new UnauthorizedException('Unable to sign in with Google');
+      throw new UnauthorizedException(`Unable to sign in with ${label}`);
     }
 
     if (user.roles.includes(UserRole.TALENT)) {
@@ -186,10 +200,74 @@ export class AuthService {
     );
   }
 
+  isLinkedinConfigured(): boolean {
+    return Boolean(this.config.get('LINKEDIN_CLIENT_ID', { infer: true }) && this.config.get('LINKEDIN_CLIENT_SECRET', { infer: true }));
+  }
+
+  /** Where Google and LinkedIn send people back. It goes through the website so the sign-in cookie is set on the site's own domain. */
+  oauthCallbackUrl(provider: 'google' | 'linkedin') {
+    const explicit = this.config.get(provider === 'google' ? 'GOOGLE_CALLBACK_URL' : 'LINKEDIN_CALLBACK_URL', { infer: true });
+    return explicit ?? `${this.config.get('APP_URL', { infer: true }).replace(/\/$/, '')}/api/v1/auth/${provider}/callback`;
+  }
+
+  linkedinAuthorizeUrl(state: string) {
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: this.config.get('LINKEDIN_CLIENT_ID', { infer: true })!,
+      redirect_uri: this.oauthCallbackUrl('linkedin'),
+      state,
+      scope: 'openid profile email',
+    });
+    return `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
+  }
+
+  /** "Sign In with LinkedIn using OpenID Connect": trade the code for a token, then read the person's profile. */
+  async linkedinProfile(code: string) {
+    const tokenRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      signal: AbortSignal.timeout(15_000),
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: this.oauthCallbackUrl('linkedin'),
+        client_id: this.config.get('LINKEDIN_CLIENT_ID', { infer: true })!,
+        client_secret: this.config.get('LINKEDIN_CLIENT_SECRET', { infer: true })!,
+      }),
+    });
+    const token = (await tokenRes.json().catch(() => null)) as { access_token?: string; error_description?: string } | null;
+    if (!tokenRes.ok || !token?.access_token) {
+      throw new UnauthorizedException(`LinkedIn sign-in failed: ${token?.error_description ?? tokenRes.status}`);
+    }
+    const infoRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+      headers: { Authorization: `Bearer ${token.access_token}` },
+      signal: AbortSignal.timeout(15_000),
+    });
+    const info = (await infoRes.json().catch(() => null)) as {
+      sub?: string;
+      email?: string;
+      email_verified?: boolean;
+      given_name?: string;
+      family_name?: string;
+      picture?: string;
+    } | null;
+    if (!infoRes.ok || !info?.sub) throw new UnauthorizedException('LinkedIn did not return your profile');
+    if (!info.email || info.email_verified === false) {
+      throw new UnauthorizedException('Your LinkedIn email is not verified. Verify it on LinkedIn, or sign up with your email.');
+    }
+    return {
+      providerId: info.sub,
+      email: normalizeEmail(info.email),
+      firstName: info.given_name || 'Dealo',
+      lastName: info.family_name || 'User',
+      avatarUrl: info.picture,
+    };
+  }
+
   async logout(res: Response, userId?: string) {
     if (userId) {
       await this.prisma.refreshToken.updateMany({
-        where: { userId, revokedAt: null },
+        where: { userId, ...NOT_REVOKED },
         data: { revokedAt: new Date() },
       });
     }
@@ -318,7 +396,7 @@ export class AuthService {
     });
 
     await this.prisma.refreshToken.updateMany({
-      where: { userId: user.id, revokedAt: null },
+      where: { userId: user.id, ...NOT_REVOKED },
       data: { revokedAt: new Date() },
     });
 
@@ -341,6 +419,42 @@ export class AuthService {
       roles: user.roles,
       permissions: user.permissions,
     };
+  }
+
+  /**
+   * Swaps a valid refresh cookie for new cookies (each refresh token works once). Seeing an
+   * already-used token means it may have been stolen, so every session for that person ends.
+   */
+  async refresh(refreshToken: string | undefined, res: Response) {
+    const fail = () => {
+      this.clearAuthCookies(res);
+      return new UnauthorizedException('Please sign in again');
+    };
+    if (!refreshToken) throw fail();
+    let payload: JwtPayload;
+    try {
+      payload = await this.jwtService.verifyAsync<JwtPayload>(refreshToken, { secret: this.config.get('JWT_REFRESH_SECRET', { infer: true }) });
+    } catch {
+      throw fail();
+    }
+    if (payload.type !== 'refresh' || !payload.sub) throw fail();
+
+    const stored = await this.prisma.refreshToken.findFirst({ where: { tokenHash: this.hashToken(refreshToken), userId: payload.sub } });
+    if (!stored || stored.expiresAt < new Date()) throw fail();
+    if (stored.revokedAt) {
+      await this.prisma.refreshToken.updateMany({ where: { userId: payload.sub, ...NOT_REVOKED }, data: { revokedAt: new Date() } });
+      throw fail();
+    }
+    const claimed = await this.prisma.refreshToken.updateMany({ where: { id: stored.id, ...NOT_REVOKED }, data: { revokedAt: new Date() } });
+    if (!claimed.count) throw fail();
+
+    const user = await this.usersService.findById(payload.sub);
+    if (!user || !user.isActive) throw fail();
+    const authUser = this.toAuthUser(user);
+    // Keep the original "remember me" choice: long-lived tokens stay long-lived.
+    const rememberMe = stored.expiresAt.getTime() - stored.createdAt.getTime() > 8 * 24 * 60 * 60 * 1000;
+    await this.setAuthCookies(res, authUser, { rememberMe });
+    return { user: authUser };
   }
 
   private async setAuthCookies(
@@ -423,6 +537,8 @@ export class AuthService {
     return this.jwtService.signAsync(payload, {
       secret,
       expiresIn: expiresIn as `${number}m` | `${number}d` | `${number}s`,
+      // Two refresh tokens made in the same second would otherwise be identical.
+      ...(type === 'refresh' ? { jwtid: randomBytes(12).toString('hex') } : {}),
     });
   }
 

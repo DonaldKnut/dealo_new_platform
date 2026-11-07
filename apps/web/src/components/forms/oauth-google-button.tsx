@@ -1,6 +1,40 @@
 'use client';
 
-import { getGoogleAuthUrl } from '@/lib/api-base';
+import { useEffect, useState } from 'react';
+
+import { apiFetch } from '@/lib/api';
+import { getGoogleAuthUrl, getOAuthUrl } from '@/lib/api-base';
+
+let providersCache: Promise<{ google: boolean; linkedin: boolean }> | null = null;
+
+/** Google and LinkedIn buttons, each shown only when the API has it switched on. */
+export function SocialSignIn({ role, verb = 'Continue' }: { role?: 'EMPLOYER' | 'TALENT'; verb?: string }) {
+  const [providers, setProviders] = useState<{ google: boolean; linkedin: boolean } | null>(null);
+  useEffect(() => {
+    providersCache ??= apiFetch<{ google: boolean; linkedin: boolean }>('/auth/providers').catch(() => ({ google: true, linkedin: false }));
+    let active = true;
+    void providersCache.then((p) => active && setProviders(p));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!providers) return <div className="h-11 animate-pulse rounded-full bg-surface" aria-hidden />;
+  if (!providers.google && !providers.linkedin) return null;
+  return (
+    <div className={`grid gap-2 ${providers.google && providers.linkedin ? 'min-[400px]:grid-cols-2' : ''}`}>
+      {providers.google ? <OAuthGoogleButton label={`${verb} with Google`} role={role} /> : null}
+      {providers.linkedin ? (
+        <a href={getOAuthUrl('linkedin', role)} className="btn-secondary w-full gap-3 no-underline">
+          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="#0A66C2">
+            <path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.36V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12ZM7.12 20.45H3.56V9h3.56v11.45ZM22.23 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.73V1.73C24 .77 23.21 0 22.23 0Z" />
+          </svg>
+          {verb} with LinkedIn
+        </a>
+      ) : null}
+    </div>
+  );
+}
 
 export function OAuthGoogleButton({
   label = 'Continue with Google',

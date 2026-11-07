@@ -22,9 +22,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     const clientID = config.get('GOOGLE_CLIENT_ID', { infer: true }) || 'missing-google-client-id';
     const clientSecret =
       config.get('GOOGLE_CLIENT_SECRET', { infer: true }) || 'missing-google-client-secret';
+    // Same rule as AuthService.oauthCallbackUrl: back through the website, so the cookie is first-party.
     const callbackURL =
       config.get('GOOGLE_CALLBACK_URL', { infer: true }) ??
-      `${config.get('API_URL', { infer: true })}/api/v1/auth/google/callback`;
+      `${config.get('APP_URL', { infer: true }).replace(/\/$/, '')}/api/v1/auth/google/callback`;
 
     super({
       clientID,

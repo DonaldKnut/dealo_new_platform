@@ -64,8 +64,16 @@ export class UsersService {
   }
 
   async findByGoogleId(googleId: string): Promise<UserWithAccess | null> {
-    const user = await this.prisma.user.findUnique({
-      where: { googleId },
+    return this.findByProviderId({ googleId });
+  }
+
+  async findByLinkedinId(linkedinId: string): Promise<UserWithAccess | null> {
+    return this.findByProviderId({ linkedinId });
+  }
+
+  private async findByProviderId(where: { googleId: string } | { linkedinId: string }): Promise<UserWithAccess | null> {
+    const user = await this.prisma.user.findFirst({
+      where,
       include: {
         roles: {
           include: {

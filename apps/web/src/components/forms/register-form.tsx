@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form';
 import { AuthField } from '@/components/auth/auth-field';
 import { AuthRoleDropdown } from '@/components/auth/auth-role-dropdown';
 import { AuthNavLink } from '@/components/forms/auth-nav-link';
-import { AuthDivider, OAuthGoogleButton } from '@/components/forms/oauth-google-button';
+import { AuthDivider, SocialSignIn } from '@/components/forms/oauth-google-button';
 import { FormStatus } from '@/components/forms/form-status';
 import { useToast } from '@/components/ui/toast';
 import { useServerFormStatus } from '@/hooks/use-server-form-status';
@@ -72,10 +72,7 @@ export function RegisterForm({
 
   return (
     <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>
-      <OAuthGoogleButton
-        label="Continue with Google"
-        role={role === UserRole.TALENT ? 'TALENT' : 'EMPLOYER'}
-      />
+      <SocialSignIn role={role === UserRole.TALENT ? 'TALENT' : 'EMPLOYER'} />
       <AuthDivider />
 
       <div className="grid gap-4 sm:grid-cols-2">

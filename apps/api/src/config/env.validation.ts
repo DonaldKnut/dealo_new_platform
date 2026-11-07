@@ -46,6 +46,19 @@ const envSchema = z.object({
     .optional()
     .transform((value) => (value && value.trim().length > 0 ? value : undefined))
     .pipe(z.string().url().optional()),
+  LINKEDIN_CLIENT_ID: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
+  LINKEDIN_CLIENT_SECRET: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
+  LINKEDIN_CALLBACK_URL: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined))
+    .pipe(z.string().url().optional()),
   CLOUDINARY_CLOUD_NAME: z
     .string()
     .optional()

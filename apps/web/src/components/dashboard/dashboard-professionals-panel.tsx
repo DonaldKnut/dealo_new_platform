@@ -20,6 +20,7 @@ import { CandidateAiPanel } from '@/components/ai/candidate-ai-panel';
 import { DashHero, DashPanel, StatusChip } from '@/components/dashboard/dashboard-ui';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
+import { apiFileHref } from '@/lib/api-base';
 import {
   fetchStaffTalentProfile,
   fetchStaffTalentProfiles,
@@ -106,7 +107,7 @@ function ProfileDrawer({ id, onClose }: { id: string; onClose: () => void }) {
 
         {!profile ? (
           <div className="flex flex-1 items-center justify-center text-sm text-muted">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loadingâ€¦
           </div>
         ) : (
           <div className="flex-1 space-y-5 overflow-y-auto px-3 py-4 min-[340px]:px-5">
@@ -164,12 +165,12 @@ function ProfileDrawer({ id, onClose }: { id: string; onClose: () => void }) {
 
             <dl className="grid grid-cols-2 gap-2 text-xs">
               {[
-                ['Type', profile.roleFamily === 'SKILLED_TRADE' ? 'Skilled trade' : profile.roleFamily ? 'Office' : '—'],
-                ['Job title', profile.roleTitle ?? '—'],
-                ['Experience', profile.yearsExperience !== null ? `${profile.yearsExperience} years` : '—'],
-                ['Can start', profile.availability ? AVAILABILITY_LABEL[profile.availability] : '—'],
-                ['Pay wanted', profile.expectedPayMinor ? `${formatMinor(profile.expectedPayMinor, 'NGN')}/month` : '—'],
-                ['Last update', profile.profileUpdatedAt ? new Date(profile.profileUpdatedAt).toLocaleDateString() : '—'],
+                ['Type', profile.roleFamily === 'SKILLED_TRADE' ? 'Skilled trade' : profile.roleFamily ? 'Office' : 'â€”'],
+                ['Job title', profile.roleTitle ?? 'â€”'],
+                ['Experience', profile.yearsExperience !== null ? `${profile.yearsExperience} years` : 'â€”'],
+                ['Can start', profile.availability ? AVAILABILITY_LABEL[profile.availability] : 'â€”'],
+                ['Pay wanted', profile.expectedPayMinor ? `${formatMinor(profile.expectedPayMinor, 'NGN')}/month` : 'â€”'],
+                ['Last update', profile.profileUpdatedAt ? new Date(profile.profileUpdatedAt).toLocaleDateString() : 'â€”'],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-xl border border-border bg-surface px-3 py-2">
                   <dt className="text-muted">{label}</dt>
@@ -207,7 +208,7 @@ function ProfileDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                   {profile.documents.map((doc) => (
                     <li key={doc.id}>
                       <a
-                        href={doc.url}
+                        href={apiFileHref(doc.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="group flex items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2.5 transition hover:border-brand/50"
@@ -216,7 +217,7 @@ function ProfileDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium text-foreground">{doc.fileName}</span>
                           <span className="text-[11px] text-muted">
-                            {doc.kind === 'CV' ? 'CV' : doc.kind.toLowerCase()} · {new Date(doc.createdAt).toLocaleDateString()}
+                            {doc.kind === 'CV' ? 'CV' : doc.kind.toLowerCase()} Â· {new Date(doc.createdAt).toLocaleDateString()}
                           </span>
                         </span>
                         <ExternalLink className="h-4 w-4 shrink-0 text-muted transition group-hover:text-brand" />
@@ -230,7 +231,7 @@ function ProfileDrawer({ id, onClose }: { id: string; onClose: () => void }) {
             {cv && cv.mimeType === 'application/pdf' ? (
               <iframe
                 title={`CV of ${profile.fullName}`}
-                src={cv.url}
+                src={apiFileHref(cv.url)}
                 className="h-[28rem] w-full rounded-xl border border-border bg-white"
               />
             ) : null}
@@ -241,7 +242,7 @@ function ProfileDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 <ul className="mt-2 space-y-1 text-sm">
                   {profile.shortlistEntries.map((entry) => (
                     <li key={entry.id} className="text-foreground">
-                      #{entry.rank} · {entry.shortlist.hireInquiry.roleTitle} at {entry.shortlist.hireInquiry.companyName}
+                      #{entry.rank} Â· {entry.shortlist.hireInquiry.roleTitle} at {entry.shortlist.hireInquiry.companyName}
                     </li>
                   ))}
                 </ul>
@@ -335,13 +336,13 @@ export function DashboardProfessionalsPanel() {
           </div>
         </div>
         <p className="mt-3 text-xs text-muted">
-          {rows.length} professional{rows.length === 1 ? '' : 's'} · {withCv} with a CV
+          {rows.length} professional{rows.length === 1 ? '' : 's'} Â· {withCv} with a CV
         </p>
       </DashPanel>
 
       {loading && rows.length === 0 ? (
         <p className="flex items-center gap-2 text-sm text-muted">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          <Loader2 className="h-4 w-4 animate-spin" /> Loadingâ€¦
         </p>
       ) : rows.length === 0 ? (
         <DashPanel>

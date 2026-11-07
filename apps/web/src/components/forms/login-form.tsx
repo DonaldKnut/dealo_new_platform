@@ -11,7 +11,7 @@ import { z } from 'zod';
 
 import { AuthField } from '@/components/auth/auth-field';
 import { AuthNavLink } from '@/components/forms/auth-nav-link';
-import { AuthDivider, OAuthGoogleButton } from '@/components/forms/oauth-google-button';
+import { AuthDivider, SocialSignIn } from '@/components/forms/oauth-google-button';
 import { FormStatus } from '@/components/forms/form-status';
 import { useModal } from '@/components/modals/modal-context';
 import { useServerFormStatus } from '@/hooks/use-server-form-status';
@@ -60,6 +60,9 @@ export function LoginForm({
   });
 
   useEffect(() => {
+    // Google and LinkedIn send people back here with ?error= when sign-in did not work.
+    const oauthError = new URLSearchParams(window.location.search).get('error');
+    if (oauthError) setServerError(oauthError.slice(0, 200));
     const remembered = loadRememberedAuth();
     if (remembered?.rememberMe) {
       reset({
@@ -106,7 +109,7 @@ export function LoginForm({
 
   return (
     <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>
-      <OAuthGoogleButton />
+      <SocialSignIn />
       <AuthDivider />
 
       <AuthField

@@ -26,6 +26,7 @@ import { IllustrativeOptionPicker, type IllustrativeOption } from '@/components/
 import { RoleAutocomplete } from '@/components/ui/role-autocomplete';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
+import { apiFileHref } from '@/lib/api-base';
 import {
   deleteTalentDocument,
   fetchTalentDocuments,
@@ -285,7 +286,7 @@ export function TalentProfilePanel() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading your profile…
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading your profileâ€¦
       </div>
     );
   }
@@ -311,7 +312,7 @@ export function TalentProfilePanel() {
                   inputMode="tel"
                   value={form.phone}
                   onChange={(e) => set('phone', e.target.value)}
-                  placeholder="+234…"
+                  placeholder="+234â€¦"
                 />
               </FormField>
               <FormField label="Email">
@@ -343,7 +344,7 @@ export function TalentProfilePanel() {
                 label="About you"
                 optional
                 className="sm:col-span-2"
-                hint={`${form.bio.length}/2000 · Say what you are good at and what work you want next.`}
+                hint={`${form.bio.length}/2000 Â· Say what you are good at and what work you want next.`}
               >
                 <textarea
                   rows={4}
@@ -438,7 +439,7 @@ export function TalentProfilePanel() {
               <FormField
                 label="Skills"
                 className="sm:col-span-2"
-                hint={`${form.skills.length}/20 · Press Enter after each skill.`}
+                hint={`${form.skills.length}/20 Â· Press Enter after each skill.`}
                 error={errors.skills}
               >
                 <div className="flex min-h-[3rem] flex-wrap items-center gap-1.5 rounded-xl border border-border bg-surface-elevated p-2 focus-within:border-brand">
@@ -495,7 +496,7 @@ export function TalentProfilePanel() {
                   inputMode="url"
                   value={form.linkedinUrl}
                   onChange={(e) => set('linkedinUrl', e.target.value)}
-                  placeholder="https://linkedin.com/in/…"
+                  placeholder="https://linkedin.com/in/â€¦"
                 />
               </FormField>
               <FormField label="Portfolio or work photos link" optional error={errors.portfolioUrl}>
@@ -504,7 +505,7 @@ export function TalentProfilePanel() {
                   inputMode="url"
                   value={form.portfolioUrl}
                   onChange={(e) => set('portfolioUrl', e.target.value)}
-                  placeholder="https://…"
+                  placeholder="https://â€¦"
                 />
               </FormField>
             </div>
@@ -513,7 +514,7 @@ export function TalentProfilePanel() {
           <div className="sticky bottom-[calc(4.5rem+var(--safe-bottom))] z-20 flex justify-end lg:bottom-4">
             <button type="button" className="btn-primary shadow-xl" disabled={saving} onClick={onSave}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              {saving ? 'Saving…' : 'Save profile'}
+              {saving ? 'Savingâ€¦' : 'Save profile'}
             </button>
           </div>
         </div>
@@ -570,7 +571,7 @@ export function TalentProfilePanel() {
                 <UploadCloud className="h-6 w-6 text-brand" />
               )}
               <p className="text-sm font-medium text-foreground">
-                {uploading ? 'Uploading…' : cvs.length ? 'Upload a newer CV' : 'Drop your CV here or tap to choose'}
+                {uploading ? 'Uploadingâ€¦' : cvs.length ? 'Upload a newer CV' : 'Drop your CV here or tap to choose'}
               </p>
               <p className="text-[11px] text-muted">PDF or Word, up to 8MB</p>
               <input
@@ -590,11 +591,11 @@ export function TalentProfilePanel() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-xs font-medium text-foreground">{doc.fileName}</p>
                       <p className="text-[10px] text-muted">
-                        {doc.kind === 'CV' ? 'CV' : doc.kind.toLowerCase()} · {formatBytes(doc.byteSize)}
+                        {doc.kind === 'CV' ? 'CV' : doc.kind.toLowerCase()} Â· {formatBytes(doc.byteSize)}
                       </p>
                     </div>
                     <a
-                      href={doc.url}
+                      href={apiFileHref(doc.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Open ${doc.fileName}`}

@@ -46,7 +46,7 @@ import {
   getRoleGroup,
   type AuthSessionUser,
 } from '@/hooks/use-auth-session';
-import { apiFetch } from '@/lib/api';
+import { ApiError, apiFetch } from '@/lib/api';
 import { logClientAudit } from '@/lib/client-audit';
 import { fetchAuthMe } from '@/lib/dashboard-api';
 import { VerifyEmailBanner } from '@/components/dashboard/verify-email-banner';
@@ -303,6 +303,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [user, setUser] = useState<AuthSessionUser | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(SIDEBAR_KEY) === '1');
@@ -314,6 +316,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       try {
         const me = await fetchAuthMe();
         if (!active) return;
+        setSessionError(null);
         setUser(me);
         const returnTo = takeReturnTo();
         if (returnTo) {
@@ -325,10 +328,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         if (group === 'talent' && pathname === '/dashboard') {
           router.replace(home);
         }
-      } catch {
-        if (active) {
+      } catch (error) {
+        if (!active) return;
+        // Only a real "not signed in" answer signs you out; a slow or broken server gets a retry screen instead.
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
           toast.error('Session expired', 'Please sign in again.');
           router.replace(`/auth/login?next=${encodeURIComponent(pathname)}`);
+        } else {
+          setSessionError(error instanceof ApiError ? error.message : 'Could not reach Dealo.');
         }
       }
     })();
@@ -337,7 +344,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     };
     // toast is stable; omit from deps to avoid remount loops
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, router]);
+  }, [pathname, router, attempt]);
 
   const nav = useMemo(() => {
     if (!user) return employerNav;
@@ -480,6 +487,39 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </nav>
     );
   };
+
+  if (!user) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background p-6 text-center text-foreground">
+        <BrandLogo href="/" />
+        {sessionError ? (
+          <div className="max-w-sm space-y-3">
+            <p className="font-display text-xl">We can’t reach Dealo right now</p>
+            <p className="text-sm text-muted">{sessionError} Our servers may be waking up; this can take up to a minute.</p>
+            <div className="flex justify-center gap-2">
+              <button
+                type="button"
+                className="btn-primary text-sm"
+                onClick={() => {
+                  setSessionError(null);
+                  setAttempt((n) => n + 1);
+                }}
+              >
+                Try again
+              </button>
+              <Link href="/" className="btn-secondary text-sm">
+                Go home
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <p className="flex items-center gap-2 text-sm text-muted" role="status">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" aria-hidden /> Checking your account…
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
