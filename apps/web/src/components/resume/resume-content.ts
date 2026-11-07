@@ -72,17 +72,20 @@ export function dateRange(start: string, end: string, current: boolean) {
   return start || to || '';
 }
 
-export function contactItems(personal: ResumeData['personal']) {
+export function contactItems(personal: ResumeData['personal']): ContactItem[] {
   const strip = (url: string) => url.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
   const href = (url: string) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
-  return [
-    personal.email ? { text: personal.email, href: `mailto:${personal.email}` } : null,
-    personal.phone ? { text: personal.phone, href: `tel:${personal.phone.replace(/\s+/g, '')}` } : null,
-    personal.location ? { text: personal.location } : null,
-    personal.linkedin ? { text: strip(personal.linkedin), href: href(personal.linkedin) } : null,
-    personal.website ? { text: strip(personal.website), href: href(personal.website) } : null,
-  ].filter((item): item is { text: string; href?: string } => Boolean(item));
+  const items: Array<ContactItem | null> = [
+    personal.email ? { kind: 'email', text: personal.email, href: `mailto:${personal.email}` } : null,
+    personal.phone ? { kind: 'phone', text: personal.phone, href: `tel:${personal.phone.replace(/\s+/g, '')}` } : null,
+    personal.location ? { kind: 'location', text: personal.location } : null,
+    personal.linkedin ? { kind: 'linkedin', text: strip(personal.linkedin), href: href(personal.linkedin) } : null,
+    personal.website ? { kind: 'website', text: strip(personal.website), href: href(personal.website) } : null,
+  ];
+  return items.filter((item): item is ContactItem => item !== null);
 }
+
+export type ContactItem = { kind: 'email' | 'phone' | 'location' | 'linkedin' | 'website'; text: string; href?: string };
 
 /** Sections that have something to show, in the person's chosen order. */
 export function visibleSections(data: ResumeData): ResumeSection[] {

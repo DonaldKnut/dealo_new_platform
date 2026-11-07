@@ -15,12 +15,19 @@ export const RESUME_TEMPLATE_IDS = RESUME_TEMPLATES.map((t) => t.id) as [ResumeT
 export const RESUME_FONTS = [
   { id: 'helvetica', name: 'Helvetica', premium: false },
   { id: 'times', name: 'Times', premium: false },
+  { id: 'lato', name: 'Lato', premium: false },
   { id: 'inter', name: 'Inter', premium: true },
+  { id: 'poppins', name: 'Poppins', premium: true },
   { id: 'lora', name: 'Lora', premium: true },
   { id: 'merriweather', name: 'Merriweather', premium: true },
+  { id: 'ptserif', name: 'PT Serif', premium: true },
 ] as const;
 
 export type ResumeFontId = (typeof RESUME_FONTS)[number]['id'];
+
+/** Header illustrations drawn in the accent colour. Everything except "none" is premium. */
+export const RESUME_ART = ['none', 'waves', 'dots', 'rings', 'leaf'] as const;
+export type ResumeArt = (typeof RESUME_ART)[number];
 export const RESUME_FONT_IDS = RESUME_FONTS.map((f) => f.id) as [ResumeFontId, ...ResumeFontId[]];
 
 /** The first colour is free; the rest (and any custom colour) are premium. */
@@ -102,9 +109,17 @@ export const resumeDataSchema = z.object({
     })
     .default({}),
   sectionOrder: z.array(z.enum(RESUME_SECTIONS)).default([...RESUME_SECTIONS]),
+  /** Optional decoration: small icons by contacts and headings, and a header illustration. */
+  design: z
+    .object({
+      icons: z.boolean().default(false),
+      art: z.enum(RESUME_ART).default('none'),
+    })
+    .default({}),
 });
 
 export type ResumeData = z.infer<typeof resumeDataSchema>;
+export type ResumeDesign = ResumeData['design'];
 
 export const coverLetterDataSchema = z.object({
   fullName: short(120),

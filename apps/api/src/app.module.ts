@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
 import { AiModule } from './ai/ai.module';
+import { AssistantModule } from './assistant/assistant.module';
 import { AtsModule } from './ats/ats.module';
 import { HiringAgentsModule } from './hiring-agents/hiring-agents.module';
 import { JobBoardModule } from './job-board/job-board.module';
@@ -80,6 +81,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     ResumesModule,
     JobBoardModule,
     HiringAgentsModule,
+    AssistantModule,
   ],
   providers: [
     {

@@ -8,10 +8,9 @@ import { LocaleProvider } from '@/components/i18n/locale-context';
 import { ModalHost } from '@/components/modals/modal-host';
 import { ModalProvider } from '@/components/modals/modal-context';
 import { PwaInstall } from '@/components/pwa-install';
-import { SupportTicketWidget } from '@/components/support/support-ticket-widget';
+import { HelpWidget } from '@/components/support/help-widget';
 import { ThemeProvider } from '@/components/theme-provider';
 import { ToastProvider } from '@/components/ui/toast';
-import { WhatsAppWidget } from '@/components/whatsapp-widget';
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -23,8 +22,7 @@ export function Providers({ children }: { children: ReactNode }) {
             <ModalHost />
             <FaqModal />
             <CookieConsent />
-            <WhatsAppWidget />
-            <SupportTicketWidget />
+            <HelpWidget />
             <PwaInstall />
           </ModalProvider>
         </ToastProvider>

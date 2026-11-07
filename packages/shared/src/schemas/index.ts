@@ -1,6 +1,7 @@
 export * from './agents';
 export * from './ai';
 export * from './api-key';
+export * from './assistant';
 export * from './ats';
 export * from './audit';
 export * from './billing';

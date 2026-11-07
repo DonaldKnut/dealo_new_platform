@@ -15,7 +15,13 @@ export type Prims = {
   View: (p: { style?: RStyle; children?: ReactNode; fixed?: boolean; wrap?: boolean }) => ReactNode;
   Text: (p: { style?: RStyle; children?: ReactNode; fixed?: boolean }) => ReactNode;
   Link: (p: { style?: RStyle; href: string; children: ReactNode }) => ReactNode;
+  /** Vector drawing for CV icons and header art; sizes are in points like everything else. */
+  Svg: (p: { width: number; height: number; viewBox: string; style?: RStyle; children: ReactNode }) => ReactNode;
+  Path: (p: SvgShape & { d: string }) => ReactNode;
+  Circle: (p: SvgShape & { cx: number; cy: number; r: number }) => ReactNode;
 };
+
+type SvgShape = { stroke?: string; strokeWidth?: number; fill?: string; opacity?: number };
 
 export const PAGE_WIDTH_PT = 595.28;
 export const PAGE_HEIGHT_PT = 841.89;
@@ -23,11 +29,25 @@ export const PT_TO_PX = 96 / 72;
 
 const UNITLESS = new Set(['lineHeight', 'flex', 'flexGrow', 'flexShrink', 'opacity', 'fontWeight', 'zIndex']);
 
+/** react-pdf shorthands that CSS does not have; a specific side (e.g. paddingLeft) still wins. */
+const SHORTHANDS: Record<string, [string, string]> = {
+  paddingHorizontal: ['paddingLeft', 'paddingRight'],
+  paddingVertical: ['paddingTop', 'paddingBottom'],
+  marginHorizontal: ['marginLeft', 'marginRight'],
+  marginVertical: ['marginTop', 'marginBottom'],
+};
+
 export function toCss(style: RStyle = {}): CSSProperties {
   const out: Record<string, string | number> = {};
+  const unit = (key: string, value: string | number) => (typeof value === 'number' && !UNITLESS.has(key) ? `${value}pt` : value);
   for (const [key, value] of Object.entries(style)) {
-    if (value === undefined) continue;
-    out[key] = typeof value === 'number' && !UNITLESS.has(key) ? `${value}pt` : value;
+    const sides = SHORTHANDS[key];
+    if (value === undefined || !sides) continue;
+    for (const side of sides) out[side] = unit(side, value);
+  }
+  for (const [key, value] of Object.entries(style)) {
+    if (value === undefined || SHORTHANDS[key]) continue;
+    out[key] = unit(key, value);
   }
   return out as CSSProperties;
 }
@@ -72,6 +92,17 @@ export const htmlPrims: Prims = {
   Text: HtmlText,
   // Previews often sit inside a clickable card, so links are plain text on screen; the PDF keeps real links.
   Link: ({ style, children }) => <span style={{ display: 'block', ...toCss(style) }}>{children}</span>,
+  Svg: ({ width, height, viewBox, style, children }) => (
+    <svg width={`${width}pt`} height={`${height}pt`} viewBox={viewBox} style={{ flexShrink: 0, ...toCss(style) }} aria-hidden>
+      {children}
+    </svg>
+  ),
+  Path: ({ d, stroke, strokeWidth, fill = 'none', opacity }) => (
+    <path d={d} stroke={stroke} strokeWidth={strokeWidth} fill={fill} opacity={opacity} strokeLinecap="round" strokeLinejoin="round" />
+  ),
+  Circle: ({ cx, cy, r, stroke, strokeWidth, fill = 'none', opacity }) => (
+    <circle cx={cx} cy={cy} r={r} stroke={stroke} strokeWidth={strokeWidth} fill={fill} opacity={opacity} />
+  ),
 };
 
 /** Builds PDF primitives from the lazily-loaded @react-pdf/renderer module. */
@@ -114,6 +145,17 @@ export function makePdfPrims(lib: typeof import('@react-pdf/renderer')): Prims {
       <Link src={href} style={{ textDecoration: 'none', ...text(style) }}>
         {children}
       </Link>
+    ),
+    Svg: ({ width, height, viewBox, style, children }) => (
+      <lib.Svg width={width} height={height} viewBox={viewBox} style={s(style)}>
+        {children}
+      </lib.Svg>
+    ),
+    Path: ({ d, stroke, strokeWidth, fill = 'none', opacity }) => (
+      <lib.Path d={d} stroke={stroke} strokeWidth={strokeWidth} fill={fill} opacity={opacity} strokeLinecap="round" strokeLinejoin="round" />
+    ),
+    Circle: ({ cx, cy, r, stroke, strokeWidth, fill = 'none', opacity }) => (
+      <lib.Circle cx={cx} cy={cy} r={r} stroke={stroke} strokeWidth={strokeWidth} fill={fill} opacity={opacity} />
     ),
   };
 }

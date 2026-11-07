@@ -86,6 +86,7 @@ export function DetailsEditor({ data, update }: { data: ResumeData; update: Upda
 export function SummaryEditor({ data, update, ai }: { data: ResumeData; update: Update; ai: AiHooks }) {
   return (
     <AreaField
+      rich
       label="Short profile"
       value={data.summary}
       onChange={(v) => update((d) => ({ ...d, summary: v }))}
@@ -302,7 +303,7 @@ export function MoreEditor({ data, update }: { data: ResumeData; update: Update 
           >
             <TextField label="Name" value={p.name} onChange={(v) => setProject(p.id, { name: v })} placeholder="20kVA solar install, Lekki estate" />
             <TextField label="Link" value={p.link} onChange={(v) => setProject(p.id, { link: v })} placeholder="Optional" maxLength={300} />
-            <AreaField label="What you did" value={p.description} onChange={(v) => setProject(p.id, { description: v })} maxLength={600} rows={3} />
+            <AreaField rich label="What you did" value={p.description} onChange={(v) => setProject(p.id, { description: v })} maxLength={600} rows={3} />
           </ItemCard>
         ))}
         <AddButton

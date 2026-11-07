@@ -42,6 +42,10 @@ function freeStyle(style: ResumeStyle): ResumeStyle {
   };
 }
 
+function freeData(data: ResumeData): ResumeData {
+  return { ...data, design: { ...data.design, art: 'none' } };
+}
+
 function parseResume(r: SavedResume): { data: ResumeData; style: ResumeStyle } {
   return {
     data: resumeDataSchema.parse(r.data),
@@ -137,7 +141,7 @@ export function ApplyModal({
   const makePdf = async (resume: SavedResume) => {
     const { buildPdf, pdfFileName } = await import('@/components/resume/resume-pdf');
     const parsed = parseResume(resume);
-    const doc = { kind: 'RESUME' as const, data: parsed.data, style: premium ? parsed.style : freeStyle(parsed.style) };
+    const doc = { kind: 'RESUME' as const, data: premium ? parsed.data : freeData(parsed.data), style: premium ? parsed.style : freeStyle(parsed.style) };
     const blob = await buildPdf(doc, !premium, resume.title);
     return new File([blob], pdfFileName(doc), { type: 'application/pdf' });
   };
@@ -267,7 +271,7 @@ export function ApplyModal({
       {selectedDoc ? (
         <div className="overflow-hidden rounded-2xl border border-border bg-[#e9eef0] p-2 dark:bg-[#0c1a16]">
           <div className="pointer-events-none mx-auto max-h-44 max-w-[16rem] overflow-hidden rounded shadow-lg">
-            <ResumePreview doc={{ kind: 'RESUME', data: selectedDoc.data, style: premium ? selectedDoc.style : freeStyle(selectedDoc.style) }} branding={!premium} />
+            <ResumePreview doc={{ kind: 'RESUME', data: premium ? selectedDoc.data : freeData(selectedDoc.data), style: premium ? selectedDoc.style : freeStyle(selectedDoc.style) }} branding={!premium} />
           </div>
         </div>
       ) : null}

@@ -2,6 +2,7 @@
 
 import {
   RESUME_COLORS,
+  RESUME_FONTS,
   RESUME_TEMPLATES,
   coverLetterDataSchema,
   isPremiumColor,
@@ -27,7 +28,10 @@ import {
   Layers,
   Loader2,
   Mail,
+  Maximize2,
+  Minus,
   Palette,
+  Plus,
   Share2,
   Target,
   UserRound,
@@ -52,6 +56,7 @@ import { cn } from '@/lib/utils';
 import { CoverLetterEditor } from './cover-letter-editor';
 import { DesignPanel } from './design-panel';
 import { DEFAULT_STYLE, completeness, emptyResume } from './resume-content';
+import { CSS_FAMILY } from './resume-fonts';
 import { buildPdf, pdfFileName, saveBlob } from './resume-pdf';
 import { ResumePreview, type PreviewDoc } from './resume-preview';
 import { AuthGateSheet, PremiumSheet } from './resume-sheets';
@@ -78,6 +83,27 @@ const LETTER_STEPS: typeof RESUME_STEPS = [
 
 const emptyLetter = (): CoverLetterData => coverLetterDataSchema.parse({});
 
+function StepArt({ icon: Icon }: { icon: typeof UserRound }) {
+  return (
+    <span aria-hidden className="relative hidden h-14 w-14 shrink-0 min-[300px]:block">
+      <svg viewBox="0 0 56 56" className="absolute inset-0 h-full w-full text-brand">
+        <circle cx="46" cy="10" r="8" fill="currentColor" opacity="0.14" />
+        <circle cx="8" cy="46" r="5" fill="currentColor" opacity="0.18" />
+        <path d="M4 20 C 14 6, 30 2, 44 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.35" />
+        <circle cx="50" cy="40" r="2" fill="currentColor" opacity="0.4" />
+      </svg>
+      <motion.span
+        initial={{ scale: 0.8, rotate: -8, opacity: 0 }}
+        animate={{ scale: 1, rotate: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 22 }}
+        className="absolute inset-2 inline-flex items-center justify-center rounded-2xl bg-gradient-to-br from-brand to-emerald-400 text-white shadow-lg shadow-brand/25 dark:text-[#071f14]"
+      >
+        <Icon className="h-5 w-5" />
+      </motion.span>
+    </span>
+  );
+}
+
 type SaveState = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
 export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: string; kind?: ResumeKind }) {
@@ -95,6 +121,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [step, setStep] = useState<Step>(initialKind === 'RESUME' ? 'details' : 'letter');
   const [previewOpen, setPreviewOpen] = useState(false);
+  const closePreview = useCallback(() => setPreviewOpen(false), []);
   const [premiumSheet, setPremiumSheet] = useState<{ reason?: string; useFree?: boolean } | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -247,7 +274,12 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
 
   // ---------------------------------------------------------------- download
 
-  const usesPremium = isPremiumTemplate(style.template) || isPremiumFont(style.font) || isPremiumColor(style.accentColor) || kind === 'COVER_LETTER';
+  const usesPremium =
+    isPremiumTemplate(style.template) ||
+    isPremiumFont(style.font) ||
+    isPremiumColor(style.accentColor) ||
+    (kind === 'RESUME' && data.design.art !== 'none') ||
+    kind === 'COVER_LETTER';
 
   const download = useCallback(async () => {
     if (!me) {
@@ -296,6 +328,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
       font: isPremiumFont(s.font) ? 'helvetica' : s.font,
       accentColor: RESUME_COLORS[0],
     }));
+    setData((d) => ({ ...d, design: { ...d.design, art: 'none' } }));
     setPremiumSheet(null);
     toast.success('Switched to a free design', 'Tap Download again.');
   };
@@ -393,7 +426,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
             type="button"
             onClick={() => setPreviewOpen(true)}
             aria-label="Preview"
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 text-sm font-semibold lg:hidden"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-border px-2.5 text-sm font-semibold transition hover:border-brand hover:text-brand"
           >
             <Eye className="h-4 w-4" />
             <span className="hidden min-[400px]:inline">Preview</span>
@@ -447,9 +480,12 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
             </div>
           ) : null}
           <section className="rounded-[1.5rem] border border-border bg-surface-elevated/70 p-3 shadow-sm min-[340px]:p-5">
-            <div className="mb-4">
-              <h1 className="font-display text-xl text-foreground min-[340px]:text-2xl">{current.label}</h1>
-              <p className="text-xs text-muted">{current.hint}</p>
+            <div className="mb-4 flex items-center gap-3">
+              <StepArt key={current.id} icon={current.icon} />
+              <div className="min-w-0">
+                <h1 className="font-display text-xl text-foreground min-[340px]:text-2xl">{current.label}</h1>
+                <p className="text-xs text-muted">{current.hint}</p>
+              </div>
             </div>
             <AnimatePresence mode="wait">
               <motion.div key={step} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
@@ -473,6 +509,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
                     showTemplates={kind === 'RESUME'}
                     onStyle={setStyle}
                     onOrder={(sectionOrder) => setData((d) => ({ ...d, sectionOrder }))}
+                    onDesign={kind === 'RESUME' ? (design) => setData((d) => ({ ...d, design })) : undefined}
                   />
                 ) : null}
               </motion.div>
@@ -510,21 +547,68 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
         </div>
 
         <aside className="hidden lg:block">
-          <div className="sticky top-[calc(4.5rem+var(--safe-top))] max-h-[calc(100vh-6rem)] overflow-y-auto rounded-[1.5rem] border border-border bg-[#e9eef0] p-5 dark:bg-[#0c1a16]">
-            <div className="mb-3 flex items-center justify-between gap-2 text-xs text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" /> Live preview · A4
-              </span>
-              {!premium ? <span>Free PDFs include a small Dealo footer</span> : null}
+          <div className="sticky top-[calc(4.5rem+var(--safe-top))] max-h-[calc(100vh-6rem)] overflow-y-auto rounded-[1.75rem] border border-border/80 bg-gradient-to-b from-slate-100/90 via-slate-50/70 to-slate-100/90 p-4 xl:p-5 shadow-inner dark:from-[#0a2018] dark:via-[#081a13] dark:to-[#05140e]">
+            {/* Studio Header Bar */}
+            <div className="mb-3.5 flex items-center justify-between gap-2 border-b border-border/60 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-elevated px-2.5 py-1 text-xs font-semibold text-foreground shadow-sm ring-1 ring-border/80">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                  </span>
+                  Live A4 Studio
+                </span>
+                <span className="hidden xl:inline-flex items-center gap-1 rounded-md bg-surface px-2 py-0.5 text-[11px] font-medium text-muted">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: style.accentColor }} />
+                  <span className="capitalize">{style.template}</span>
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {!premium ? (
+                  <span className="hidden items-center gap-1 rounded-md bg-surface-elevated/80 px-2 py-0.5 text-[10px] font-medium text-muted ring-1 ring-border/50 xl:inline-flex">
+                    Free Tier · Standard PDF
+                  </span>
+                ) : (
+                  <span className="hidden items-center gap-1 rounded-md bg-amber-400/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 xl:inline-flex">
+                    ✨ Premium Clean PDF
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-surface-elevated px-3 py-1.5 text-xs font-semibold text-foreground shadow-sm ring-1 ring-border/80 transition hover:text-brand hover:ring-brand/50"
+                >
+                  <Maximize2 className="h-3.5 w-3.5" /> Expand
+                </button>
+              </div>
             </div>
-            <div className="overflow-hidden rounded-md shadow-2xl shadow-black/20">
+
+            {/* Document Paper Canvas Frame */}
+            <div className="overflow-hidden rounded-xl bg-white shadow-[0_20px_50px_-12px_rgba(15,23,42,0.22)] ring-1 ring-slate-900/10">
               <ResumePreview doc={doc} branding={!premium} />
+            </div>
+
+            {/* Document Metadata Micro-Footer */}
+            <div className="mt-3 flex items-center justify-between px-1 text-[11px] text-muted">
+              <span>Standard A4 · 210 × 297 mm</span>
+              <span>100% Vector Quality</span>
             </div>
           </div>
         </aside>
       </div>
 
-      <MobilePreview open={previewOpen} onClose={() => setPreviewOpen(false)} doc={doc} branding={!premium} onDownload={() => void download()} downloading={downloading} />
+      <PreviewModal
+        open={previewOpen}
+        onClose={closePreview}
+        doc={doc}
+        branding={!premium}
+        onDownload={() => void download()}
+        downloading={downloading}
+        style={style}
+        onStyle={setStyle}
+        premium={premium}
+      />
 
       <PremiumSheet
         open={Boolean(premiumSheet)}
@@ -565,13 +649,20 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
   );
 }
 
-function MobilePreview({
+/** A4 at 100% is 794px wide on screen; "Fit" uses the window width instead. */
+const A4_PX = 794;
+const ZOOMS = [0.6, 0.75, 1, 1.25] as const;
+
+function PreviewModal({
   open,
   onClose,
   doc,
   branding,
   onDownload,
   downloading,
+  style,
+  onStyle,
+  premium,
 }: {
   open: boolean;
   onClose: () => void;
@@ -579,42 +670,120 @@ function MobilePreview({
   branding: boolean;
   onDownload: () => void;
   downloading: boolean;
+  style: ResumeStyle;
+  onStyle: (s: ResumeStyle) => void;
+  premium: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
+  const [zoom, setZoom] = useState<'fit' | (typeof ZOOMS)[number]>('fit');
   useEffect(() => setMounted(true), []);
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = previous;
+      window.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, onClose]);
   if (!mounted) return null;
+
+  const step = (dir: 1 | -1) =>
+    setZoom((z) => {
+      const index = z === 'fit' ? ZOOMS.indexOf(0.75) : ZOOMS.indexOf(z);
+      return ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, index + dir))]!;
+    });
+  const pageWidth = zoom === 'fit' ? `min(100%, ${A4_PX}px)` : `${Math.round(A4_PX * zoom)}px`;
+
   return createPortal(
     <AnimatePresence>
       {open ? (
         <motion.div
-          className="fixed inset-0 z-[150] flex flex-col bg-[#e9eef0] dark:bg-[#0c1a16] lg:hidden"
-          initial={{ y: '100%' }}
-          animate={{ y: 0 }}
-          exit={{ y: '100%' }}
-          transition={{ type: 'spring', stiffness: 340, damping: 36 }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="CV preview"
+          className="fixed inset-0 z-[150] flex flex-col bg-slate-900/80 backdrop-blur-sm dark:bg-[#020c08]/90"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
         >
-          <div className="flex items-center justify-between gap-2 border-b border-border bg-background px-2 py-2 pt-[max(0.5rem,var(--safe-top))] min-[340px]:px-4">
-            <button type="button" onClick={onClose} aria-label="Close preview" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border">
+          <motion.div
+            initial={{ y: -16, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.05 }}
+            className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-background/95 px-2 py-2 pt-[max(0.5rem,var(--safe-top))] shadow-lg min-[340px]:px-4"
+          >
+            <button type="button" onClick={onClose} aria-label="Close preview" className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border hover:bg-surface">
               <X className="h-4 w-4" />
             </button>
-            <span className="truncate text-sm font-semibold">Preview</span>
-            <button type="button" onClick={onDownload} disabled={downloading} className="btn-primary h-9 px-3 py-0 text-sm">
-              {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              <span className="hidden min-[300px]:inline">PDF</span>
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 pb-[calc(1rem+var(--safe-bottom))] min-[340px]:p-4">
-            <div className="mx-auto max-w-xl overflow-hidden rounded shadow-xl">
-              <ResumePreview doc={doc} branding={branding} />
+            <span className="hidden text-sm font-semibold sm:inline">Preview</span>
+            <div className="ml-auto flex flex-wrap items-center gap-1.5">
+              {doc.kind === 'RESUME' ? (
+                <label className="hidden items-center gap-1 sm:flex">
+                  <span className="sr-only">Template</span>
+                  <select
+                    value={style.template}
+                    onChange={(e) => onStyle({ ...style, template: e.target.value as ResumeStyle['template'] })}
+                    className="h-9 rounded-full border border-border bg-surface-elevated px-3 text-xs font-semibold"
+                  >
+                    {RESUME_TEMPLATES.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                        {t.premium && !premium ? ' (Premium)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <label className="flex items-center">
+                <span className="sr-only">Font</span>
+                <select
+                  value={style.font}
+                  onChange={(e) => onStyle({ ...style, font: e.target.value as ResumeStyle['font'] })}
+                  className="h-9 max-w-[9.5rem] rounded-full border border-border bg-surface-elevated px-3 text-xs font-semibold"
+                  style={{ fontFamily: CSS_FAMILY[style.font] }}
+                >
+                  {RESUME_FONTS.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                      {f.premium && !premium ? ' (Premium)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="flex items-center rounded-full border border-border bg-surface-elevated">
+                <button type="button" aria-label="Zoom out" onClick={() => step(-1)} className="inline-flex h-9 w-9 items-center justify-center rounded-full hover:text-brand">
+                  <Minus className="h-4 w-4" />
+                </button>
+                <button type="button" onClick={() => setZoom('fit')} className={cn('min-w-[3.25rem] text-xs font-semibold tabular-nums', zoom === 'fit' && 'text-brand')}>
+                  {zoom === 'fit' ? 'Fit' : `${Math.round(zoom * 100)}%`}
+                </button>
+                <button type="button" aria-label="Zoom in" onClick={() => step(1)} className="inline-flex h-9 w-9 items-center justify-center rounded-full hover:text-brand">
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <button type="button" onClick={onDownload} disabled={downloading} className="btn-primary h-9 px-3 py-0 text-sm">
+                {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                <span className="hidden min-[340px]:inline">Download PDF</span>
+              </button>
             </div>
+          </motion.div>
+          <div className="flex-1 overflow-auto px-2 py-4 pb-[calc(1.5rem+var(--safe-bottom))] min-[340px]:px-4 sm:py-8" onClick={(e) => e.target === e.currentTarget && onClose()}>
+            <motion.div
+              initial={{ y: 24, opacity: 0, scale: 0.98 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+              className="mx-auto overflow-hidden rounded-md bg-white shadow-[0_30px_80px_-20px_rgba(0,0,0,0.55)] ring-1 ring-black/10"
+              style={{ width: pageWidth }}
+            >
+              <ResumePreview doc={doc} branding={branding} />
+            </motion.div>
+            <p className="mt-4 text-center text-xs text-white/70">A4 page · what you see is what downloads{branding ? ' · free PDFs include a small Dealo footer' : ''}</p>
           </div>
         </motion.div>
       ) : null}

@@ -1,10 +1,72 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowDown, ArrowUp, ChevronDown, Crown, Plus, Trash2, X } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Award,
+  Bold,
+  Italic,
+  List,
+  RemoveFormatting,
+  BookOpen,
+  Briefcase,
+  Building2,
+  CalendarCheck2,
+  CalendarDays,
+  ChevronDown,
+  Contact,
+  Crown,
+  Globe,
+  GraduationCap,
+  Hash,
+  Landmark,
+  Languages,
+  Linkedin,
+  Mail,
+  MapPin,
+  PenLine,
+  Phone,
+  Plus,
+  Sparkles,
+  Star,
+  Trash2,
+  UserRound,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
+import { useRef, useState, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
+
+/** Every field gets a matching icon from its label, so new fields pick one up without extra wiring. */
+const FIELD_ICONS: Array<[RegExp, LucideIcon]> = [
+  [/^full name$|^name$/i, UserRound],
+  [/headline/i, Sparkles],
+  [/^email$/i, Mail],
+  [/phone or email/i, Contact],
+  [/phone/i, Phone],
+  [/where you live|location/i, MapPin],
+  [/linkedin/i, Linkedin],
+  [/website|portfolio|link/i, Globe],
+  [/job title/i, Briefcase],
+  [/company/i, Building2],
+  [/^start$/i, CalendarDays],
+  [/^end$/i, CalendarCheck2],
+  [/school|college/i, GraduationCap],
+  [/qualification/i, Award],
+  [/course/i, BookOpen],
+  [/grade/i, Star],
+  [/given by/i, Landmark],
+  [/year/i, CalendarDays],
+  [/number/i, Hash],
+  [/language/i, Languages],
+  [/what you did|profile|description/i, PenLine],
+];
+
+export function fieldIcon(label: string): LucideIcon {
+  return FIELD_ICONS.find(([pattern]) => pattern.test(label))?.[1] ?? PenLine;
+}
 
 export function TextField({
   label,
@@ -14,6 +76,7 @@ export function TextField({
   type = 'text',
   maxLength = 140,
   hint,
+  icon,
 }: {
   label: string;
   value: string;
@@ -22,11 +85,21 @@ export function TextField({
   type?: string;
   maxLength?: number;
   hint?: string;
+  icon?: LucideIcon;
 }) {
+  const Icon = icon ?? fieldIcon(label);
   return (
-    <label className="block min-w-0 space-y-1.5 text-sm">
+    <label className="group block min-w-0 space-y-1.5 text-sm">
       <span className="font-medium text-foreground">{label}</span>
-      <input className="input-field" type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} />
+      <span className="relative block">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-1.5 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg bg-brand-soft text-brand transition group-focus-within:bg-brand group-focus-within:text-white dark:group-focus-within:text-[#071f14]"
+        >
+          <Icon className="h-3.5 w-3.5" />
+        </span>
+        <input className="input-field pl-11" type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} />
+      </span>
       {hint ? <span className="block text-[11px] text-muted">{hint}</span> : null}
     </label>
   );
@@ -40,6 +113,7 @@ export function AreaField({
   maxLength = 2000,
   rows = 5,
   action,
+  rich = false,
 }: {
   label: string;
   value: string;
@@ -48,11 +122,20 @@ export function AreaField({
   maxLength?: number;
   rows?: number;
   action?: ReactNode;
+  /** Shows a formatting toolbar: **bold**, *italic* and "- " bullet lines, which every CV template renders. */
+  rich?: boolean;
 }) {
+  if (rich) return <RichTextField label={label} value={value} onChange={onChange} placeholder={placeholder} maxLength={maxLength} rows={rows} action={action} />;
+  const Icon = fieldIcon(label);
   return (
     <label className="block min-w-0 space-y-1.5 text-sm">
       <span className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-medium text-foreground">{label}</span>
+        <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+          <span aria-hidden className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-soft text-brand">
+            <Icon className="h-3.5 w-3.5" />
+          </span>
+          {label}
+        </span>
         {action}
       </span>
       <textarea className="input-field resize-y leading-relaxed" rows={rows} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} />
@@ -60,6 +143,125 @@ export function AreaField({
         {value.length}/{maxLength}
       </span>
     </label>
+  );
+}
+
+function RichTextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  maxLength,
+  rows,
+  action,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  maxLength: number;
+  rows: number;
+  action?: ReactNode;
+}) {
+  const area = useRef<HTMLTextAreaElement>(null);
+  const Icon = fieldIcon(label);
+
+  /** Wraps the selection in a marker (or inserts an empty pair), then restores the cursor. */
+  const wrap = (marker: string) => {
+    const el = area.current;
+    if (!el) return;
+    const { selectionStart: start, selectionEnd: end } = el;
+    const selected = value.slice(start, end);
+    const already = selected.startsWith(marker) && selected.endsWith(marker) && selected.length >= marker.length * 2;
+    const replacement = already ? selected.slice(marker.length, -marker.length) : `${marker}${selected || 'text'}${marker}`;
+    const next = `${value.slice(0, start)}${replacement}${value.slice(end)}`.slice(0, maxLength);
+    onChange(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const inner = already ? 0 : marker.length;
+      el.setSelectionRange(start + inner, start + replacement.length - inner);
+    });
+  };
+
+  /** Turns the selected lines into "- " bullets, or back into plain lines. */
+  const toggleList = () => {
+    const el = area.current;
+    if (!el) return;
+    const lineStart = value.lastIndexOf('\n', el.selectionStart - 1) + 1;
+    const lineEnd = value.indexOf('\n', el.selectionEnd);
+    const end = lineEnd === -1 ? value.length : lineEnd;
+    const lines = value.slice(lineStart, end).split('\n');
+    const allBullets = lines.every((l) => /^\s*[-•]\s+/.test(l));
+    const changed = lines.map((l) => (allBullets ? l.replace(/^\s*[-•]\s+/, '') : `- ${l.replace(/^\s*[-•]\s+/, '')}`)).join('\n');
+    onChange(`${value.slice(0, lineStart)}${changed}${value.slice(end)}`.slice(0, maxLength));
+    requestAnimationFrame(() => el.focus());
+  };
+
+  const clear = () => onChange(value.replace(/\*\*(.+?)\*\*/g, '$1').replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1$2').replace(/^\s*[-•]\s+/gm, ''));
+
+  const tools: Array<{ label: string; icon: LucideIcon; run: () => void; keys?: string }> = [
+    { label: 'Bold', icon: Bold, run: () => wrap('**'), keys: 'Ctrl+B' },
+    { label: 'Italic', icon: Italic, run: () => wrap('*'), keys: 'Ctrl+I' },
+    { label: 'Bullet list', icon: List, run: toggleList },
+    { label: 'Clear formatting', icon: RemoveFormatting, run: clear },
+  ];
+
+  return (
+    <div className="block min-w-0 space-y-1.5 text-sm">
+      <span className="flex flex-wrap items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+          <span aria-hidden className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-soft text-brand">
+            <Icon className="h-3.5 w-3.5" />
+          </span>
+          {label}
+        </span>
+        {action}
+      </span>
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface-elevated transition focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
+        <div role="toolbar" aria-label={`${label} formatting`} className="flex items-center gap-0.5 border-b border-border bg-surface/70 px-1.5 py-1">
+          {tools.map((tool) => {
+            const ToolIcon = tool.icon;
+            return (
+              <button
+                key={tool.label}
+                type="button"
+                title={tool.keys ? `${tool.label} (${tool.keys})` : tool.label}
+                aria-label={tool.label}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={tool.run}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-background hover:text-brand"
+              >
+                <ToolIcon className="h-4 w-4" />
+              </button>
+            );
+          })}
+          <span className="ml-auto pr-1 text-[10px] tabular-nums text-muted">
+            {value.length}/{maxLength}
+          </span>
+        </div>
+        <textarea
+          ref={area}
+          aria-label={label}
+          className="block w-full resize-y bg-transparent px-3 py-2.5 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted"
+          rows={rows}
+          value={value}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (!(e.ctrlKey || e.metaKey)) return;
+            if (e.key.toLowerCase() === 'b') {
+              e.preventDefault();
+              wrap('**');
+            } else if (e.key.toLowerCase() === 'i') {
+              e.preventDefault();
+              wrap('*');
+            }
+          }}
+        />
+      </div>
+      <span className="block text-[11px] text-muted">Select words and tap B for bold or I for italic. Use the list button for bullet points.</span>
+    </div>
   );
 }
 
