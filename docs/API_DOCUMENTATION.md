@@ -1,7 +1,7 @@
 # Dealo API documentation
 
 Base path: `/api/v1`  
-Swagger UI: `/api/docs`  
+Swagger UI: `/api/docs`
 OpenAPI JSON: `/api/openapi.json`  
 Root metadata: `/`  
 Health: `/health`

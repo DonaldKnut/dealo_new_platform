@@ -59,10 +59,15 @@ export function ResumePreview({ doc, branding, className = '' }: { doc: PreviewD
         {Array.from({ length: pages - 1 }, (_, i) => (
           <div
             key={i}
-            className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-rose-300"
+            className="pointer-events-none absolute inset-x-0 z-30 flex items-center justify-between border-t border-dashed border-slate-400/90 px-4 py-1"
             style={{ top: PAGE_H * (i + 1) }}
           >
-            <span className="absolute right-2 top-1 rounded bg-rose-100 px-2 py-0.5 text-[11px] font-semibold text-rose-700">Page {i + 2}</span>
+            <span className="rounded-full bg-slate-900/90 px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-md">
+              Page {i + 2} Break
+            </span>
+            <span className="rounded bg-white/90 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider text-slate-500 shadow-sm">
+              Standard A4 Boundary
+            </span>
           </div>
         ))}
       </div>

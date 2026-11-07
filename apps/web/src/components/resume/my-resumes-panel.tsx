@@ -135,8 +135,8 @@ export function MyResumesPanel() {
           {items.map((item, i) => (
             <motion.div key={item.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="group relative overflow-hidden rounded-2xl border border-border bg-surface-elevated shadow-sm transition hover:shadow-lg">
               <Link href={`/resume-builder/${item.id}`} className="block">
-                <div className="max-h-72 overflow-hidden bg-[#e9eef0] p-3 dark:bg-[#0c1a16]">
-                  <div className="pointer-events-none overflow-hidden rounded shadow">
+                <div className="max-h-72 overflow-hidden bg-slate-100/80 p-3 dark:bg-[#071f14]">
+                  <div className="pointer-events-none overflow-hidden rounded-lg bg-white shadow-md ring-1 ring-slate-900/10">
                     <ResumePreview doc={toDoc(item)} branding={false} />
                   </div>
                 </div>

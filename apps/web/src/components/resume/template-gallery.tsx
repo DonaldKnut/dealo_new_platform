@@ -33,14 +33,14 @@ export function TemplateGallery() {
             href={`/resume-builder/new?template=${t.id}`}
             className="group block overflow-hidden rounded-2xl border border-border bg-surface-elevated shadow-sm transition hover:-translate-y-1 hover:border-brand/50 hover:shadow-xl"
           >
-            <div className="relative max-h-[26rem] overflow-hidden bg-[#e9eef0] p-3 dark:bg-[#0c1a16]">
-              <div className="pointer-events-none overflow-hidden rounded shadow-lg transition duration-500 group-hover:scale-[1.02]">
+            <div className="relative max-h-[26rem] overflow-hidden bg-slate-100/80 p-3.5 dark:bg-[#071f14]">
+              <div className="pointer-events-none overflow-hidden rounded-lg bg-white shadow-xl ring-1 ring-slate-900/10 transition duration-500 group-hover:scale-[1.02]">
                 <ResumePreview
                   doc={{ kind: 'RESUME', data: SAMPLE_RESUME, style: { template: t.id, accentColor: COLORS[t.id], font: t.id === 'minimal' ? 'times' : 'helvetica' } }}
                   branding={false}
                 />
               </div>
-              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#e9eef0] dark:from-[#0c1a16]" />
+              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-100 dark:from-[#071f14]" />
             </div>
             <div className="flex items-center justify-between gap-2 p-3">
               <span className="min-w-0">
