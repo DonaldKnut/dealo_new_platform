@@ -1,12 +1,14 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Bot, Building2, CalendarClock, ChartColumn, Globe, Kanban, Loader2, Plus, Users } from 'lucide-react';
+import { Bot, Building2, CalendarClock, ChartColumn, Globe, HelpCircle, Kanban, Loader2, Plus, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 
+import { ATS_TAB_HELP, AtsGuide } from '@/components/ats/ats-guide';
 import { AtsWorkspaceProvider, useAtsWorkspace } from '@/components/ats/ats-workspace';
+import { Tooltip } from '@/components/ui/tooltip';
 import { CreateWorkspaceForm } from '@/components/ats/create-workspace-form';
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -27,6 +29,8 @@ function Frame({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { loading, error, workspaces, current, orgId, select, reload } = useAtsWorkspace();
   const [creating, setCreating] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [highlight, setHighlight] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -86,6 +90,7 @@ function Frame({ children }: { children: ReactNode }) {
             <label className="sr-only" htmlFor="ats-workspace">
               Workspace
             </label>
+            <Tooltip content="Switch between workspaces, or create a new one for another company or branch." className="w-full max-w-full">
             <select
               id="ats-workspace"
               value={orgId ?? ''}
@@ -102,6 +107,7 @@ function Frame({ children }: { children: ReactNode }) {
               ))}
               <option value="__new">+ New workspace</option>
             </select>
+            </Tooltip>
             <p className="text-xs text-muted">
               {current ? (
                 <>
@@ -115,15 +121,30 @@ function Frame({ children }: { children: ReactNode }) {
             </p>
           </div>
         </div>
-        {current?.workspace.careersEnabled ? (
-          <Link
-            href={`/careers/${current.workspace.slug}`}
-            target="_blank"
-            className="btn-secondary w-full shrink-0 whitespace-nowrap text-sm sm:w-auto"
-          >
-            <Globe className="h-4 w-4" /> Careers page
-          </Link>
-        ) : null}
+        <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+          <Tooltip content="Take the quick guide again: what each section does and where to start.">
+            <button
+              type="button"
+              onClick={() => setGuideOpen(true)}
+              aria-label="Show me around"
+              className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-sm font-medium text-muted transition hover:border-brand hover:text-brand"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span className="hidden min-[400px]:inline">Guide</span>
+            </button>
+          </Tooltip>
+          {current?.workspace.careersEnabled ? (
+            <Tooltip content="Open your public careers page in a new tab. This is what applicants see." className="flex-1 sm:flex-none">
+              <Link
+                href={`/careers/${current.workspace.slug}`}
+                target="_blank"
+                className="btn-secondary w-full whitespace-nowrap text-sm"
+              >
+                <Globe className="h-4 w-4" /> Careers page
+              </Link>
+            </Tooltip>
+          ) : null}
+        </div>
       </div>
 
       <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1" aria-label="Hiring sections">
@@ -131,24 +152,26 @@ function Frame({ children }: { children: ReactNode }) {
           const active = isTab(tab.href);
           const Icon = tab.icon;
           return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={cn(
-                'relative inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors',
-                active ? 'text-white dark:text-[#071f14]' : 'text-muted hover:text-foreground',
-              )}
-            >
-              {active ? (
-                <motion.span
-                  layoutId="ats-tab"
-                  className="absolute inset-0 rounded-full bg-brand"
-                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                />
-              ) : null}
-              <Icon className="relative z-10 h-4 w-4" />
-              <span className="relative z-10">{tab.label}</span>
-            </Link>
+            <Tooltip key={tab.href} content={ATS_TAB_HELP[tab.href]} className="shrink-0">
+              <Link
+                href={tab.href}
+                className={cn(
+                  'relative inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors',
+                  active ? 'text-white dark:text-[#071f14]' : 'text-muted hover:text-foreground',
+                  highlight === tab.href && 'z-[170] bg-surface-elevated text-brand ring-2 ring-brand ring-offset-2 ring-offset-background',
+                )}
+              >
+                {active ? (
+                  <motion.span
+                    layoutId="ats-tab"
+                    className="absolute inset-0 rounded-full bg-brand"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  />
+                ) : null}
+                <Icon className="relative z-10 h-4 w-4" />
+                <span className="relative z-10">{tab.label}</span>
+              </Link>
+            </Tooltip>
           );
         })}
       </nav>
@@ -160,6 +183,8 @@ function Frame({ children }: { children: ReactNode }) {
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       )}
+
+      <AtsGuide open={guideOpen} onOpenChange={setGuideOpen} onHighlight={setHighlight} />
 
       <BottomSheet
         open={creating}

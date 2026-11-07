@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ApplicantDrawer } from '@/components/ats/applicant-drawer';
 import { ApplicationCardView } from '@/components/ats/application-card';
 import { AddApplicantForm } from '@/components/ats/add-applicant-form';
+import { JOB_STATUS_HELP } from '@/components/ats/ats-guide';
 import { JobEditorModal } from '@/components/ats/ats-job-editor';
 import { FormModal } from '@/components/ui/form-modal';
 import { useAtsWorkspace } from '@/components/ats/ats-workspace';
@@ -15,6 +16,7 @@ import { EmailComposeSheet } from '@/components/ats/email-compose-sheet';
 import { StatusChip } from '@/components/dashboard/dashboard-ui';
 import { BottomSheet, useCompactViewport } from '@/components/ui/bottom-sheet';
 import { useToast } from '@/components/ui/toast';
+import { Tooltip } from '@/components/ui/tooltip';
 import { ApiError } from '@/lib/api';
 import { atsApi, canManage, type ApplicationCard, type AtsJob, type WorkspaceRole } from '@/lib/ats-api';
 import { cn } from '@/lib/utils';
@@ -168,14 +170,18 @@ export function AtsBoard({ jobId }: { jobId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3">
-        <Link href="/dashboard/ats" className="inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-brand">
-          <ArrowLeft className="h-4 w-4" /> All jobs
-        </Link>
+        <Tooltip content="Back to the list of all your jobs." className="w-fit">
+          <Link href="/dashboard/ats" className="inline-flex w-fit items-center gap-1 text-sm text-muted hover:text-brand">
+            <ArrowLeft className="h-4 w-4" /> All jobs
+          </Link>
+        </Tooltip>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="break-words font-display text-2xl text-foreground min-[340px]:text-3xl">{job.title}</h1>
-              <StatusChip status={job.status} />
+              <Tooltip content={JOB_STATUS_HELP[job.status] ?? job.status}>
+                <StatusChip status={job.status} />
+              </Tooltip>
             </div>
             <p className="mt-1 text-sm text-muted">
               {job.location} · {cards.length} {view === 'ACTIVE' ? 'in progress' : view.toLowerCase()}

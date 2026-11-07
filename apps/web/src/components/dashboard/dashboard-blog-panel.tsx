@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { DashHero, StatusChip } from '@/components/dashboard/dashboard-ui';
 import { FormField } from '@/components/forms/form-field';
 import { FormModal } from '@/components/ui/form-modal';
+import { RichHtmlEditor } from '@/components/ui/rich-html-editor';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import {
@@ -115,6 +116,10 @@ export function DashboardBlogPanel() {
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!content.replace(/<[^>]*>/g, '').trim() && !/<img/i.test(content)) {
+      toast.error('Add some content', 'The post body is empty.');
+      return;
+    }
     setSaving(true);
     const payload = {
       title,
@@ -304,8 +309,8 @@ export function DashboardBlogPanel() {
             <FormField label="Excerpt" hint="One or two sentences shown on the blog list and in Google.">
               <textarea className="input-field min-h-[4.5rem]" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} required />
             </FormField>
-            <FormField label="Content" hint="HTML or plain text with blank lines between paragraphs.">
-              <textarea className="input-field min-h-[18rem] font-mono text-xs leading-relaxed" value={content} onChange={(e) => setContent(e.target.value)} required />
+            <FormField label="Content" hint="Use the toolbar for headings, lists, links and images. Tap HTML to edit the code directly.">
+              <RichHtmlEditor value={content} onChange={setContent} placeholder="Write your post. Start with a short intro paragraph…" />
             </FormField>
           </div>
 

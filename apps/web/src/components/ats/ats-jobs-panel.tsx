@@ -6,24 +6,25 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { JOB_STATUS_HELP } from '@/components/ats/ats-guide';
 import { JobEditorModal } from '@/components/ats/ats-job-editor';
 import { AtsLimitBanner } from '@/components/ats/ats-usage';
 import { useAtsWorkspace } from '@/components/ats/ats-workspace';
 import { DashPanel, StatusChip } from '@/components/dashboard/dashboard-ui';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { useToast } from '@/components/ui/toast';
+import { Tooltip } from '@/components/ui/tooltip';
 import { ApiError } from '@/lib/api';
 import { ARRANGEMENT_LABEL, atsApi, canManage, formatPay, type AtsJob, type JobStatus } from '@/lib/ats-api';
 import { cn } from '@/lib/utils';
 
-const FILTERS: Array<{ id: 'ALL' | JobStatus; label: string }> = [
-  { id: 'OPEN', label: 'Open' },
-  { id: 'DRAFT', label: 'Drafts' },
-  { id: 'PAUSED', label: 'Paused' },
-  { id: 'CLOSED', label: 'Closed' },
-  { id: 'ALL', label: 'All' },
+const FILTERS: Array<{ id: 'ALL' | JobStatus; label: string; help: string }> = [
+  { id: 'OPEN', label: 'Open', help: 'Live jobs taking applications right now.' },
+  { id: 'DRAFT', label: 'Drafts', help: 'Not published yet. Only your team can see them.' },
+  { id: 'PAUSED', label: 'Paused', help: 'Hidden from your careers page for now. Applicants are kept.' },
+  { id: 'CLOSED', label: 'Closed', help: 'Finished hiring. Applicants stay here for your records.' },
+  { id: 'ALL', label: 'All', help: 'Every job in this workspace.' },
 ];
-
 export function AtsJobsPanel() {
   const toast = useToast();
   const { orgId, current, reloadDetail } = useAtsWorkspace();
@@ -78,24 +79,27 @@ export function AtsJobsPanel() {
           {FILTERS.map((f) => {
             const count = f.id === 'ALL' ? jobs?.length ?? 0 : (jobs ?? []).filter((j) => j.status === f.id).length;
             return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setFilter(f.id)}
-                className={cn(
-                  'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition',
-                  filter === f.id ? 'border-brand bg-brand-soft text-brand' : 'border-border text-muted hover:text-foreground',
-                )}
-              >
-                {f.label} <span className="tabular-nums opacity-70">{count}</span>
-              </button>
+              <Tooltip key={f.id} content={f.help} className="shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setFilter(f.id)}
+                  className={cn(
+                    'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition',
+                    filter === f.id ? 'border-brand bg-brand-soft text-brand' : 'border-border text-muted hover:text-foreground',
+                  )}
+                >
+                  {f.label} <span className="tabular-nums opacity-70">{count}</span>
+                </button>
+              </Tooltip>
             );
           })}
         </div>
         {manage ? (
-          <button type="button" onClick={() => setEditor({ jobId: null })} className="btn-primary w-full text-sm sm:w-auto">
-            <Plus className="h-4 w-4" /> New job
-          </button>
+          <Tooltip content="Write a new job post. You can save it as a draft and publish later." className="w-full sm:w-auto">
+            <button type="button" onClick={() => setEditor({ jobId: null })} className="btn-primary w-full text-sm sm:w-auto">
+              <Plus className="h-4 w-4" /> New job
+            </button>
+          </Tooltip>
         ) : null}
       </div>
 
@@ -136,7 +140,9 @@ export function AtsJobsPanel() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <Link href={`/dashboard/ats/jobs/${job.id}`} className="min-w-0 flex-1">
-                    <h3 className="break-words font-display text-lg leading-snug text-foreground group-hover:text-brand">{job.title}</h3>
+                    <Tooltip content="Open this job to see every applicant on a board you can drag between stages." side="top">
+                      <h3 className="break-words font-display text-lg leading-snug text-foreground group-hover:text-brand">{job.title}</h3>
+                    </Tooltip>
                     <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
                       <span className="inline-flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
@@ -147,16 +153,20 @@ export function AtsJobsPanel() {
                     </p>
                   </Link>
                   <div className="flex shrink-0 items-center gap-1">
-                    <StatusChip status={job.status} />
+                    <Tooltip content={JOB_STATUS_HELP[job.status] ?? job.status} side="top">
+                      <StatusChip status={job.status} />
+                    </Tooltip>
                     {manage ? (
-                      <button
-                        type="button"
-                        aria-label="Job actions"
-                        onClick={() => setMenuJob(job)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted transition hover:border-brand hover:text-brand"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
+                      <Tooltip content="Edit, publish, pause, copy the link or close this job." side="top">
+                        <button
+                          type="button"
+                          aria-label="Job actions"
+                          onClick={() => setMenuJob(job)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted transition hover:border-brand hover:text-brand"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </Tooltip>
                     ) : null}
                   </div>
                 </div>

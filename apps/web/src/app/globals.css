@@ -661,6 +661,46 @@
     color: var(--foreground);
   }
 
+  .prose-dealo h4 {
+    margin-top: 1.4em;
+    font-weight: 600;
+  }
+
+  .prose-dealo img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 1rem;
+  }
+
+  .prose-dealo hr {
+    margin: 2em 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .prose-dealo code {
+    border-radius: 0.375rem;
+    background: var(--surface);
+    padding: 0.1em 0.35em;
+    font-size: 0.9em;
+  }
+
+  .prose-dealo pre {
+    overflow-x: auto;
+    border-radius: 0.75rem;
+    background: var(--surface);
+    padding: 1rem;
+    font-size: 0.875rem;
+  }
+
+  .prose-editor {
+    font-size: 1rem;
+  }
+
+  .prose-editor > :first-child {
+    margin-top: 0;
+  }
+
   @media (max-width: 359px) {
     .prose-dealo {
       font-size: 0.975rem;
