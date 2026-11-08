@@ -380,10 +380,13 @@ export async function uploadContentImage(file: File) {
 export function sendNewsletterCampaign(id: string) {
   return apiFetch<{
     recipientCount: number;
+    skippedOptedOut?: number;
     sent: number;
     failed: number;
   }>(`/newsletter/campaigns/${id}/send`, { method: 'POST' });
 }
+
+export const fetchNewsletterStats = () => apiFetch<{ subscribers: number; optedOut: number }>('/newsletter/stats');
 
 export type TalentProfile = {
   id: string;

@@ -405,6 +405,19 @@ model NewsletterSubscriber {
   updatedAt   DateTime @updatedAt
 }
 
+/// Someone who asked not to get newsletters or broadcasts. Covers subscribers and account holders alike.
+model EmailOptOut {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  /// "link" (footer), "one_click" (mail app button), "preferences" or "admin".
+  source    String   @default("link")
+  reason    String?
+  campaignId String? @db.ObjectId
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model NewsletterCampaign {
   id          String                    @id @default(auto()) @map("_id") @db.ObjectId
   subject     String

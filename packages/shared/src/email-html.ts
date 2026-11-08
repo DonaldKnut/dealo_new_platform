@@ -56,7 +56,7 @@ export function inlineEmailStyles(body: string) {
     });
 }
 
-export function renderEmailHtml(body: string, opts: { siteUrl?: string; preheader?: string; footerNote?: string } = {}) {
+export function renderEmailHtml(body: string, opts: { siteUrl?: string; preheader?: string; footerNote?: string; unsubscribeUrl?: string } = {}) {
   if (/<html[\s>]/i.test(body)) return body;
   const site = (opts.siteUrl ?? 'https://dealo.ng').replace(/\/$/, '');
   const preheader = opts.preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeAttr(opts.preheader)}</div>` : '';
@@ -67,6 +67,8 @@ export function renderEmailHtml(body: string, opts: { siteUrl?: string; preheade
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px">
 <tr><td style="padding:4px 8px 16px"><a href="${site}" target="_blank"><img src="${LOGO}" alt="Dealo" width="132" style="display:block;width:132px;height:auto;border:0"></a></td></tr>
 <tr><td style="background:#ffffff;border-radius:20px;padding:32px 24px;font-family:Arial,Helvetica,sans-serif;border:1px solid #e3ecea">${inlineEmailStyles(body)}</td></tr>
-<tr><td style="padding:16px 8px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#6b7c7a;text-align:center">${escapeAttr(footer)}<br><a href="${site}" target="_blank" style="color:${BRAND}">${site.replace(/^https?:\/\//, '')}</a></td></tr>
+<tr><td style="padding:16px 8px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#6b7c7a;text-align:center">${escapeAttr(footer)}<br><a href="${site}" target="_blank" style="color:${BRAND}">${site.replace(/^https?:\/\//, '')}</a>${
+    opts.unsubscribeUrl ? ` · <a href="${escapeAttr(opts.unsubscribeUrl)}" target="_blank" style="color:#6b7c7a;text-decoration:underline">Unsubscribe</a>` : ''
+  }</td></tr>
 </table></td></tr></table></body></html>`;
 }

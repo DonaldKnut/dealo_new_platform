@@ -33,6 +33,7 @@ export class ResendEmailProvider implements EmailProvider {
       subject: input.subject,
       html: input.html,
       text: input.text,
+      ...(input.headers ? { headers: input.headers } : {}),
       attachments: input.attachments?.map((file) => ({
         filename: file.filename,
         content: Buffer.from(file.content).toString('base64'),

@@ -8,6 +8,7 @@ import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
 import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
+import { EmailPreferencesService } from '../newsletter/email-preferences.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -18,6 +19,7 @@ export class MailService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly auditLog: AuditLogService,
+    private readonly preferences: EmailPreferencesService,
     config: ConfigService<AppEnv, true>,
   ) {
     this.siteUrl = config.get('APP_URL', { infer: true });
@@ -61,16 +63,21 @@ export class MailService {
   }
 
   async mailAll(input: MailAllUsersInput, actor: AuthUser) {
-    const recipients = await this.resolveRecipients(input.roleFilter);
+    // Team-only mail is internal; every other broadcast respects opt-outs and carries an unsubscribe link.
+    const internal = input.roleFilter === 'STAFF';
+    const everyone = await this.resolveRecipients(input.roleFilter);
+    const recipients = internal ? everyone : await this.preferences.withoutOptOuts(everyone);
     const results: Array<{ email: string; ok: boolean }> = [];
 
     for (const email of recipients) {
       try {
+        const links = internal ? null : this.preferences.linksFor(email);
         await this.emailService.send({
           to: email,
           subject: input.subject,
-          html: this.html(input.bodyHtml),
-          text: input.bodyText ?? stripHtml(input.bodyHtml),
+          html: renderEmailHtml(input.bodyHtml, { siteUrl: this.siteUrl, preheader: stripHtml(input.bodyHtml).slice(0, 140), unsubscribeUrl: links?.page }),
+          text: `${input.bodyText ?? stripHtml(input.bodyHtml)}${links ? `\n\nUnsubscribe: ${links.page}` : ''}`,
+          ...(internal ? {} : { headers: this.preferences.headersFor(email) }),
         });
         results.push({ email, ok: true });
       } catch {
@@ -86,6 +93,7 @@ export class MailService {
         roleFilter: input.roleFilter,
         subject: input.subject,
         recipientCount: recipients.length,
+        skippedOptedOut: everyone.length - recipients.length,
         sent: results.filter((r) => r.ok).length,
         failed: results.filter((r) => !r.ok).length,
       },
@@ -93,6 +101,7 @@ export class MailService {
 
     return {
       recipientCount: recipients.length,
+      skippedOptedOut: everyone.length - recipients.length,
       sent: results.filter((r) => r.ok).length,
       failed: results.filter((r) => !r.ok).length,
     };

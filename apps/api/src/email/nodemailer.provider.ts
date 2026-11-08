@@ -47,6 +47,7 @@ export class NodemailerEmailProvider implements EmailProvider {
       subject: input.subject,
       html: input.html,
       text: input.text,
+      headers: input.headers,
       attachments: input.attachments?.map((file) => ({
         filename: file.filename,
         content: file.content,

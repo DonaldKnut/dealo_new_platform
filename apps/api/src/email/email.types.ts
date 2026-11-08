@@ -10,6 +10,8 @@ export interface SendEmailInput {
   html: string;
   text?: string;
   attachments?: EmailAttachment[];
+  /** Extra mail headers, e.g. List-Unsubscribe for bulk mail. */
+  headers?: Record<string, string>;
 }
 
 export interface EmailProvider {

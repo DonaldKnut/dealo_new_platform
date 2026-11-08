@@ -11,6 +11,15 @@ export const newsletterCampaignInputSchema = z.object({
 
 export type NewsletterCampaignInput = z.infer<typeof newsletterCampaignInputSchema>;
 
+export const UNSUBSCRIBE_REASONS = ['Too many emails', 'Not relevant to me', 'I never signed up', 'Other'] as const;
+
+export const emailPreferenceSchema = z.object({
+  token: z.string().trim().min(10).max(600),
+  reason: z.string().trim().max(300).optional(),
+  campaignId: z.string().trim().max(40).optional(),
+});
+export type EmailPreferenceInput = z.infer<typeof emailPreferenceSchema>;
+
 /** Sends the draft to the signed-in staff member only, to check it in a real inbox. */
 export const newsletterTestSchema = newsletterCampaignInputSchema.pick({ subject: true, bodyHtml: true });
 export type NewsletterTestInput = z.infer<typeof newsletterTestSchema>;

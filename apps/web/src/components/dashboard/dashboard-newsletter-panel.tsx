@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Briefcase, FlaskConical, LoaderCircle, Mail, Newspaper, Plus, Send, UserRound, Users } from 'lucide-react';
+import { BellOff, Briefcase, FlaskConical, LoaderCircle, Mail, Newspaper, Plus, Send, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { DashHero, StatusChip } from '@/components/dashboard/dashboard-ui';
@@ -13,6 +13,7 @@ import { ApiError } from '@/lib/api';
 import {
   createNewsletterCampaign,
   fetchNewsletterCampaigns,
+  fetchNewsletterStats,
   sendNewsletterCampaign,
   sendNewsletterTest,
   type NewsletterCampaign,
@@ -37,9 +38,12 @@ export function DashboardNewsletterPanel() {
   const [segment, setSegment] = useState('ALL');
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
+  const [stats, setStats] = useState<{ subscribers: number; optedOut: number } | null>(null);
 
   const refresh = async () => {
-    setCampaigns(await fetchNewsletterCampaigns());
+    const [list, counts] = await Promise.all([fetchNewsletterCampaigns(), fetchNewsletterStats().catch(() => null)]);
+    setCampaigns(list);
+    setStats(counts);
   };
 
   useEffect(() => {
@@ -99,7 +103,12 @@ export function DashboardNewsletterPanel() {
     setSendingId(campaign.id);
     try {
       const result = await sendNewsletterCampaign(campaign.id);
-      toast.success('Campaign sent', `Sent ${result.sent} of ${result.recipientCount}${result.failed ? ` (${result.failed} failed)` : ''}`);
+      toast.success(
+        'Campaign sent',
+        `Sent ${result.sent} of ${result.recipientCount}${result.failed ? ` (${result.failed} failed)` : ''}${
+          result.skippedOptedOut ? `. ${result.skippedOptedOut} unsubscribed people were skipped.` : ''
+        }`,
+      );
       await refresh();
     } catch (err) {
       toast.error('Send failed', err instanceof ApiError ? err.message : '');
@@ -131,6 +140,27 @@ export function DashboardNewsletterPanel() {
       />
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
+
+      {stats ? (
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { icon: Users, label: 'Newsletter subscribers', value: stats.subscribers.toLocaleString(), hint: 'Signed up on the site. Verified accounts are added on send.' },
+            { icon: BellOff, label: 'Unsubscribed', value: stats.optedOut.toLocaleString(), hint: 'Always skipped. Account emails still reach them.' },
+            { icon: ShieldCheck, label: 'Unsubscribe link', value: 'On', hint: 'In every footer, plus the one-tap button in Gmail and Yahoo.' },
+          ].map((s) => (
+            <div key={s.label} className="flex items-start gap-3 rounded-2xl border border-border bg-surface-elevated p-4">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
+                <s.icon className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs text-muted">{s.label}</p>
+                <p className="font-display text-xl text-foreground">{s.value}</p>
+                <p className="text-[11px] leading-snug text-muted">{s.hint}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <section className="space-y-3">
         {campaigns.length === 0 ? (

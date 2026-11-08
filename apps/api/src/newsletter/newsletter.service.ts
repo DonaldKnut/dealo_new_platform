@@ -9,6 +9,7 @@ import { normalizeEmail } from '../common/normalize-email';
 import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailPreferencesService } from './email-preferences.service';
 
 @Injectable()
 export class NewsletterService {
@@ -18,20 +19,35 @@ export class NewsletterService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly auditLog: AuditLogService,
+    private readonly preferences: EmailPreferencesService,
     config: ConfigService<AppEnv, true>,
   ) {
     this.siteUrl = config.get('APP_URL', { infer: true });
   }
 
-  private html(bodyHtml: string) {
-    return renderEmailHtml(bodyHtml, { siteUrl: this.siteUrl, preheader: stripHtml(bodyHtml).slice(0, 140) });
+  /** One recipient's copy: their own unsubscribe link in the footer and in the mail headers. */
+  private message(to: string, subject: string, bodyHtml: string, bodyText?: string | null, campaignId?: string) {
+    const links = this.preferences.linksFor(to);
+    const page = campaignId ? `${links.page}&c=${campaignId}` : links.page;
+    return {
+      to,
+      subject,
+      html: renderEmailHtml(bodyHtml, { siteUrl: this.siteUrl, preheader: stripHtml(bodyHtml).slice(0, 140), unsubscribeUrl: page }),
+      text: `${bodyText ?? stripHtml(bodyHtml)}\n\nUnsubscribe: ${page}`,
+      headers: this.preferences.headersFor(to),
+    };
   }
 
   async sendTest(input: NewsletterTestInput, user: AuthUser) {
     const account = await this.prisma.user.findUnique({ where: { id: user.id }, select: { email: true } });
     if (!account) throw new NotFoundException('Account not found');
-    await this.emailService.send({ to: account.email, subject: `[Test] ${input.subject}`, html: this.html(input.bodyHtml), text: stripHtml(input.bodyHtml) });
+    await this.emailService.send(this.message(account.email, `[Test] ${input.subject}`, input.bodyHtml));
     return { ok: true, email: account.email };
+  }
+
+  async stats() {
+    const [subscribers, optedOut] = await Promise.all([this.prisma.newsletterSubscriber.count({ where: { isActive: true } }), this.preferences.count()]);
+    return { subscribers, optedOut };
   }
 
   listCampaigns() {
@@ -71,17 +87,13 @@ export class NewsletterService {
     });
     if (!campaign) throw new NotFoundException('Campaign not found');
 
-    const recipients = await this.resolveRecipients(campaign.segment);
+    const everyone = await this.resolveRecipients(campaign.segment);
+    const recipients = await this.preferences.withoutOptOuts(everyone);
     const results: Array<{ email: string; ok: boolean }> = [];
 
     for (const email of recipients) {
       try {
-        await this.emailService.send({
-          to: email,
-          subject: campaign.subject,
-          html: this.html(campaign.bodyHtml),
-          text: campaign.bodyText ?? stripHtml(campaign.bodyHtml),
-        });
+        await this.emailService.send(this.message(email, campaign.subject, campaign.bodyHtml, campaign.bodyText, campaign.id));
         await this.prisma.newsletterSend.create({
           data: {
             campaignId: campaign.id,
@@ -119,6 +131,7 @@ export class NewsletterService {
       actorId: user.id,
       metadata: {
         recipientCount: recipients.length,
+        skippedOptedOut: everyone.length - recipients.length,
         sent: results.filter((r) => r.ok).length,
         failed: results.filter((r) => !r.ok).length,
       },
@@ -127,6 +140,7 @@ export class NewsletterService {
     return {
       campaign: updated,
       recipientCount: recipients.length,
+      skippedOptedOut: everyone.length - recipients.length,
       sent: results.filter((r) => r.ok).length,
       failed: results.filter((r) => !r.ok).length,
     };
@@ -148,6 +162,8 @@ export class NewsletterService {
         isActive: true,
       },
     });
+    // Signing up again is fresh consent, so an earlier opt-out no longer applies.
+    await this.prisma.emailOptOut.deleteMany({ where: { email } });
     return { ok: true, id: subscriber.id };
   }
 
