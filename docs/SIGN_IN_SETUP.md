@@ -175,7 +175,7 @@ What happens behind the scenes:
 | What you see | What to do |
 | --- | --- |
 | No Google/LinkedIn button | The keys are missing on Render, or Render has not restarted yet. Check `your-website/api/v1/auth/providers`. |
-| Google: **"redirect_uri_mismatch"** | The redirect URI in Google Cloud is not exactly `https://YOUR-WEBSITE/api/v1/auth/google/callback`. Fix it there (it can take a few minutes to apply). |
+| Google: **"redirect_uri_mismatch"** | The redirect URI in Google Cloud is not exactly `https://YOUR-WEBSITE/api/v1/auth/google/callback`. Fix it there (it can take a few minutes to apply). Testing on your computer? Also add `http://localhost:3000/api/v1/auth/google/callback`, and if `GOOGLE_CALLBACK_URL` is set in `apps/api/.env`, add that exact address too (or delete the line so the API uses the localhost:3000 one). |
 | LinkedIn: **"The redirect_uri does not match"** | Same idea: fix the URL on the LinkedIn **Auth** tab. |
 | Google: **"Access blocked: app has not completed verification"** or only some people can sign in | The consent screen is still in "Testing". Add those people as test users, or click **Publish app**. |
 | LinkedIn: **"unauthorized_scope_error"** | The **Sign In with LinkedIn using OpenID Connect** product is not added yet (Part 3.3). |
