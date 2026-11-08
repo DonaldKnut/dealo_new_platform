@@ -30,7 +30,6 @@ import {
   type UpdateAgentInput,
 } from '@dealo/shared';
 import { ApplicationStatus, InterviewStatus, JobStatus, OfferStatus, Prisma, UserRole, WorkspaceRole, type AgentTask, type Job, type Organization } from '@prisma/client';
-import { randomBytes } from 'crypto';
 import type { Subscription } from 'rxjs';
 
 import { ApplicationsService } from '../ats/applications.service';
@@ -42,7 +41,8 @@ import { HiringService } from '../ats/hiring.service';
 import { JobsService } from '../ats/jobs.service';
 import type { AuthUser } from '../auth/auth.types';
 import { assertEmailVerified } from '../auth/verified-email';
-import { PaystackClient } from '../billing/paystack.client';
+import { PaymentRouterService } from '../payments/payment-router.service';
+import { newReference, PAYMENT_PREFIX, PaystackClient, type PaystackTransaction } from '../payments/paystack.client';
 import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -93,12 +93,14 @@ export class HiringAgentsService implements OnModuleInit, OnModuleDestroy {
     private readonly brains: AgentBrainsService,
     private readonly email: EmailService,
     private readonly paystack: PaystackClient,
+    private readonly payments: PaymentRouterService,
     config: ConfigService<AppEnv, true>,
   ) {
     this.appUrl = config.get('APP_URL', { infer: true }).replace(/\/$/, '');
   }
 
   onModuleInit() {
+    this.payments.register(PAYMENT_PREFIX.agents, 'hiring_agents_pro', (txn) => this.applyTransaction(txn));
     this.subscription = this.events.events$.subscribe((event) => void this.onEvent(event));
     this.sweepTimer = setInterval(() => void this.sweep(), SWEEP_MS);
     this.sweepTimer.unref();
@@ -809,7 +811,7 @@ export class HiringAgentsService implements OnModuleInit, OnModuleDestroy {
     const account = await this.prisma.user.findUnique({ where: { id: user.id }, select: { email: true } });
     if (!account) throw new ForbiddenException('Account not found');
     const pro = AGENT_PLANS.PRO;
-    const reference = `dealo_agents_${randomBytes(10).toString('hex')}`;
+    const reference = newReference(PAYMENT_PREFIX.agents);
     const invoice = await this.prisma.agentInvoice.create({
       data: { reference, organizationId: organization.id, userId: user.id, amountMinor: pro.priceMinor, currency: pro.currency, periodDays: pro.periodDays },
     });
@@ -825,19 +827,33 @@ export class HiringAgentsService implements OnModuleInit, OnModuleDestroy {
     return { reference, authorizationUrl: session.authorization_url };
   }
 
+  /** Grants Pro for a verified Paystack payment. Safe to call twice (webhook and return page). */
+  private async applyTransaction(txn: PaystackTransaction) {
+    const invoice = await this.prisma.agentInvoice.findUnique({ where: { reference: txn.reference } });
+    if (!invoice || invoice.status !== 'PENDING') return;
+    if (txn.status === 'success') {
+      if (txn.amount !== invoice.amountMinor || txn.currency.toUpperCase() !== invoice.currency.toUpperCase()) {
+        await this.prisma.agentInvoice.updateMany({
+          where: { id: invoice.id, status: 'PENDING' },
+          data: { status: 'FAILED', failureReason: `Amount mismatch: paid ${txn.amount} ${txn.currency}` },
+        });
+        return;
+      }
+      const claimed = await this.prisma.agentInvoice.updateMany({
+        where: { id: invoice.id, status: 'PENDING' },
+        data: { status: 'PAID', paidAt: txn.paid_at ? new Date(txn.paid_at) : new Date() },
+      });
+      if (claimed.count) await this.extendPro(invoice.organizationId, invoice.periodDays);
+    } else if (txn.status === 'failed' || txn.status === 'abandoned') {
+      await this.prisma.agentInvoice.updateMany({ where: { id: invoice.id, status: 'PENDING' }, data: { status: 'FAILED', failureReason: txn.gateway_response ?? txn.status } });
+    }
+  }
+
   async verifyUpgrade(orgId: string, reference: string, user: AuthUser) {
     await this.access.require(orgId, user, WorkspaceRole.HIRING_MANAGER);
     const invoice = await this.prisma.agentInvoice.findUnique({ where: { reference } });
     if (!invoice || invoice.organizationId !== orgId) throw new NotFoundException('Payment not found');
-    if (invoice.status === 'PENDING') {
-      const txn = await this.paystack.verify(reference);
-      if (txn.status === 'success' && txn.amount === invoice.amountMinor && txn.currency.toUpperCase() === invoice.currency.toUpperCase()) {
-        const claimed = await this.prisma.agentInvoice.updateMany({ where: { id: invoice.id, status: 'PENDING' }, data: { status: 'PAID', paidAt: new Date() } });
-        if (claimed.count) await this.extendPro(orgId, invoice.periodDays);
-      } else if (txn.status === 'failed' || txn.status === 'abandoned') {
-        await this.prisma.agentInvoice.updateMany({ where: { id: invoice.id, status: 'PENDING' }, data: { status: 'FAILED', failureReason: txn.gateway_response ?? txn.status } });
-      }
-    }
+    if (invoice.status === 'PENDING') await this.applyTransaction(await this.paystack.verify(reference));
     const [fresh, org] = await Promise.all([
       this.prisma.agentInvoice.findUnique({ where: { id: invoice.id }, select: { status: true, failureReason: true } }),
       this.prisma.organization.findUnique({ where: { id: orgId }, select: { agentPlan: true, agentPlanUntil: true } }),

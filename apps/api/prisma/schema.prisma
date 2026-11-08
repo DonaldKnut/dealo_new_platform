@@ -832,7 +832,42 @@ model AgentInvoice {
   @@index([organizationId, createdAt])
 }
 
-/// Job pulled from a public job feed (Remotive, Jobicy, Arbeitnow). Applying always happens on `url`.
+/// One online payment for CV builder Premium (job seekers). Moves PENDING -> PAID/FAILED once.
+model ResumeInvoice {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  reference        String    @unique
+  userId           String    @db.ObjectId
+  amountMinor      Int
+  currency         String
+  periodDays       Int
+  status           String    @default("PENDING")
+  authorizationUrl String?
+  providerTxnId    String?
+  failureReason    String?
+  paidAt           DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// Every Paystack webhook we receive, kept for audit and so a repeated event is handled once.
+model PaymentEvent {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  provider   String   @default("paystack")
+  /// Provider event name plus the transaction id, e.g. "charge.success:123456".
+  eventKey   String   @unique
+  event      String
+  reference  String?
+  product    String?
+  status     String   @default("RECEIVED")
+  error      String?
+  receivedAt DateTime @default(now())
+
+  @@index([reference])
+  @@index([receivedAt])
+}
+
+/// Job pulled from a public job feed (Remotive, Jobicy, Arbeitnow, Jooble, Careerjet). Applying always happens on `url`.
 model ExternalJob {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   source         String

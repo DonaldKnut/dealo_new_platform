@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 import type { AppEnv } from '../config/env.validation';
 import { PrismaService } from '../prisma/prisma.service';
-import { collapseDuplicates, FEED_FETCHERS, FEED_INFO, type FeedSource } from './job-feeds';
+import { collapseDuplicates, FEED_FETCHERS, FEED_INFO, type FeedKeys, type FeedSource } from './job-feeds';
 
 const KEEP_DAYS = 30;
 const CHECK_EVERY_MS = 30 * 60_000;
@@ -12,6 +12,7 @@ const CHECK_EVERY_MS = 30 * 60_000;
 export class JobFeedsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(JobFeedsService.name);
   private readonly enabled: boolean;
+  private readonly keys: FeedKeys;
   private running = false;
   private timers: NodeJS.Timeout[] = [];
 
@@ -20,6 +21,12 @@ export class JobFeedsService implements OnModuleInit, OnModuleDestroy {
     config: ConfigService<AppEnv, true>,
   ) {
     this.enabled = config.get('JOB_FEEDS_ENABLED', { infer: true }) !== 'false';
+    this.keys = { joobleKey: config.get('JOOBLE_API_KEY', { infer: true }), careerjetAffid: config.get('CAREERJET_AFFID', { infer: true }) };
+  }
+
+  private configured(source: FeedSource) {
+    const needs = FEED_INFO[source].needs;
+    return !needs || Boolean(this.keys[needs]);
   }
 
   onModuleInit() {
@@ -42,6 +49,7 @@ export class JobFeedsService implements OnModuleInit, OnModuleDestroy {
       return {
         source,
         name: FEED_INFO[source].name,
+        configured: this.configured(source),
         jobs: counts.find((c) => c.source === source)?._count._all ?? 0,
         lastRunAt: row?.lastRunAt ?? null,
         lastOkAt: row?.lastOkAt ?? null,
@@ -58,6 +66,7 @@ export class JobFeedsService implements OnModuleInit, OnModuleDestroy {
     const results: Record<string, number | string> = {};
     try {
       for (const source of Object.keys(FEED_INFO) as FeedSource[]) {
+        if (!this.configured(source)) continue;
         const row = await this.prisma.jobFeedSync.findUnique({ where: { source } });
         const due = !row?.lastRunAt || Date.now() - row.lastRunAt.getTime() >= FEED_INFO[source].minIntervalMs;
         if (!due && !(force && source !== 'remotive')) continue;
@@ -76,7 +85,7 @@ export class JobFeedsService implements OnModuleInit, OnModuleDestroy {
   private async syncOne(source: FeedSource): Promise<number | string> {
     const now = new Date();
     try {
-      const raw = await FEED_FETCHERS[source]();
+      const raw = await FEED_FETCHERS[source](this.keys);
       const jobs = collapseDuplicates(raw);
       const unique = [...new Map(jobs.map((job) => [job.sourceId, job])).values()];
       const ids = unique.map((job) => job.sourceId);

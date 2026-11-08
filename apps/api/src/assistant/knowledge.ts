@@ -25,7 +25,7 @@ export const TOPICS: Topic[] = [
     id: 'cv-premium',
     keywords: ['premium', 'upgrade', 'pay for cv', 'cover letter', 'cover letters', 'ai writing', 'write it for me', 'locked'],
     answer:
-      'CV Premium unlocks every template (Executive, Minimal, Artisan, Compact), all fonts and colours, corner illustrations, AI writing help, cover letters, up to 20 saved CVs and PDFs without the small Dealo footer. To get it, message us on WhatsApp or tap "Talk to a person" and we will set it up for you.',
+      'CV Premium unlocks every template (Executive, Minimal, Artisan, Compact), all fonts and colours, corner illustrations, AI writing help, cover letters, up to 20 saved CVs and PDFs without the small Dealo footer. When the Premium sheet shows a price you can pay securely with Paystack and it switches on straight away; otherwise message us on WhatsApp or tap "Talk to a person" and we will set it up for you.',
     links: [{ label: 'See templates', href: '/resume-builder' }],
     suggestions: ['Talk to a person', 'What is free?', 'How do I download my CV?'],
   },

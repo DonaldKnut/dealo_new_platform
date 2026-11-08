@@ -369,6 +369,22 @@ export function JobBoard() {
           </form>
 
           <div className="mt-4 flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              aria-pressed={/^nigeria$/i.test(filters.location ?? '')}
+              onClick={() => setParams({ location: /^nigeria$/i.test(filters.location ?? '') ? undefined : 'Nigeria' })}
+              className={cn(
+                'mr-1 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition',
+                /^nigeria$/i.test(filters.location ?? '') ? 'border-brand bg-brand text-white dark:text-[#071f14]' : 'border-brand/40 bg-brand-soft text-brand hover:border-brand',
+              )}
+            >
+              <span aria-hidden className="inline-flex h-3 w-4 overflow-hidden rounded-[2px]">
+                <span className="w-1/3 bg-[#008751]" />
+                <span className="w-1/3 bg-white" />
+                <span className="w-1/3 bg-[#008751]" />
+              </span>
+              Jobs in Nigeria
+            </button>
             <span className="mr-1 text-xs text-muted">Popular:</span>
             {POPULAR.map((term) => (
               <button
@@ -394,7 +410,7 @@ export function JobBoard() {
               <Zap className="h-3.5 w-3.5 text-brand" /> Easy apply on Dealo jobs
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Globe2 className="h-3.5 w-3.5 text-brand" /> Also from Remotive, Jobicy and Arbeitnow
+              <Globe2 className="h-3.5 w-3.5 text-brand" /> Also from trusted job sites in Nigeria and worldwide
             </span>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import type { JobBoardSource, JobBoardType } from '@dealo/shared';
+import { createHash } from 'crypto';
 import sanitizeHtml from 'sanitize-html';
 
 export type FeedSource = Exclude<JobBoardSource, 'dealo'>;
@@ -21,13 +22,53 @@ export type FeedJob = {
   publishedAt: Date;
 };
 
+/** Keys for feeds that need an account. A feed without its key is skipped, not failed. */
+export type FeedKeys = { joobleKey?: string; careerjetAffid?: string };
+
 /** Credit each feed and link back to it, as their terms ask. */
-export const FEED_INFO: Record<FeedSource, { name: string; url: string; minIntervalMs: number }> = {
+export const FEED_INFO: Record<FeedSource, { name: string; url: string; minIntervalMs: number; needs?: keyof FeedKeys }> = {
   // Remotive asks for at most 4 calls a day.
   remotive: { name: 'Remotive', url: 'https://remotive.com', minIntervalMs: 6 * 3_600_000 },
   jobicy: { name: 'Jobicy', url: 'https://jobicy.com', minIntervalMs: 2 * 3_600_000 },
   arbeitnow: { name: 'Arbeitnow', url: 'https://www.arbeitnow.com', minIntervalMs: 2 * 3_600_000 },
+  jooble: { name: 'Jooble', url: 'https://ng.jooble.org', minIntervalMs: 3 * 3_600_000, needs: 'joobleKey' },
+  careerjet: { name: 'Careerjet', url: 'https://www.careerjet.com.ng', minIntervalMs: 3 * 3_600_000, needs: 'careerjetAffid' },
 };
+
+/** Places that mean "in Nigeria" when someone filters by Nigeria. */
+export const NIGERIA_PLACES = [
+  'Nigeria',
+  'Lagos',
+  'Abuja',
+  'FCT',
+  'Port Harcourt',
+  'Ibadan',
+  'Kano',
+  'Enugu',
+  'Kaduna',
+  'Benin City',
+  'Ikeja',
+  'Lekki',
+  'Victoria Island',
+  'Warri',
+  'Uyo',
+  'Calabar',
+  'Owerri',
+  'Abeokuta',
+  'Ilorin',
+  'Onitsha',
+  'Asaba',
+  'Akure',
+  'Osogbo',
+  'Jos',
+  'Ogun',
+  'Rivers',
+  'Delta',
+  'Anambra',
+  'Oyo',
+];
+
+export const isNigeria = (location: string) => /^(nigeria|ng|naija)$/i.test(location.trim());
 
 const USER_AGENT = 'DealoJobBoard/1.0 (+https://dealo.ng/jobs)';
 
@@ -248,6 +289,115 @@ export async function fetchArbeitnow(pages = 2): Promise<FeedJob[]> {
   return out;
 }
 
+// --------------------------------------------------------------------- Jooble
+
+type JoobleJob = {
+  id: number | string;
+  title: string;
+  location?: string;
+  snippet?: string;
+  salary?: string;
+  source?: string;
+  type?: string;
+  link: string;
+  company?: string;
+  updated?: string;
+};
+
+/** Jooble's free partner API (key from jooble.org/api/about). Nigerian jobs from many local sites. */
+export async function fetchJooble(key: string, pages = 3): Promise<FeedJob[]> {
+  const out: FeedJob[] = [];
+  for (let page = 1; page <= pages; page += 1) {
+    const res = await fetch(`https://jooble.org/api/${encodeURIComponent(key)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
+      body: JSON.stringify({ keywords: '', location: 'Nigeria', page: String(page), ResultOnPage: '50' }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!res.ok) throw new Error(`Jooble answered ${res.status}`);
+    const body = (await res.json()) as { jobs?: JoobleJob[] };
+    const jobs = body.jobs ?? [];
+    for (const job of jobs) {
+      const text = plainText(job.snippet ?? '');
+      out.push({
+        source: 'jooble',
+        sourceId: String(job.id),
+        title: clean(job.title),
+        company: clean(job.company, 120) || clean(job.source, 120) || 'Employer',
+        companyLogo: null,
+        location: clean(job.location, 120) || 'Nigeria',
+        remote: /remote/i.test(`${job.location} ${job.title}`),
+        employmentType: mapJobType(job.type),
+        category: null,
+        tags: [],
+        salaryText: clean(job.salary, 80) || null,
+        description: safeHtml(`<p>${job.snippet ?? ''}</p>`),
+        summary: summarise(text),
+        url: job.link,
+        publishedAt: validDate(new Date(job.updated ?? Date.now())),
+      });
+    }
+    if (jobs.length < 50) break;
+  }
+  return out;
+}
+
+// ------------------------------------------------------------------ Careerjet
+
+type CareerjetJob = {
+  title: string;
+  company?: string;
+  date?: string;
+  description?: string;
+  locations?: string;
+  salary?: string;
+  site?: string;
+  url: string;
+};
+
+/** Careerjet partner API (free affiliate ID from careerjet.com.ng/partners). Searches Nigeria in English. */
+export async function fetchCareerjet(affid: string, pages = 2): Promise<FeedJob[]> {
+  const out: FeedJob[] = [];
+  for (let page = 1; page <= pages; page += 1) {
+    const params = new URLSearchParams({
+      locale_code: 'en_NG',
+      affid,
+      location: 'Nigeria',
+      sort: 'date',
+      pagesize: '99',
+      page: String(page),
+      user_ip: '0.0.0.0',
+      user_agent: USER_AGENT,
+      url: 'https://dealo.ng/jobs',
+    });
+    const body = await getJson<{ type?: string; jobs?: CareerjetJob[]; error?: string }>(`https://public.api.careerjet.net/search?${params}`);
+    if (body.error) throw new Error(`Careerjet: ${body.error}`);
+    const jobs = body.jobs ?? [];
+    for (const job of jobs) {
+      const text = plainText(job.description ?? '');
+      out.push({
+        source: 'careerjet',
+        sourceId: createHash('sha1').update(job.url).digest('hex'),
+        title: clean(job.title),
+        company: clean(job.company, 120) || clean(job.site, 120) || 'Employer',
+        companyLogo: null,
+        location: clean(job.locations, 120) || 'Nigeria',
+        remote: /remote/i.test(`${job.locations} ${job.title}`),
+        employmentType: mapJobType(job.title),
+        category: null,
+        tags: [],
+        salaryText: clean(job.salary, 80) || null,
+        description: safeHtml(`<p>${job.description ?? ''}</p>`),
+        summary: summarise(text),
+        url: job.url,
+        publishedAt: validDate(new Date(job.date ?? Date.now())),
+      });
+    }
+    if (jobs.length < 99) break;
+  }
+  return out;
+}
+
 /**
  * Some companies post the same job once per city. Keep one listing (the newest) and
  * name the other places, so one employer can't fill the whole board.
@@ -267,8 +417,10 @@ export function collapseDuplicates(jobs: FeedJob[]): FeedJob[] {
   });
 }
 
-export const FEED_FETCHERS: Record<FeedSource, () => Promise<FeedJob[]>> = {
-  remotive: fetchRemotive,
-  jobicy: fetchJobicy,
+export const FEED_FETCHERS: Record<FeedSource, (keys: FeedKeys) => Promise<FeedJob[]>> = {
+  remotive: () => fetchRemotive(),
+  jobicy: () => fetchJobicy(),
   arbeitnow: () => fetchArbeitnow(),
+  jooble: (keys) => fetchJooble(keys.joobleKey!),
+  careerjet: (keys) => fetchCareerjet(keys.careerjetAffid!),
 };

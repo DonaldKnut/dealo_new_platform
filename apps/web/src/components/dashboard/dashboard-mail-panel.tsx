@@ -15,6 +15,7 @@ import { useForm, type UseFormReturn } from 'react-hook-form';
 import { DashHero } from '@/components/dashboard/dashboard-ui';
 import { FormField } from '@/components/forms/form-field';
 import { FormModal } from '@/components/ui/form-modal';
+import { RichHtmlEditor } from '@/components/ui/rich-html-editor';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { logClientAudit } from '@/lib/client-audit';
@@ -31,11 +32,12 @@ const AUDIENCES: Array<{ id: MailAllUsersInput['roleFilter']; label: string; hin
 /** Body editor with a sandboxed preview so admins see the email before it goes out. */
 function BodyEditor({ form, id }: { form: UseFormReturn<MailOneUserInput> | UseFormReturn<MailAllUsersInput>; id: string }) {
   const [preview, setPreview] = useState(false);
-  const body = (form as UseFormReturn<MailOneUserInput>).watch('bodyHtml');
+  const typed = form as UseFormReturn<MailOneUserInput>;
+  const body = typed.watch('bodyHtml');
   const error = form.formState.errors.bodyHtml?.message;
   return (
-    <FormField label="Message" error={error} hint="Plain text or simple HTML (<p>, <a>, <strong>).">
-      <div className="overflow-hidden rounded-xl border border-border">
+    <FormField label="Message" error={error} hint="Use the toolbar for headings, bold, lists and links. Preview shows the email as people will get it.">
+      <div className="overflow-hidden rounded-2xl border border-border">
         <div className="flex items-center gap-1 border-b border-border bg-surface/60 p-1">
           {[
             { id: false, label: 'Write', icon: PenLine },
@@ -66,10 +68,13 @@ function BodyEditor({ form, id }: { form: UseFormReturn<MailOneUserInput> | UseF
             }</div>`}
           />
         ) : (
-          <textarea
-            className="block min-h-[14rem] w-full resize-y bg-transparent p-3 text-sm leading-relaxed text-foreground outline-none"
-            placeholder={'Hello,\n\nWrite your message here.\n\nThe Dealo team'}
-            {...(form as UseFormReturn<MailOneUserInput>).register('bodyHtml')}
+          <RichHtmlEditor
+            bare
+            allowFullscreen={false}
+            minHeight={224}
+            value={body ?? ''}
+            onChange={(html) => typed.setValue('bodyHtml', html, { shouldValidate: Boolean(error), shouldDirty: true })}
+            placeholder="Hello, write your message here…"
           />
         )}
       </div>

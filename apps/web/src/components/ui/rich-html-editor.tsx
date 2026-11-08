@@ -94,11 +94,16 @@ export function RichHtmlEditor({
   onChange,
   placeholder = 'Start writing…',
   minHeight = 320,
+  bare = false,
+  allowFullscreen = true,
 }: {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
   minHeight?: number;
+  /** Drop the outer border when the editor sits inside another framed box. */
+  bare?: boolean;
+  allowFullscreen?: boolean;
 }) {
   const editor = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef<string | null>(null);
@@ -256,8 +261,9 @@ export function RichHtmlEditor({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-2xl border border-border bg-surface-elevated focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15',
-        full && 'fixed inset-2 z-[180] flex flex-col shadow-2xl sm:inset-6',
+        'overflow-hidden bg-surface-elevated',
+        !bare && 'rounded-2xl border border-border focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/15',
+        full && 'fixed inset-2 z-[180] flex flex-col rounded-2xl border border-border shadow-2xl sm:inset-6',
       )}
     >
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 border-b border-border bg-surface/90 px-1.5 py-1.5 backdrop-blur">
@@ -295,6 +301,7 @@ export function RichHtmlEditor({
           >
             <Code2 className="h-4 w-4" /> HTML
           </button>
+          {allowFullscreen ? (
           <button
             type="button"
             onClick={() => setFull((f) => !f)}
@@ -304,6 +311,7 @@ export function RichHtmlEditor({
           >
             {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
+          ) : null}
         </span>
       </div>
 

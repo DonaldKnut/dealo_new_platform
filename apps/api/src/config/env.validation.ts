@@ -80,9 +80,21 @@ const envSchema = z.object({
     .optional()
     .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
   GEMINI_MODEL: z.string().default('gemini-2.5-flash'),
-  /** Pull jobs from Remotive, Jobicy and Arbeitnow for the job board. */
+  /** Pull jobs from Remotive, Jobicy and Arbeitnow (plus Jooble and Careerjet when their keys are set). */
   JOB_FEEDS_ENABLED: z.enum(['true', 'false']).default('true'),
   PAYSTACK_PUBLIC_KEY: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
+  /** CV builder Premium: price in kobo and how many days one payment buys. */
+  CV_PREMIUM_PRICE_MINOR: z.coerce.number().int().min(10_000).default(250_000),
+  CV_PREMIUM_DAYS: z.coerce.number().int().min(1).max(366).default(30),
+  /** Nigerian job sources; each one switches on when its key is set. */
+  JOOBLE_API_KEY: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? value : undefined)),
+  CAREERJET_AFFID: z
     .string()
     .optional()
     .transform((value) => (value && value.trim().length > 0 ? value : undefined)),

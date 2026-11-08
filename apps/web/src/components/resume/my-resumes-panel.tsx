@@ -41,6 +41,23 @@ export function MyResumesPanel() {
     setHasDraft(Boolean(window.localStorage.getItem(DRAFT_KEY)));
   }, [load]);
 
+  // Back from Paystack: confirm the payment, then show the new plan.
+  useEffect(() => {
+    const reference = new URLSearchParams(window.location.search).get('premium');
+    if (!reference) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    void resumeApi
+      .verifyPremium(reference)
+      .then((result) => {
+        if (result.status === 'PAID') toast.success('You are on Premium', 'Every template, font and AI tool is now unlocked.');
+        else if (result.status === 'FAILED') toast.error('The payment did not go through', result.failureReason ?? 'You were not charged for Premium.');
+        else toast.success('Payment received', 'We are confirming it with Paystack. Premium switches on in a moment.');
+        return load();
+      })
+      .catch((err) => toast.error('Could not check the payment', err instanceof ApiError ? err.message : ''));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const run = async (label: string, action: () => Promise<unknown>) => {
     setMenu(null);
     try {
@@ -185,7 +202,7 @@ export function MyResumesPanel() {
         ) : null}
       </BottomSheet>
 
-      <PremiumSheet open={premiumOpen} onClose={() => setPremiumOpen(false)} />
+      <PremiumSheet open={premiumOpen} onClose={() => setPremiumOpen(false)} offer={plan?.offer} />
     </div>
   );
 }

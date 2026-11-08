@@ -1,4 +1,4 @@
-import type { ResumeAiTailorResult, ResumeData, ResumeStyle } from '@dealo/shared';
+import type { PremiumOffer, ResumeAiTailorResult, ResumeData, ResumeStyle } from '@dealo/shared';
 
 import { apiFetch, apiUpload } from '@/lib/api';
 
@@ -25,12 +25,17 @@ export type ResumePlan = {
   used: { resumes: number; coverLetters: number };
   canShareToProfile: boolean;
   aiProvider: 'gemini' | 'rules';
+  offer?: PremiumOffer;
 };
+
+export type PremiumVerify = { status: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELLED'; failureReason: string | null; premium: boolean; premiumUntil: string | null };
 
 export type SaveBody = { kind: ResumeKind; title: string; style: ResumeStyle; data: Record<string, unknown> };
 
 export const resumeApi = {
   plan: () => apiFetch<ResumePlan>('/resumes/plan'),
+  checkoutPremium: () => apiFetch<{ reference: string; authorizationUrl: string }>('/resumes/premium/checkout', { method: 'POST' }),
+  verifyPremium: (reference: string) => apiFetch<PremiumVerify>('/resumes/premium/verify', { method: 'POST', json: { reference } }),
   list: () => apiFetch<SavedResume[]>('/resumes'),
   get: (id: string) => apiFetch<SavedResume>(`/resumes/${id}`),
   create: (body: SaveBody) => apiFetch<SavedResume>('/resumes', { method: 'POST', json: body }),

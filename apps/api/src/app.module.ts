@@ -26,6 +26,7 @@ import { HireInquiryModule } from './hire-inquiry/hire-inquiry.module';
 import { MailModule } from './mail/mail.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
 import { OpsModule } from './ops/ops.module';
+import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RootModule } from './root/root.module';
 import { SupportModule } from './support/support.module';
@@ -58,6 +59,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     PrismaModule,
     CommonModule,
     EmailModule,
+    PaymentsModule,
     RootModule,
     HealthModule,
     UsersModule,

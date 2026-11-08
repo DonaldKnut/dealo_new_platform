@@ -615,6 +615,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
         onClose={() => setPremiumSheet(null)}
         reason={premiumSheet?.reason}
         onUseFree={premiumSheet?.useFree ? useFreeDesign : undefined}
+        offer={plan?.offer}
       />
       <AuthGateSheet open={authOpen} onClose={() => setAuthOpen(false)} onGo={goAuth} />
 

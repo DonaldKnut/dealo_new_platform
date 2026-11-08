@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   RESUME_LIMITS,
   coverLetterDataSchema,
@@ -11,7 +12,12 @@ import { Prisma, UserRole } from '@prisma/client';
 import type { AuthUser } from '../auth/auth.types';
 import { AuditLogService } from '../common/audit-log.service';
 import { CandidatesService } from '../candidates/candidates.service';
+import type { AppEnv } from '../config/env.validation';
+import { PaymentRouterService } from '../payments/payment-router.service';
+import { newReference, PAYMENT_PREFIX, PaystackClient, type PaystackTransaction } from '../payments/paystack.client';
 import { PrismaService } from '../prisma/prisma.service';
+
+const DAY_MS = 86_400_000;
 
 const isObjectId = (value: string) => /^[a-f0-9]{24}$/i.test(value);
 
@@ -52,12 +58,102 @@ const validUrl = (value: string) => {
 };
 
 @Injectable()
-export class ResumesService {
+export class ResumesService implements OnModuleInit {
+  private readonly appUrl: string;
+  private readonly premiumPrice: number;
+  private readonly premiumDays: number;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly candidates: CandidatesService,
     private readonly audit: AuditLogService,
-  ) {}
+    private readonly paystack: PaystackClient,
+    private readonly payments: PaymentRouterService,
+    config: ConfigService<AppEnv, true>,
+  ) {
+    this.appUrl = config.get('APP_URL', { infer: true }).replace(/\/$/, '');
+    this.premiumPrice = config.get('CV_PREMIUM_PRICE_MINOR', { infer: true });
+    this.premiumDays = config.get('CV_PREMIUM_DAYS', { infer: true });
+  }
+
+  onModuleInit() {
+    this.payments.register(PAYMENT_PREFIX.cvPremium, 'cv_premium', (txn) => this.applyPremiumPayment(txn));
+  }
+
+  /** What one online payment buys, shown on the upgrade sheet. */
+  premiumOffer() {
+    return { priceMinor: this.premiumPrice, currency: 'NGN', periodDays: this.premiumDays, paymentsEnabled: this.paystack.isConfigured };
+  }
+
+  async checkoutPremium(user: AuthUser) {
+    const account = await this.prisma.user.findUnique({ where: { id: user.id }, select: { email: true } });
+    if (!account) throw new ForbiddenException('Account not found');
+    const reference = newReference(PAYMENT_PREFIX.cvPremium);
+    const invoice = await this.prisma.resumeInvoice.create({
+      data: { reference, userId: user.id, amountMinor: this.premiumPrice, currency: 'NGN', periodDays: this.premiumDays },
+    });
+    try {
+      const session = await this.paystack.initialize({
+        email: account.email,
+        amountMinor: this.premiumPrice,
+        currency: 'NGN',
+        reference,
+        callbackUrl: `${this.appUrl}/dashboard/resumes?premium=${reference}`,
+        metadata: { product: 'dealo_cv_premium', userId: user.id, invoiceId: invoice.id },
+      });
+      await this.prisma.resumeInvoice.update({ where: { id: invoice.id }, data: { authorizationUrl: session.authorization_url } });
+      return { reference, authorizationUrl: session.authorization_url };
+    } catch (error) {
+      await this.prisma.resumeInvoice.update({ where: { id: invoice.id }, data: { status: 'CANCELLED', failureReason: 'Checkout could not be started' } });
+      throw error;
+    }
+  }
+
+  async verifyPremium(user: AuthUser, reference: string) {
+    const invoice = await this.prisma.resumeInvoice.findUnique({ where: { reference } });
+    if (!invoice || invoice.userId !== user.id) throw new NotFoundException('Payment not found');
+    if (invoice.status === 'PENDING') await this.applyPremiumPayment(await this.paystack.verify(reference));
+    const [fresh, plan] = await Promise.all([
+      this.prisma.resumeInvoice.findUnique({ where: { id: invoice.id }, select: { status: true, failureReason: true } }),
+      this.plan(user),
+    ]);
+    return { status: fresh?.status ?? 'PENDING', failureReason: fresh?.failureReason ?? null, premium: plan.premium, premiumUntil: plan.premiumUntil };
+  }
+
+  /** Called by the webhook and by the return page; only the first successful call adds days. */
+  private async applyPremiumPayment(txn: PaystackTransaction) {
+    const invoice = await this.prisma.resumeInvoice.findUnique({ where: { reference: txn.reference } });
+    if (!invoice || invoice.status !== 'PENDING') return;
+    if (txn.status !== 'success') {
+      if (txn.status === 'failed' || txn.status === 'abandoned') {
+        await this.prisma.resumeInvoice.updateMany({ where: { id: invoice.id, status: 'PENDING' }, data: { status: 'FAILED', failureReason: txn.gateway_response ?? txn.status } });
+      }
+      return;
+    }
+    if (txn.amount !== invoice.amountMinor || txn.currency.toUpperCase() !== invoice.currency.toUpperCase()) {
+      await this.prisma.resumeInvoice.updateMany({
+        where: { id: invoice.id, status: 'PENDING' },
+        data: { status: 'FAILED', failureReason: `Amount mismatch: paid ${txn.amount} ${txn.currency}` },
+      });
+      return;
+    }
+    const claimed = await this.prisma.resumeInvoice.updateMany({
+      where: { id: invoice.id, status: 'PENDING' },
+      data: { status: 'PAID', paidAt: txn.paid_at ? new Date(txn.paid_at) : new Date(), providerTxnId: String(txn.id) },
+    });
+    if (!claimed.count) return;
+    const account = await this.prisma.user.findUnique({ where: { id: invoice.userId }, select: { premiumUntil: true } });
+    const base = account?.premiumUntil && account.premiumUntil > new Date() ? account.premiumUntil : new Date();
+    const premiumUntil = new Date(base.getTime() + invoice.periodDays * DAY_MS);
+    await this.prisma.user.update({ where: { id: invoice.userId }, data: { premiumUntil } });
+    await this.audit.record({
+      action: 'PREMIUM_PAID',
+      entityType: 'User',
+      entityId: invoice.userId,
+      actorId: invoice.userId,
+      metadata: { reference: invoice.reference, amountMinor: invoice.amountMinor, premiumUntil: premiumUntil.toISOString() },
+    });
+  }
 
   async plan(user: AuthUser) {
     const account = await this.prisma.user.findUnique({ where: { id: user.id }, select: { premiumUntil: true } });
@@ -72,6 +168,7 @@ export class ResumesService {
       limits: premium ? RESUME_LIMITS.premium : RESUME_LIMITS.free,
       used: { resumes, coverLetters },
       canShareToProfile: user.roles.includes(UserRole.TALENT),
+      offer: this.premiumOffer(),
     };
   }
 

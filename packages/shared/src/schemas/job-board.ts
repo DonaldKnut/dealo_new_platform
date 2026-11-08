@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const JOB_BOARD_TYPES = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'FREELANCE', 'TEMPORARY', 'INTERNSHIP', 'OTHER'] as const;
 export type JobBoardType = (typeof JOB_BOARD_TYPES)[number];
 
-export const JOB_BOARD_SOURCES = ['dealo', 'remotive', 'jobicy', 'arbeitnow'] as const;
+export const JOB_BOARD_SOURCES = ['dealo', 'remotive', 'jobicy', 'arbeitnow', 'jooble', 'careerjet'] as const;
 export type JobBoardSource = (typeof JOB_BOARD_SOURCES)[number];
 
 export const JOB_APPLICATION_STATUSES = ['SAVED', 'APPLIED', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED', 'WITHDRAWN'] as const;

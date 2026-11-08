@@ -15,14 +15,13 @@ import {
   ApiKeyPlan,
   ApiSubscriptionStatus,
 } from '@prisma/client';
-import { randomBytes } from 'crypto';
-
 import { ApiPlansService } from '../api-keys/api-plans.service';
 import type { AuthUser } from '../auth/auth.types';
 import { AuditLogService } from '../common/audit-log.service';
 import type { AppEnv } from '../config/env.validation';
+import { PaymentRouterService } from '../payments/payment-router.service';
+import { newReference, PAYMENT_PREFIX, PaystackClient, type PaystackTransaction } from '../payments/paystack.client';
 import { PrismaService } from '../prisma/prisma.service';
-import { PaystackClient, type PaystackTransaction } from './paystack.client';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EXPIRY_SWEEP_MS = 60 * 60 * 1000;
@@ -42,12 +41,14 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     private readonly paystack: PaystackClient,
     private readonly plans: ApiPlansService,
     private readonly auditLog: AuditLogService,
+    private readonly payments: PaymentRouterService,
     config: ConfigService<AppEnv, true>,
   ) {
     this.appUrl = config.get('APP_URL', { infer: true }).replace(/\/$/, '');
   }
 
   onModuleInit() {
+    this.payments.register(PAYMENT_PREFIX.api, 'api_plan', (txn) => this.applyTransaction(txn));
     void this.expireLapsedSubscriptions();
     this.sweepTimer = setInterval(() => void this.expireLapsedSubscriptions(), EXPIRY_SWEEP_MS);
     this.sweepTimer.unref();
@@ -161,7 +162,7 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
     const account = await this.prisma.user.findUnique({ where: { id: user.id }, select: { email: true } });
     if (!account) throw new ForbiddenException('Account not found');
 
-    const reference = `dealo_api_${randomBytes(10).toString('hex')}`;
+    const reference = newReference(PAYMENT_PREFIX.api);
     const invoice = await this.prisma.apiInvoice.create({
       data: {
         reference,
@@ -210,16 +211,9 @@ export class BillingService implements OnModuleInit, OnModuleDestroy {
 
   // --------------------------------------------------------------- webhook
 
-  async handlePaystackWebhook(rawBody: Buffer | undefined, signature: string | undefined) {
-    if (!this.paystack.isValidSignature(rawBody, signature)) {
-      throw new ForbiddenException('Invalid signature');
-    }
-    const event = JSON.parse(rawBody!.toString('utf8')) as { event: string; data: PaystackTransaction };
-    if (event.event === 'charge.success' && event.data?.reference?.startsWith('dealo_api_')) {
-      // Never trust the webhook body alone: re-verify with Paystack before granting access.
-      await this.applyTransaction(await this.paystack.verify(event.data.reference));
-    }
-    return { received: true };
+  /** Older webhook URL; every product's payments are routed from one place now. */
+  handlePaystackWebhook(rawBody: Buffer | undefined, signature: string | undefined) {
+    return this.payments.handleWebhook(rawBody, signature);
   }
 
   /** Idempotent: a reference can only move PENDING -> PAID/FAILED once. */

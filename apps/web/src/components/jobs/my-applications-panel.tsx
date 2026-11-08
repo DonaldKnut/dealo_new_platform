@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 
 import { CompanyLogo } from './company-logo';
 
-const SOURCE_NAME: Record<string, string> = { remotive: 'Remotive', jobicy: 'Jobicy', arbeitnow: 'Arbeitnow' };
+const SOURCE_NAME: Record<string, string> = { remotive: 'Remotive', jobicy: 'Jobicy', arbeitnow: 'Arbeitnow', jooble: 'Jooble', careerjet: 'Careerjet' };
 
 const STATUS_TONE: Record<JobApplicationStatus, string> = {
   SAVED: 'bg-surface text-muted',

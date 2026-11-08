@@ -3,6 +3,7 @@ import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import {
   grantPremiumSchema,
+  paymentReferenceSchema,
   resumeAiBulletsSchema,
   resumeAiCoverLetterSchema,
   resumeAiSummarySchema,
@@ -85,6 +86,24 @@ export class ResumesController {
   ) {
     await this.resumes.requirePremium(user);
     return this.ai.coverLetter(body.data, body);
+  }
+
+  // ---------------------------------------------------------------- Premium payment
+
+  @Post('premium/checkout')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Start a Paystack checkout for CV builder Premium' })
+  checkoutPremium(@CurrentUser() user: AuthUser) {
+    return this.resumes.checkoutPremium(user);
+  }
+
+  @Post('premium/verify')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Confirm a Premium payment after returning from Paystack' })
+  verifyPremium(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(paymentReferenceSchema)) body: { reference: string }) {
+    return this.resumes.verifyPremium(user, body.reference);
   }
 
   @Post('admin/premium')

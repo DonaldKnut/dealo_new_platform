@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Bot, Building2, CalendarClock, ChartColumn, Globe, HelpCircle, Kanban, Loader2, Plus, Users } from 'lucide-react';
+import { Bot, CalendarClock, ChartColumn, Globe, HelpCircle, Kanban, Loader2, Plus, Users } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
@@ -11,7 +11,8 @@ import { AtsWorkspaceProvider, useAtsWorkspace } from '@/components/ats/ats-work
 import { Tooltip } from '@/components/ui/tooltip';
 import { CreateWorkspaceForm } from '@/components/ats/create-workspace-form';
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
-import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { WorkspaceSwitcher } from '@/components/ats/workspace-switcher';
+import { FormModal } from '@/components/ui/form-modal';
 import { ROLE_LABEL } from '@/lib/ats-api';
 import { cn } from '@/lib/utils';
 
@@ -73,53 +74,24 @@ function Frame({ children }: { children: ReactNode }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
-          {current?.workspace.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={current.workspace.logoUrl}
-              alt=""
-              className="h-10 w-10 shrink-0 rounded-xl border border-border bg-white object-contain p-1"
-            />
-          ) : (
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
-              <Building2 className="h-5 w-5" />
-            </span>
-          )}
-          <div className="min-w-0">
-            <label className="sr-only" htmlFor="ats-workspace">
-              Workspace
-            </label>
-            <Tooltip content="Switch between workspaces, or create a new one for another company or branch." className="w-full max-w-full">
-            <select
-              id="ats-workspace"
-              value={orgId ?? ''}
-              onChange={(e) => {
-                if (e.target.value === '__new') setCreating(true);
-                else select(e.target.value);
-              }}
-              className="w-full max-w-full truncate bg-transparent font-display text-xl text-foreground outline-none min-[340px]:text-2xl"
-            >
-              {workspaces.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-              <option value="__new">+ New workspace</option>
-            </select>
-            </Tooltip>
-            <p className="text-xs text-muted">
-              {current ? (
+        <div className="min-w-0">
+          <WorkspaceSwitcher
+            workspaces={workspaces}
+            currentId={orgId}
+            onSelect={select}
+            onCreate={() => setCreating(true)}
+            meta={
+              current ? (
                 <>
                   {ROLE_LABEL[current.myRole]}
-                  {current.support ? ' (Dealo support)' : ''} · {current.usage.openJobs}/{current.usage.maxOpenJobs} open jobs ·{' '}
-                  {current.usage.seats}/{current.usage.maxSeats} seats
+                  {current.support ? ' (Dealo support)' : ''} · {current.usage.openJobs}/{current.usage.maxOpenJobs} open jobs · {current.usage.seats}/
+                  {current.usage.maxSeats} seats
                 </>
               ) : (
                 'Loading…'
-              )}
-            </p>
-          </div>
+              )
+            }
+          />
         </div>
         <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
           <Tooltip content="Take the quick guide again: what each section does and where to start.">
@@ -186,25 +158,23 @@ function Frame({ children }: { children: ReactNode }) {
 
       <AtsGuide open={guideOpen} onOpenChange={setGuideOpen} onHighlight={setHighlight} />
 
-      <BottomSheet
+      <FormModal
         open={creating}
         onClose={() => setCreating(false)}
-        title={
-          <span className="inline-flex items-center gap-1.5">
-            <Plus className="h-4 w-4" /> New workspace
-          </span>
-        }
+        size="xl"
+        icon={Plus}
+        title="New workspace"
+        description="A separate hiring space with its own jobs, team and careers page. Good for another company, brand or branch."
       >
-        <div className="py-3">
-          <CreateWorkspaceForm
-            onCreated={async (id) => {
-              setCreating(false);
-              select(id);
-              await reload();
-            }}
-          />
-        </div>
-      </BottomSheet>
+        <CreateWorkspaceForm
+          onCancel={() => setCreating(false)}
+          onCreated={async (id) => {
+            setCreating(false);
+            select(id);
+            await reload();
+          }}
+        />
+      </FormModal>
     </div>
   );
 }

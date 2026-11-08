@@ -15,7 +15,7 @@ import { JobStatus, Prisma, RoleFamily, WorkArrangement, type ExternalJob, type 
 import type { AuthUser } from '../auth/auth.types';
 import type { AppEnv } from '../config/env.validation';
 import { PrismaService } from '../prisma/prisma.service';
-import { FEED_INFO, type FeedSource, salaryRange } from './job-feeds';
+import { FEED_INFO, isNigeria, NIGERIA_PLACES, type FeedSource, salaryRange } from './job-feeds';
 
 const ROLE_FAMILY_LABEL: Record<RoleFamily, string> = {
   OFFICE_PROFESSIONAL: 'Office & professional',
@@ -142,7 +142,13 @@ export class JobBoardService {
     const and: Prisma.JobWhereInput[] = [{ status: JobStatus.OPEN }, { organization: { is: { isActive: true, careersEnabled: true } } }];
     if (input.q) and.push({ OR: [{ title: ci(input.q) }, { description: ci(input.q) }, { organization: { is: { name: ci(input.q) } } }] });
     if (input.location) {
-      and.push(/^remote$/i.test(input.location) ? { workArrangement: WorkArrangement.REMOTE } : { location: ci(input.location) });
+      and.push(
+        /^remote$/i.test(input.location)
+          ? { workArrangement: WorkArrangement.REMOTE }
+          : isNigeria(input.location)
+            ? { OR: NIGERIA_PLACES.map((place) => ({ location: ci(place) })) }
+            : { location: ci(input.location) },
+      );
     }
     if (input.remote === 'true') and.push({ workArrangement: WorkArrangement.REMOTE });
     if (input.remote === 'false') and.push({ workArrangement: { not: WorkArrangement.REMOTE } });
@@ -158,7 +164,15 @@ export class JobBoardService {
   private externalWhere(input: JobSearchInput, withType = true): Prisma.ExternalJobWhereInput {
     const and: Prisma.ExternalJobWhereInput[] = [];
     if (input.q) and.push({ OR: [{ title: ci(input.q) }, { company: ci(input.q) }, { category: ci(input.q) }, { summary: ci(input.q) }] });
-    if (input.location) and.push(/^remote$/i.test(input.location) ? { remote: true } : { location: ci(input.location) });
+    if (input.location) {
+      and.push(
+        /^remote$/i.test(input.location)
+          ? { remote: true }
+          : isNigeria(input.location)
+            ? { OR: NIGERIA_PLACES.map((place) => ({ location: ci(place) })) }
+            : { location: ci(input.location) },
+      );
+    }
     if (input.remote === 'true') and.push({ remote: true });
     if (input.remote === 'false') and.push({ remote: false });
     if (withType && input.type) and.push({ employmentType: input.type });
