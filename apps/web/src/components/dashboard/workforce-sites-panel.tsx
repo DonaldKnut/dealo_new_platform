@@ -1,36 +1,26 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { AlertTriangle, ArrowRight, Crosshair, Loader2, MapPin, Plus, Radar, ShieldCheck, Users } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Loader2, MapPin, Plus, Radar, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
-import { FormField } from '@/components/forms/form-field';
+import { coordsOf, EMPTY_SITE, NewSiteForm, type SiteDraft } from '@/components/dashboard/new-site-form';
 import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { createWorkSite, fetchWorkSites, type WorkSiteRow } from '@/lib/dashboard-api';
 
-const EMPTY = {
-  name: '',
-  address: '',
-  latitude: '',
-  longitude: '',
-  radiusMeters: 200,
-  shiftStart: '07:30',
-  shiftEnd: '17:30',
-  graceMinutes: 15,
-  slaCoverHours: 48,
-};
-
 export function WorkforceSitesPanel() {
   const toast = useToast();
   const [sites, setSites] = useState<WorkSiteRow[] | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState<SiteDraft>(EMPTY_SITE);
   const [locating, setLocating] = useState(false);
+  const [accuracy, setAccuracy] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -45,8 +35,13 @@ export function WorkforceSitesPanel() {
     void load();
   }, [load]);
 
-  const set = <K extends keyof typeof EMPTY>(key: K, value: (typeof EMPTY)[K]) =>
-    setForm((current) => ({ ...current, [key]: value }));
+  const set = <K extends keyof SiteDraft>(key: K, value: SiteDraft[K]) => setForm((current) => ({ ...current, [key]: value }));
+
+  const close = () => {
+    setShowForm(false);
+    setShowErrors(false);
+    setAccuracy(null);
+  };
 
   const useMyLocation = () => {
     if (!navigator.geolocation) {
@@ -58,33 +53,40 @@ export function WorkforceSitesPanel() {
       (position) => {
         set('latitude', position.coords.latitude.toFixed(6));
         set('longitude', position.coords.longitude.toFixed(6));
+        setAccuracy(position.coords.accuracy);
         setLocating(false);
         toast.success('Site centre set to where you are now');
       },
       (error) => {
         setLocating(false);
-        toast.error('Could not get your location', error.message);
+        toast.error(
+          'Could not get your location',
+          error.code === error.PERMISSION_DENIED ? 'Allow location for this site in your browser settings, or paste the coordinates instead.' : error.message,
+        );
       },
-      { enableHighAccuracy: true, timeout: 15_000 },
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 0 },
     );
   };
 
   const onCreate = async () => {
-    if (!form.name.trim() || form.latitude === '' || form.longitude === '') {
-      toast.error('Add a name and the site location');
+    const coords = coordsOf(form);
+    if (form.name.trim().length < 2 || !coords) {
+      setShowErrors(true);
+      toast.error('A few details are missing', 'Add a site name and set the site centre.');
       return;
     }
     setSaving(true);
     try {
-      await createWorkSite({
+      const site = await createWorkSite({
         ...form,
-        address: form.address || undefined,
-        latitude: Number(form.latitude),
-        longitude: Number(form.longitude),
+        name: form.name.trim(),
+        address: form.address.trim() || undefined,
+        latitude: coords.lat,
+        longitude: coords.lng,
       });
-      toast.success('Site created');
-      setForm(EMPTY);
-      setShowForm(false);
+      toast.success('Site created', `${site.name} is ready. Add workers from its console.`);
+      setForm(EMPTY_SITE);
+      close();
       await load();
     } catch (error) {
       toast.error('Could not create site', error instanceof ApiError ? error.message : undefined);
@@ -109,101 +111,24 @@ export function WorkforceSitesPanel() {
 
       <FormModal
         open={showForm}
-        onClose={() => setShowForm(false)}
+        onClose={close}
         icon={Radar}
         title="New site"
         description="Workers check in from their phones when they are inside the site circle."
-        size="lg"
+        size="xl"
         footer={
           <>
-            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
+            <button type="button" className="btn-secondary" onClick={close}>
               Cancel
             </button>
             <button type="button" className="btn-primary" disabled={saving} onClick={onCreate}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Create site
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {saving ? 'Creating…' : 'Create site'}
             </button>
           </>
         }
       >
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <FormField label="Site name">
-                  <input
-                    className="input-field"
-                    value={form.name}
-                    onChange={(e) => set('name', e.target.value)}
-                    placeholder="e.g. Lekki Scheme 1 · Gate 3"
-                  />
-                </FormField>
-                <FormField label="Address" optional>
-                  <input className="input-field" value={form.address} onChange={(e) => set('address', e.target.value)} />
-                </FormField>
-                <FormField
-                  label="Site centre"
-                  className="sm:col-span-2"
-                  help="Stand at the site gate and tap “Use my location”, or paste the map coordinates."
-                >
-                  <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-[1fr_1fr_auto]">
-                    <input
-                      className="input-field"
-                      inputMode="decimal"
-                      placeholder="Latitude e.g. 6.4474"
-                      value={form.latitude}
-                      onChange={(e) => set('latitude', e.target.value)}
-                    />
-                    <input
-                      className="input-field"
-                      inputMode="decimal"
-                      placeholder="Longitude e.g. 3.4723"
-                      value={form.longitude}
-                      onChange={(e) => set('longitude', e.target.value)}
-                    />
-                    <button type="button" className="btn-secondary" onClick={useMyLocation} disabled={locating}>
-                      {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crosshair className="h-4 w-4" />}
-                      Use my location
-                    </button>
-                  </div>
-                </FormField>
-                <FormField label={`Geofence: ${form.radiusMeters} m`} help="Workers can only check in inside this circle.">
-                  <input
-                    type="range"
-                    min={50}
-                    max={1000}
-                    step={25}
-                    value={form.radiusMeters}
-                    onChange={(e) => set('radiusMeters', Number(e.target.value))}
-                    className="w-full accent-[var(--brand)]"
-                  />
-                </FormField>
-                <div className="grid grid-cols-2 gap-2">
-                  <FormField label="Shift starts">
-                    <input type="time" className="input-field" value={form.shiftStart} onChange={(e) => set('shiftStart', e.target.value)} />
-                  </FormField>
-                  <FormField label="Shift ends">
-                    <input type="time" className="input-field" value={form.shiftEnd} onChange={(e) => set('shiftEnd', e.target.value)} />
-                  </FormField>
-                </div>
-                <FormField label="Grace minutes" help="After this, a missing worker is marked as a no-show.">
-                  <input
-                    type="number"
-                    min={0}
-                    max={120}
-                    className="input-field"
-                    value={form.graceMinutes}
-                    onChange={(e) => set('graceMinutes', Number(e.target.value))}
-                  />
-                </FormField>
-                <FormField label="Cover promise (hours)" help="How fast you promise a replacement after a no-show.">
-                  <input
-                    type="number"
-                    min={1}
-                    max={168}
-                    className="input-field"
-                    value={form.slaCoverHours}
-                    onChange={(e) => set('slaCoverHours', Number(e.target.value))}
-                  />
-                </FormField>
-              </div>
+        <NewSiteForm form={form} set={set} locating={locating} accuracy={accuracy} onLocate={useMyLocation} showErrors={showErrors} />
       </FormModal>
 
       {sites === null ? (

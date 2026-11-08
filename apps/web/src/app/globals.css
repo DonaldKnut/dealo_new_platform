@@ -693,8 +693,27 @@
     font-size: 0.875rem;
   }
 
+  .prose-dealo a[data-kind='button'] {
+    display: inline-block;
+    border-radius: 999px;
+    background: var(--brand);
+    padding: 0.6em 1.4em;
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
   .prose-editor {
     font-size: 1rem;
+  }
+
+  .prose-editor img {
+    cursor: default;
+    outline-offset: 3px;
+  }
+
+  .prose-editor img:hover {
+    outline: 2px solid color-mix(in srgb, var(--brand) 45%, transparent);
   }
 
   .prose-editor > :first-child {

@@ -1,20 +1,38 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NewsletterCampaignStatus, NewsletterSendStatus, UserRole } from '@prisma/client';
-import type { NewsletterCampaignInput, NewsletterSubscribeInput } from '@dealo/shared';
+import { renderEmailHtml, type NewsletterCampaignInput, type NewsletterSubscribeInput, type NewsletterTestInput } from '@dealo/shared';
 
 import type { AuthUser } from '../auth/auth.types';
 import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
+import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class NewsletterService {
+  private readonly siteUrl: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly auditLog: AuditLogService,
-  ) {}
+    config: ConfigService<AppEnv, true>,
+  ) {
+    this.siteUrl = config.get('APP_URL', { infer: true });
+  }
+
+  private html(bodyHtml: string) {
+    return renderEmailHtml(bodyHtml, { siteUrl: this.siteUrl, preheader: stripHtml(bodyHtml).slice(0, 140) });
+  }
+
+  async sendTest(input: NewsletterTestInput, user: AuthUser) {
+    const account = await this.prisma.user.findUnique({ where: { id: user.id }, select: { email: true } });
+    if (!account) throw new NotFoundException('Account not found');
+    await this.emailService.send({ to: account.email, subject: `[Test] ${input.subject}`, html: this.html(input.bodyHtml), text: stripHtml(input.bodyHtml) });
+    return { ok: true, email: account.email };
+  }
 
   listCampaigns() {
     return this.prisma.newsletterCampaign.findMany({
@@ -61,7 +79,7 @@ export class NewsletterService {
         await this.emailService.send({
           to: email,
           subject: campaign.subject,
-          html: campaign.bodyHtml,
+          html: this.html(campaign.bodyHtml),
           text: campaign.bodyText ?? stripHtml(campaign.bodyHtml),
         });
         await this.prisma.newsletterSend.create({

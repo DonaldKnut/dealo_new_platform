@@ -12,9 +12,11 @@ import {
   Link2,
   List,
   ListOrdered,
+  Loader2,
   Maximize2,
   Minimize2,
   Minus,
+  MousePointerClick,
   Pilcrow,
   Quote,
   Redo2,
@@ -22,6 +24,7 @@ import {
   Underline,
   Undo2,
   Unlink,
+  Upload,
   type LucideIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
@@ -46,7 +49,7 @@ const ALLOWED: Record<string, string[]> = {
   li: [],
   br: [],
   hr: [],
-  a: ['href'],
+  a: ['href', 'data-kind'],
   img: ['src', 'alt'],
 };
 const RENAME: Record<string, string> = { b: 'strong', i: 'em', strike: 's', del: 's', h1: 'h2', h5: 'h4', h6: 'h4', div: 'p' };
@@ -68,6 +71,7 @@ export function cleanHtml(html: string): string {
       const value = el.getAttribute(attr);
       if (!value) continue;
       if ((attr === 'href' || attr === 'src') && !/^(https?:|mailto:|tel:|\/|#)/i.test(value.trim())) continue;
+      if (attr === 'data-kind' && value !== 'button') continue;
       next.setAttribute(attr, value.trim());
     }
     if (tag === 'a') next.setAttribute('rel', 'noopener');
@@ -87,7 +91,9 @@ function exec(command: string, value?: string) {
   document.execCommand(command, false, value);
 }
 
-type Popover = { kind: 'link' | 'image'; url: string; alt: string } | null;
+type Popover = { kind: 'link' | 'image' | 'button'; url: string; alt: string; text: string } | null;
+
+const attrSafe = (value: string) => value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
 export function RichHtmlEditor({
   value,
@@ -96,6 +102,7 @@ export function RichHtmlEditor({
   minHeight = 320,
   bare = false,
   allowFullscreen = true,
+  onUploadImage,
 }: {
   value: string;
   onChange: (html: string) => void;
@@ -104,10 +111,15 @@ export function RichHtmlEditor({
   /** Drop the outer border when the editor sits inside another framed box. */
   bare?: boolean;
   allowFullscreen?: boolean;
+  /** Uploads a picture and returns its public link; enables upload, drag-and-drop and paste of images. */
+  onUploadImage?: (file: File) => Promise<string>;
 }) {
   const editor = useRef<HTMLDivElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const lastEmitted = useRef<string | null>(null);
   const savedRange = useRef<Range | null>(null);
+  const [uploading, setUploading] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [mode, setMode] = useState<'visual' | 'html'>('visual');
   const [source, setSource] = useState(value);
   const [active, setActive] = useState<Record<string, boolean>>({});
@@ -180,29 +192,80 @@ export function RichHtmlEditor({
     emit();
   };
 
-  const openPopover = (kind: 'link' | 'image') => {
+  const saveRange = () => {
     const sel = window.getSelection();
     savedRange.current = sel && sel.rangeCount && editor.current?.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+  };
+
+  /** Puts the caret back where it was before a toolbar form took focus (or at the end). */
+  const restoreRange = () => {
+    editor.current?.focus();
+    const sel = window.getSelection();
+    if (!sel || !editor.current) return sel;
+    sel.removeAllRanges();
+    if (savedRange.current && editor.current.contains(savedRange.current.startContainer)) {
+      sel.addRange(savedRange.current);
+    } else {
+      const end = document.createRange();
+      end.selectNodeContents(editor.current);
+      end.collapse(false);
+      sel.addRange(end);
+    }
+    return sel;
+  };
+
+  const openPopover = (kind: 'link' | 'image' | 'button') => {
+    saveRange();
+    const sel = window.getSelection();
     const existing = kind === 'link' ? sel?.anchorNode?.parentElement?.closest('a')?.getAttribute('href') ?? '' : '';
-    setPopover({ kind, url: existing, alt: '' });
+    const text = kind === 'button' && sel && !sel.isCollapsed ? sel.toString().trim() : '';
+    setPopover({ kind, url: existing, alt: '', text });
+  };
+
+  const insertImage = (url: string, alt: string) => {
+    restoreRange();
+    exec('insertHTML', `<img src="${attrSafe(url)}" alt="${attrSafe(alt)}" /><p><br></p>`);
+    saveRange();
+    emit();
+  };
+
+  const uploadFiles = async (files: File[]) => {
+    if (!onUploadImage) return;
+    const images = files.filter((f) => f.type.startsWith('image/'));
+    if (!images.length) return;
+    setUploadError(null);
+    setPopover(null);
+    for (const file of images) {
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError(`${file.name} is over 5 MB. Use a smaller picture.`);
+        continue;
+      }
+      setUploading((n) => n + 1);
+      try {
+        const url = await onUploadImage(file);
+        insertImage(url, file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '));
+      } catch (err) {
+        setUploadError(err instanceof Error ? err.message : 'The picture could not be uploaded.');
+      } finally {
+        setUploading((n) => n - 1);
+      }
+    }
   };
 
   const applyPopover = (e: FormEvent) => {
     e.preventDefault();
     if (!popover) return;
     const url = popover.url.trim();
-    editor.current?.focus();
-    const sel = window.getSelection();
-    if (savedRange.current && sel) {
-      sel.removeAllRanges();
-      sel.addRange(savedRange.current);
-    }
     if (url && /^(https?:|mailto:|tel:|\/)/i.test(url)) {
+      const sel = restoreRange();
       if (popover.kind === 'link') {
-        if (sel && sel.isCollapsed) exec('insertHTML', `<a href="${url.replace(/"/g, '&quot;')}">${url.replace(/</g, '&lt;')}</a>`);
+        if (sel && sel.isCollapsed) exec('insertHTML', `<a href="${attrSafe(url)}">${url.replace(/</g, '&lt;')}</a>`);
         else exec('createLink', url);
+      } else if (popover.kind === 'button') {
+        const label = (popover.text.trim() || 'Learn more').replace(/</g, '&lt;');
+        exec('insertHTML', `<p><a href="${attrSafe(url)}" data-kind="button">${label}</a></p><p><br></p>`);
       } else {
-        exec('insertHTML', `<img src="${url.replace(/"/g, '&quot;')}" alt="${popover.alt.replace(/"/g, '&quot;')}" />`);
+        exec('insertHTML', `<img src="${attrSafe(url)}" alt="${attrSafe(popover.alt)}" /><p><br></p>`);
       }
       emit();
     }
@@ -248,7 +311,8 @@ export function RichHtmlEditor({
     'sep',
     { icon: Link2, label: 'Link (Ctrl+K)', on: active.link, act: () => openPopover('link') },
     { icon: Unlink, label: 'Remove link', act: () => run('unlink') },
-    { icon: ImageIcon, label: 'Image', act: () => openPopover('image') },
+    { icon: ImageIcon, label: onUploadImage ? 'Image (upload or link)' : 'Image', act: () => openPopover('image') },
+    { icon: MousePointerClick, label: 'Button link', act: () => openPopover('button') },
     'sep',
     { icon: Undo2, label: 'Undo (Ctrl+Z)', act: () => run('undo') },
     { icon: Redo2, label: 'Redo (Ctrl+Y)', act: () => run('redo') },
@@ -317,28 +381,59 @@ export function RichHtmlEditor({
 
       {popover ? (
         <form onSubmit={applyPopover} className="flex flex-wrap items-center gap-2 border-b border-border bg-brand-soft/40 px-3 py-2">
+          {popover.kind === 'image' && onUploadImage ? (
+            <>
+              <button type="button" onClick={() => fileInput.current?.click()} className="btn-primary h-9 px-3 py-0 text-xs">
+                <Upload className="h-3.5 w-3.5" /> Upload from device
+              </button>
+              <span className="text-[11px] text-muted">or paste a link:</span>
+            </>
+          ) : null}
+          {popover.kind === 'button' ? (
+            <input
+              autoFocus
+              value={popover.text}
+              onChange={(e) => setPopover({ ...popover, text: e.target.value })}
+              placeholder="Button text, e.g. See open jobs"
+              maxLength={60}
+              className="input-field h-9 min-w-[10rem] flex-1 py-1 text-sm"
+            />
+          ) : null}
           <input
-            autoFocus
+            autoFocus={popover.kind !== 'button' && !(popover.kind === 'image' && onUploadImage)}
             value={popover.url}
             onChange={(e) => setPopover({ ...popover, url: e.target.value })}
-            placeholder={popover.kind === 'link' ? 'https://… or /page' : 'Image link, e.g. https://res.cloudinary.com/…'}
+            placeholder={popover.kind === 'image' ? 'https://…/picture.jpg' : 'https://… or /page'}
             className="input-field h-9 min-w-[12rem] flex-1 py-1 text-sm"
           />
           {popover.kind === 'image' ? (
             <input
               value={popover.alt}
               onChange={(e) => setPopover({ ...popover, alt: e.target.value })}
-              placeholder="Describe the image (for Google and screen readers)"
+              placeholder="Describe the picture (for screen readers)"
               className="input-field h-9 min-w-[12rem] flex-1 py-1 text-sm"
             />
           ) : null}
-          <button type="submit" className="btn-primary h-9 px-3 py-0 text-xs">
-            {popover.kind === 'link' ? 'Add link' : 'Insert image'}
+          <button type="submit" className={cn('h-9 px-3 py-0 text-xs', popover.kind === 'image' && onUploadImage ? 'btn-secondary' : 'btn-primary')}>
+            {popover.kind === 'link' ? 'Add link' : popover.kind === 'button' ? 'Add button' : 'Insert from link'}
           </button>
           <button type="button" onClick={() => setPopover(null)} className="px-2 text-xs text-muted hover:text-foreground">
             Cancel
           </button>
         </form>
+      ) : null}
+      {onUploadImage ? (
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          multiple
+          hidden
+          onChange={(e) => {
+            void uploadFiles([...(e.target.files ?? [])]);
+            e.target.value = '';
+          }}
+        />
       ) : null}
 
       <div className={cn('relative', full && 'min-h-0 flex-1 overflow-y-auto')}>
@@ -346,18 +441,37 @@ export function RichHtmlEditor({
           ref={editor}
           role="textbox"
           aria-multiline="true"
-          aria-label="Post content"
+          aria-label="Content"
           contentEditable={mode === 'visual'}
           suppressContentEditableWarning
           onInput={emit}
           onBlur={emit}
           onKeyDown={onKeyDown}
           onPaste={(e) => {
+            const pictures = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'));
+            if (pictures.length && onUploadImage) {
+              e.preventDefault();
+              saveRange();
+              void uploadFiles(pictures);
+              return;
+            }
             const html = e.clipboardData.getData('text/html');
             if (!html) return;
             e.preventDefault();
             exec('insertHTML', cleanHtml(html));
             emit();
+          }}
+          onDragOver={(e) => {
+            if (onUploadImage && [...e.dataTransfer.items].some((i) => i.kind === 'file')) e.preventDefault();
+          }}
+          onDrop={(e) => {
+            const pictures = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/'));
+            if (!pictures.length || !onUploadImage) return;
+            e.preventDefault();
+            const doc = document as Document & { caretRangeFromPoint?: (x: number, y: number) => Range | null };
+            const at = doc.caretRangeFromPoint?.(e.clientX, e.clientY);
+            if (at) savedRange.current = at;
+            void uploadFiles(pictures);
           }}
           className={cn('prose-dealo prose-editor max-w-none px-4 py-4 outline-none sm:px-6', mode === 'html' && 'hidden', full && 'mx-auto max-w-3xl')}
           style={{ minHeight }}
@@ -379,10 +493,22 @@ export function RichHtmlEditor({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-surface/60 px-3 py-1.5 text-[11px] text-muted">
-        <span>
-          {stats.words.toLocaleString()} words · {stats.chars.toLocaleString()} characters · about {Math.max(1, Math.round(stats.words / 220))} min read
+        <span className="flex items-center gap-2">
+          {uploading ? (
+            <span className="inline-flex items-center gap-1 font-semibold text-brand">
+              <Loader2 className="h-3 w-3 animate-spin" /> Uploading {uploading > 1 ? `${uploading} pictures` : 'picture'}…
+            </span>
+          ) : uploadError ? (
+            <span className="font-semibold text-danger">{uploadError}</span>
+          ) : (
+            <>
+              {stats.words.toLocaleString()} words · {stats.chars.toLocaleString()} characters · about {Math.max(1, Math.round(stats.words / 220))} min read
+            </>
+          )}
         </span>
-        <span className="hidden sm:inline">Paste from Word or Google Docs: formatting is tidied for the blog.</span>
+        <span className="hidden sm:inline">
+          {onUploadImage ? 'Drag pictures in or paste them. ' : ''}Pasting from Word or Google Docs is tidied automatically.
+        </span>
       </div>
     </div>
   );

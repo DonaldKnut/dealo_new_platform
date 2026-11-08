@@ -76,7 +76,7 @@ To pull many more Nigerian jobs from local job sites, add one or both free keys 
 
 | Source | What it covers | Get a key | Env name |
 | --- | --- | --- | --- |
-| Jooble | Jobs from hundreds of Nigerian sites | [jooble.org/api/about](https://jooble.org/api/about) | `JOOBLE_API_KEY` |
+| Jooble | Jobs from hundreds of Nigerian sites | [ng.jooble.org/api/about](https://ng.jooble.org/api/about) (the key must be for **Nigeria**; keys from other Jooble country sites return no Nigerian jobs) | `JOOBLE_API_KEY` |
 | Careerjet | Nigerian listings in English | [careerjet.com.ng/partners](https://www.careerjet.com.ng/partners/) | `CAREERJET_AFFID` |
 
 Restart the API. Jobs appear within a few minutes and refresh every 3 hours. Applying happens on the original site, as each source requires.

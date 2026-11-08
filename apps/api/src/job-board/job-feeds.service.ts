@@ -68,7 +68,11 @@ export class JobFeedsService implements OnModuleInit, OnModuleDestroy {
       for (const source of Object.keys(FEED_INFO) as FeedSource[]) {
         if (!this.configured(source)) continue;
         const row = await this.prisma.jobFeedSync.findUnique({ where: { source } });
-        const due = !row?.lastRunAt || Date.now() - row.lastRunAt.getTime() >= FEED_INFO[source].minIntervalMs;
+        // An empty run is retried after 10 minutes and a failed one after an hour, so a wrong key
+        // doesn't burn the provider's quota. Remotive always keeps its daily cap.
+        const retryMs = row?.lastError ? 60 * 60_000 : !row?.lastCount ? 10 * 60_000 : null;
+        const gap = source !== 'remotive' && retryMs ? Math.min(retryMs, FEED_INFO[source].minIntervalMs) : FEED_INFO[source].minIntervalMs;
+        const due = !row?.lastRunAt || Date.now() - row.lastRunAt.getTime() >= gap;
         if (!due && !(force && source !== 'remotive')) continue;
         results[source] = await this.syncOne(source);
       }
@@ -84,6 +88,7 @@ export class JobFeedsService implements OnModuleInit, OnModuleDestroy {
 
   private async syncOne(source: FeedSource): Promise<number | string> {
     const now = new Date();
+    this.logger.log(`${FEED_INFO[source].name}: refreshing`);
     try {
       const raw = await FEED_FETCHERS[source](this.keys);
       const jobs = collapseDuplicates(raw);

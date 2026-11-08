@@ -1,10 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Briefcase, LoaderCircle, Mail, Newspaper, Plus, Send, UserRound, Users } from 'lucide-react';
+import { Briefcase, FlaskConical, LoaderCircle, Mail, Newspaper, Plus, Send, UserRound, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { DashHero, StatusChip } from '@/components/dashboard/dashboard-ui';
+import { EmailComposer } from '@/components/dashboard/email-composer';
 import { FormField } from '@/components/forms/form-field';
 import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
@@ -13,6 +14,7 @@ import {
   createNewsletterCampaign,
   fetchNewsletterCampaigns,
   sendNewsletterCampaign,
+  sendNewsletterTest,
   type NewsletterCampaign,
 } from '@/lib/dashboard-api';
 import { cn } from '@/lib/utils';
@@ -34,6 +36,7 @@ export function DashboardNewsletterPanel() {
   const [bodyHtml, setBodyHtml] = useState('');
   const [segment, setSegment] = useState('ALL');
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
 
   const refresh = async () => {
     setCampaigns(await fetchNewsletterCampaigns());
@@ -56,8 +59,26 @@ export function DashboardNewsletterPanel() {
     };
   }, []);
 
+  const hasBody = Boolean(bodyHtml.replace(/<[^>]*>/g, '').trim()) || /<img/i.test(bodyHtml);
+
+  const sendTest = async () => {
+    setTesting(true);
+    try {
+      const result = await sendNewsletterTest({ subject, bodyHtml });
+      toast.success('Test sent', `Check ${result.email} to see it in a real inbox.`);
+    } catch (err) {
+      toast.error('Could not send the test', err instanceof ApiError ? err.message : '');
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!hasBody) {
+      toast.error('Write a message first', 'The email body is empty.');
+      return;
+    }
     setSaving(true);
     try {
       await createNewsletterCampaign({ subject, bodyHtml, bodyText: '', segment });
@@ -151,11 +172,15 @@ export function DashboardNewsletterPanel() {
         icon={Mail}
         title="New campaign"
         description="Saved as a draft. Nothing goes out until you press Send now."
-        size="lg"
+        size="xl"
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={() => setComposing(false)}>
               Cancel
+            </button>
+            <button type="button" className="btn-secondary" disabled={testing || !hasBody || subject.trim().length < 3} onClick={() => void sendTest()}>
+              {testing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
+              {testing ? 'Sending test…' : 'Send me a test'}
             </button>
             <button type="submit" form="newsletter-form" className="btn-primary" disabled={saving}>
               {saving ? 'Saving…' : 'Save campaign'}
@@ -193,8 +218,8 @@ export function DashboardNewsletterPanel() {
           <FormField label="Subject">
             <input className="input-field" placeholder="This month at Dealo" value={subject} onChange={(e) => setSubject(e.target.value)} required />
           </FormField>
-          <FormField label="Message" hint="Plain text or simple HTML.">
-            <textarea className="input-field min-h-[14rem]" placeholder="Hello," value={bodyHtml} onChange={(e) => setBodyHtml(e.target.value)} required />
+          <FormField label="Message" hint="Add headings, pictures (upload, drag in or paste) and buttons. Preview shows it exactly as it lands in the inbox.">
+            <EmailComposer id="newsletter" value={bodyHtml} onChange={setBodyHtml} subject={subject} />
           </FormField>
         </form>
       </FormModal>

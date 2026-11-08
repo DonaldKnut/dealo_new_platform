@@ -304,19 +304,50 @@ type JoobleJob = {
   updated?: string;
 };
 
+/** Jooble needs a search word, so a spread of common Nigerian job searches is pulled each run. */
+const JOOBLE_SEARCHES = ['manager', 'sales', 'engineer', 'accountant', 'driver', 'admin', 'customer service', 'marketing', 'technician', 'teacher', 'nurse', 'developer'];
+
+type JoobleBody = { jobs?: JoobleJob[]; totalCount?: number; message?: string };
+
+/** Jooble keys belong to one country site; Nigerian results come from ng.jooble.org. */
+const JOOBLE_ROUTES = [
+  { host: 'ng.jooble.org', location: 'Nigeria' },
+  { host: 'jooble.org', location: 'Nigeria' },
+  { host: 'jooble.org', location: 'Lagos' },
+];
+let joobleRoute: (typeof JOOBLE_ROUTES)[number] | null = null;
+
+async function joobleSearch(key: string, route: (typeof JOOBLE_ROUTES)[number], keywords: string) {
+  const res = await fetch(`https://${route.host}/api/${encodeURIComponent(key)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
+    body: JSON.stringify({ keywords, ...(route.location ? { location: route.location } : {}), page: '1', ResultOnPage: '50' }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (res.status === 401 || res.status === 403) throw new Error(`Jooble refused the key on ${route.host} (${res.status}). Check JOOBLE_API_KEY.`);
+  if (!res.ok) return { jobs: [] as JoobleJob[], note: `${route.host} answered ${res.status}` };
+  const body = (await res.json().catch(() => ({}))) as JoobleBody;
+  return { jobs: body.jobs ?? [], note: `${route.host}${route.location ? ` / ${route.location}` : ''}: total ${body.totalCount ?? 0}${body.message ? ` (${body.message})` : ''}` };
+}
+
 /** Jooble's free partner API (key from jooble.org/api/about). Nigerian jobs from many local sites. */
-export async function fetchJooble(key: string, pages = 3): Promise<FeedJob[]> {
+export async function fetchJooble(key: string): Promise<FeedJob[]> {
   const out: FeedJob[] = [];
-  for (let page = 1; page <= pages; page += 1) {
-    const res = await fetch(`https://jooble.org/api/${encodeURIComponent(key)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
-      body: JSON.stringify({ keywords: '', location: 'Nigeria', page: String(page), ResultOnPage: '50' }),
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!res.ok) throw new Error(`Jooble answered ${res.status}`);
-    const body = (await res.json()) as { jobs?: JoobleJob[] };
-    const jobs = body.jobs ?? [];
+  const notes: string[] = [];
+  if (!joobleRoute) {
+    for (const route of JOOBLE_ROUTES) {
+      const probe = await joobleSearch(key, route, 'manager').catch((error: unknown) => ({ jobs: [] as JoobleJob[], note: String(error instanceof Error ? error.message : error) }));
+      notes.push(probe.note);
+      if (probe.jobs.length) {
+        joobleRoute = route;
+        break;
+      }
+    }
+    if (!joobleRoute) throw new Error(`Jooble returned no Nigerian jobs. Tried ${notes.join('; ')}`);
+  }
+  const route = joobleRoute;
+  for (const keywords of JOOBLE_SEARCHES) {
+    const { jobs } = await joobleSearch(key, route, keywords);
     for (const job of jobs) {
       const text = plainText(job.snippet ?? '');
       out.push({
@@ -337,9 +368,12 @@ export async function fetchJooble(key: string, pages = 3): Promise<FeedJob[]> {
         publishedAt: validDate(new Date(job.updated ?? Date.now())),
       });
     }
-    if (jobs.length < 50) break;
   }
-  return out;
+  if (!out.length) {
+    joobleRoute = null;
+    throw new Error(`Jooble returned no jobs on ${route.host}`);
+  }
+  return [...new Map(out.map((job) => [job.sourceId, job])).values()];
 }
 
 // ------------------------------------------------------------------ Careerjet

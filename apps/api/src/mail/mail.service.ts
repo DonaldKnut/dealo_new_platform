@@ -1,20 +1,31 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { UserRole } from '@prisma/client';
-import type { MailAllUsersInput, MailOneUserInput } from '@dealo/shared';
+import { renderEmailHtml, type MailAllUsersInput, type MailOneUserInput } from '@dealo/shared';
 
 import type { AuthUser } from '../auth/auth.types';
 import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
+import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class MailService {
+  private readonly siteUrl: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly auditLog: AuditLogService,
-  ) {}
+    config: ConfigService<AppEnv, true>,
+  ) {
+    this.siteUrl = config.get('APP_URL', { infer: true });
+  }
+
+  private html(bodyHtml: string) {
+    return renderEmailHtml(bodyHtml, { siteUrl: this.siteUrl, preheader: stripHtml(bodyHtml).slice(0, 140) });
+  }
 
   async mailOne(input: MailOneUserInput, actor: AuthUser) {
     let email = input.email ? normalizeEmail(input.email) : null;
@@ -34,7 +45,7 @@ export class MailService {
     await this.emailService.send({
       to: email,
       subject: input.subject,
-      html: input.bodyHtml,
+      html: this.html(input.bodyHtml),
       text: input.bodyText ?? stripHtml(input.bodyHtml),
     });
 
@@ -58,7 +69,7 @@ export class MailService {
         await this.emailService.send({
           to: email,
           subject: input.subject,
-          html: input.bodyHtml,
+          html: this.html(input.bodyHtml),
           text: input.bodyText ?? stripHtml(input.bodyHtml),
         });
         results.push({ email, ok: true });

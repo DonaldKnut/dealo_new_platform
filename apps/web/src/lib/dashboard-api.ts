@@ -366,6 +366,17 @@ export function createNewsletterCampaign(payload: Record<string, unknown>) {
   });
 }
 
+export function sendNewsletterTest(payload: { subject: string; bodyHtml: string }) {
+  return apiFetch<{ ok: boolean; email: string }>('/newsletter/campaigns/test', { method: 'POST', json: payload });
+}
+
+/** Uploads a picture for emails and blog posts; resolves to its public link. */
+export async function uploadContentImage(file: File) {
+  const form = new FormData();
+  form.append('file', file);
+  return (await apiUpload<{ url: string; width: number; height: number }>('/media/images', form)).url;
+}
+
 export function sendNewsletterCampaign(id: string) {
   return apiFetch<{
     recipientCount: number;

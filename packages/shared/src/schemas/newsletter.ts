@@ -11,6 +11,10 @@ export const newsletterCampaignInputSchema = z.object({
 
 export type NewsletterCampaignInput = z.infer<typeof newsletterCampaignInputSchema>;
 
+/** Sends the draft to the signed-in staff member only, to check it in a real inbox. */
+export const newsletterTestSchema = newsletterCampaignInputSchema.pick({ subject: true, bodyHtml: true });
+export type NewsletterTestInput = z.infer<typeof newsletterTestSchema>;
+
 export const newsletterSubscribeSchema = z.object({
   email: z.string().trim().email().max(255),
   firstName: z.string().trim().max(80).optional().or(z.literal('')),

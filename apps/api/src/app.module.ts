@@ -24,6 +24,7 @@ import { EmailModule } from './email/email.module';
 import { HealthModule } from './health/health.module';
 import { HireInquiryModule } from './hire-inquiry/hire-inquiry.module';
 import { MailModule } from './mail/mail.module';
+import { MediaModule } from './media/media.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
 import { OpsModule } from './ops/ops.module';
 import { PaymentsModule } from './payments/payments.module';
@@ -38,7 +39,8 @@ import { WebhooksModule } from './webhooks/webhooks.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.local', '.env.txt'],
+      // apps/api/.env wins; the monorepo root .env fills in anything it leaves out.
+      envFilePath: ['.env', '.env.local', '.env.txt', '../../.env'],
       validate: validateEnv,
     }),
     LoggerModule.forRoot({
@@ -74,6 +76,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     AuditModule,
     SupportModule,
     MailModule,
+    MediaModule,
     ApiKeysModule,
     WebhooksModule,
     BillingModule,

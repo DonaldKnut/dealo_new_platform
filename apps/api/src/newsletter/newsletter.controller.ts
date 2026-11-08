@@ -4,8 +4,10 @@ import { UserRole } from '@prisma/client';
 import {
   newsletterCampaignInputSchema,
   newsletterSubscribeSchema,
+  newsletterTestSchema,
   type NewsletterCampaignInput,
   type NewsletterSubscribeInput,
+  type NewsletterTestInput,
 } from '@dealo/shared';
 import { Throttle } from '@nestjs/throttler';
 
@@ -55,6 +57,14 @@ export class NewsletterController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.newsletterService.createCampaign(body, user);
+  }
+
+  @Post('campaigns/test')
+  @ApiCookieAuth()
+  @Roles(...STAFF)
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
+  sendTest(@Body(new ZodValidationPipe(newsletterTestSchema)) body: NewsletterTestInput, @CurrentUser() user: AuthUser) {
+    return this.newsletterService.sendTest(body, user);
   }
 
   @Post('campaigns/:id/send')

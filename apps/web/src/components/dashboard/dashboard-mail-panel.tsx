@@ -8,14 +8,14 @@ import {
   type MailOneUserInput,
 } from '@dealo/shared';
 import { motion } from 'framer-motion';
-import { ArrowRight, Briefcase, Eye, Mail, Megaphone, PenLine, Send, ShieldCheck, UserRound, Users } from 'lucide-react';
+import { ArrowRight, Briefcase, Mail, Megaphone, Send, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 
 import { DashHero } from '@/components/dashboard/dashboard-ui';
+import { EmailComposer } from '@/components/dashboard/email-composer';
 import { FormField } from '@/components/forms/form-field';
 import { FormModal } from '@/components/ui/form-modal';
-import { RichHtmlEditor } from '@/components/ui/rich-html-editor';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
 import { logClientAudit } from '@/lib/client-audit';
@@ -29,55 +29,20 @@ const AUDIENCES: Array<{ id: MailAllUsersInput['roleFilter']; label: string; hin
   { id: 'STAFF', label: 'Staff', hint: 'Dealo team only', icon: ShieldCheck },
 ];
 
-/** Body editor with a sandboxed preview so admins see the email before it goes out. */
+/** Body editor with pictures and buttons, and a preview of the email exactly as it is delivered. */
 function BodyEditor({ form, id }: { form: UseFormReturn<MailOneUserInput> | UseFormReturn<MailAllUsersInput>; id: string }) {
-  const [preview, setPreview] = useState(false);
   const typed = form as UseFormReturn<MailOneUserInput>;
   const body = typed.watch('bodyHtml');
+  const subject = typed.watch('subject');
   const error = form.formState.errors.bodyHtml?.message;
   return (
-    <FormField label="Message" error={error} hint="Use the toolbar for headings, bold, lists and links. Preview shows the email as people will get it.">
-      <div className="overflow-hidden rounded-2xl border border-border">
-        <div className="flex items-center gap-1 border-b border-border bg-surface/60 p-1">
-          {[
-            { id: false, label: 'Write', icon: PenLine },
-            { id: true, label: 'Preview', icon: Eye },
-          ].map((t) => (
-            <button
-              key={t.label}
-              type="button"
-              onClick={() => setPreview(t.id)}
-              className={cn(
-                'relative inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition',
-                preview === t.id ? 'text-white dark:text-[#071f14]' : 'text-muted hover:text-foreground',
-              )}
-            >
-              {preview === t.id ? <motion.span layoutId={`mail-tab-${id}`} className="absolute inset-0 rounded-lg bg-brand" /> : null}
-              <t.icon className="relative z-10 h-3.5 w-3.5" />
-              <span className="relative z-10">{t.label}</span>
-            </button>
-          ))}
-        </div>
-        {preview ? (
-          <iframe
-            title="Email preview"
-            sandbox=""
-            className="h-64 w-full bg-white"
-            srcDoc={`<div style="font-family:Arial,sans-serif;color:#0b1f1e;line-height:1.6;padding:16px;max-width:560px">${
-              /<[a-z][\s\S]*>/i.test(body ?? '') ? body : (body ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] ?? c).replace(/\n/g, '<br>')
-            }</div>`}
-          />
-        ) : (
-          <RichHtmlEditor
-            bare
-            allowFullscreen={false}
-            minHeight={224}
-            value={body ?? ''}
-            onChange={(html) => typed.setValue('bodyHtml', html, { shouldValidate: Boolean(error), shouldDirty: true })}
-            placeholder="Hello, write your message here…"
-          />
-        )}
-      </div>
+    <FormField label="Message" error={error} hint="Add headings, pictures (upload, drag in or paste) and buttons. Preview shows it exactly as it lands in the inbox.">
+      <EmailComposer
+        id={id}
+        value={body ?? ''}
+        subject={subject ?? ''}
+        onChange={(html) => typed.setValue('bodyHtml', html, { shouldValidate: Boolean(error), shouldDirty: true })}
+      />
     </FormField>
   );
 }
