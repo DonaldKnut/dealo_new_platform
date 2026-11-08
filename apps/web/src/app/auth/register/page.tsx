@@ -15,7 +15,7 @@ export default function RegisterPage() {
       <AuthPageHeader
         eyebrow="Join Dealo"
         title="Create your account"
-        subtitle="Sign up with email or Google. We verify accounts to keep Dealo trusted."
+        subtitle="Sign up with email, Google or LinkedIn. We verify accounts to keep Dealo trusted."
       />
       <RegisterForm variant="page" />
     </>
