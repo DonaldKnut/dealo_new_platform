@@ -796,6 +796,8 @@ export class HiringAgentsService implements OnModuleInit, OnModuleDestroy {
           this.logger.log(`Daily ${agent} skipped for ${org.id}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
+    } catch (error) {
+      this.logger.warn(`Agent sweep failed: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       this.sweeping = false;
     }

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  HttpException,
   Post,
   Query,
   Req,
@@ -109,7 +110,7 @@ export class AuthController {
     try {
       await this.authService.loginWithGoogle(req.user, res);
     } catch (err) {
-      return res.redirect(`${appUrl}/auth/login?error=${encodeURIComponent(err instanceof Error ? err.message : 'Google sign-in failed')}`);
+      return res.redirect(`${appUrl}/auth/login?error=${encodeURIComponent(err instanceof HttpException ? err.message : 'Google sign-in failed. Please try again.')}`);
     }
     return res.redirect(`${appUrl}/dashboard`);
   }
@@ -176,7 +177,7 @@ export class AuthController {
       await this.authService.loginWithProvider('linkedin', { ...profile, intendedRole: parsed.role }, res);
       return res.redirect(`${appUrl}/dashboard`);
     } catch (err) {
-      return fail(err instanceof Error ? err.message : 'LinkedIn sign-in failed');
+      return fail(err instanceof HttpException ? err.message : 'LinkedIn sign-in failed. Please try again.');
     }
   }
 

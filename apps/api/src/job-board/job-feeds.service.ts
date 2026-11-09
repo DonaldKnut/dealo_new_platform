@@ -31,9 +31,13 @@ export class JobFeedsService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit() {
     if (!this.enabled) return;
+    const run = () =>
+      void this.syncStale().catch((error: unknown) =>
+        this.logger.warn(`Job feed sync failed: ${error instanceof Error ? error.message : String(error)}`),
+      );
     // The host may have just woken from sleep; wait for the app to settle, then catch up.
-    this.timers.push(setTimeout(() => void this.syncStale(), 20_000));
-    this.timers.push(setInterval(() => void this.syncStale(), CHECK_EVERY_MS));
+    this.timers.push(setTimeout(run, 20_000));
+    this.timers.push(setInterval(run, CHECK_EVERY_MS));
     this.timers.forEach((t) => t.unref());
   }
 

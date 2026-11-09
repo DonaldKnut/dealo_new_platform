@@ -20,7 +20,7 @@ export function SocialSignIn({
   useEffect(() => {
     providersCache ??= apiFetch<{ google: boolean; linkedin: boolean }>('/auth/providers').catch(() => {
       providersCache = null;
-      return { google: true, linkedin: false };
+      return { google: true, linkedin: true };
     });
     let active = true;
     void providersCache.then((p) => active && setProviders(p));
