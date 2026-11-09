@@ -15,13 +15,14 @@ import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
 import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AtsAccessService } from './ats-access.service';
 import { workspaceInviteEmail } from './ats-emails';
 
 const INVITE_TTL_MS = 7 * 24 * 3_600_000;
 const MAX_OWNED_WORKSPACES = 3;
-const RESERVED_SLUGS = new Set(['admin', 'api', 'dealo-support', 'careers', 'jobs', 'www', 'app', 'dashboard']);
+export const RESERVED_SLUGS = new Set(['admin', 'api', 'dealo-support', 'careers', 'jobs', 'www', 'app', 'dashboard']);
 /** In MongoDB an optional field that was never set is missing, not null. */
 const NOT_ACCEPTED = { OR: [{ acceptedAt: null }, { acceptedAt: { isSet: false } }] };
 
@@ -36,6 +37,7 @@ export class WorkspacesService {
     private readonly access: AtsAccessService,
     private readonly email: EmailService,
     private readonly audit: AuditLogService,
+    private readonly notifications: NotificationsService,
     config: ConfigService<AppEnv, true>,
   ) {
     this.appUrl = config.get('APP_URL', { infer: true }).replace(/\/$/, '');
@@ -177,6 +179,12 @@ export class WorkspacesService {
     await this.email
       .send(workspaceInviteEmail({ to: email, orgName: access.organization.name, inviterName: access.userName, role: invite.role, link }))
       .catch(() => undefined);
+    await this.notifications.notify([existingUser?.id], {
+      type: 'workspace.invite',
+      title: `${access.userName} invited you to join ${access.organization.name}`,
+      body: 'Open the invite to accept and start hiring together.',
+      link: `/ats/invite/${token}`,
+    });
     // The link is also returned so an admin can share it directly (e.g. on WhatsApp).
     return { ...invite, link };
   }
@@ -208,7 +216,7 @@ export class WorkspacesService {
     if (!invite || invite.acceptedAt || invite.expiresAt < new Date()) {
       throw new NotFoundException('This invite has expired or was already used');
     }
-    const account = await this.prisma.user.findUnique({ where: { id: user.id }, select: { email: true } });
+    const account = await this.prisma.user.findUnique({ where: { id: user.id }, select: { email: true, firstName: true, lastName: true } });
     if (!account || normalizeEmail(account.email) !== invite.email) {
       throw new ForbiddenException(`Sign in with ${invite.email} to accept this invite`);
     }
@@ -219,6 +227,12 @@ export class WorkspacesService {
       create: { organizationId: invite.organizationId, userId: user.id, role: invite.role },
     });
     await this.prisma.workspaceInvite.update({ where: { id: invite.id }, data: { acceptedAt: new Date() } });
+    const org = await this.prisma.organization.findUnique({ where: { id: invite.organizationId }, select: { name: true } });
+    await this.notifications.notify([invite.invitedById], {
+      type: 'workspace.member_joined',
+      title: `${`${account.firstName} ${account.lastName}`.trim() || account.email} joined ${org?.name ?? 'your workspace'}`,
+      link: '/dashboard/organization',
+    });
     return { organizationId: invite.organizationId };
   }
 

@@ -17,6 +17,7 @@ import {
   QuickLink,
   StatusChip,
 } from '@/components/dashboard/dashboard-ui';
+import { useOpenHireRequest } from '@/components/dashboard/dashboard-session';
 import type { DashboardUserCore, EmployerWorkspace } from '@/lib/dashboard-api';
 
 export function EmployerOverview({
@@ -26,6 +27,7 @@ export function EmployerOverview({
   user: DashboardUserCore;
   workspace: EmployerWorkspace;
 }) {
+  const openHireRequest = useOpenHireRequest();
   return (
     <div className="dash-atmosphere space-y-8">
       <DashHero
@@ -34,10 +36,10 @@ export function EmployerOverview({
         subtitle={workspace.subcopy}
         actions={
           <>
-            <Link href="/hire" className="btn-primary">
+            <button type="button" onClick={openHireRequest} className="btn-primary">
               New hire request
               <ArrowUpRight className="h-4 w-4" />
-            </Link>
+            </button>
             <Link href="/dashboard/requests" className="btn-secondary">
               My requests
             </Link>
@@ -88,9 +90,9 @@ export function EmployerOverview({
           {workspace.recentRequests.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center">
               <p className="text-sm text-muted">No hire requests yet.</p>
-              <Link href="/hire" className="btn-primary mt-4 inline-flex">
+              <button type="button" onClick={openHireRequest} className="btn-primary mt-4 inline-flex">
                 Start a hire request
-              </Link>
+              </button>
             </div>
           ) : (
             <div className="dash-rail">
@@ -158,7 +160,7 @@ export function EmployerOverview({
       >
         {workspace.organizations.length === 0 ? (
           <p className="text-sm text-muted">
-            No company membership yet. Submit a hire request and Dealo can attach your organization.
+            No company yet. Create your company account to invite your team and share hire requests.
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -174,7 +176,7 @@ export function EmployerOverview({
           </div>
         )}
         <Link href="/dashboard/organization" className="btn-secondary mt-4 inline-flex">
-          Organization settings
+          {workspace.organizations.length === 0 ? 'Create company' : 'Organization settings'}
         </Link>
       </DashPanel>
     </div>

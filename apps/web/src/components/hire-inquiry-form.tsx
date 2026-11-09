@@ -33,6 +33,7 @@ import {
   type IllustrativeOption,
 } from '@/components/forms/illustrative-option-picker';
 import { TypewriterTip } from '@/components/forms/typewriter-tip';
+import type { HirePrefill } from '@/components/modals/modal-context';
 import { RoleAutocomplete } from '@/components/ui/role-autocomplete';
 import { useToast } from '@/components/ui/toast';
 import { useServerFormStatus } from '@/hooks/use-server-form-status';
@@ -234,7 +235,10 @@ const WORK_ARRANGEMENT_TRADE: IllustrativeOption[] = [
   },
 ];
 
-export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
+/** Fired on window after a request is sent, so open dashboard lists can refresh. */
+export const HIRE_REQUEST_CREATED_EVENT = 'dealo:hire-request-created';
+
+export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void; prefill?: HirePrefill | null }) {
   const [step, setStep] = useState(1);
   const toast = useToast();
   const { serverError, serverMessage, setServerError, setServerMessage, clear } =
@@ -261,6 +265,14 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
       location: 'Lagos, Nigeria',
     },
   });
+
+  useEffect(() => {
+    if (!prefill) return;
+    for (const key of ['companyName', 'contactName', 'email', 'phone'] as const) {
+      const value = prefill[key]?.trim();
+      if (value && !getValues(key)) setValue(key, value, { shouldValidate: true });
+    }
+  }, [prefill, getValues, setValue]);
 
   const values = watch();
   const serviceType = values.serviceType;
@@ -361,6 +373,7 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
         entityType: 'HireInquiry',
         metadata: { roleTitle: formValues.roleTitle },
       });
+      window.dispatchEvent(new CustomEvent(HIRE_REQUEST_CREATED_EVENT));
       onSuccess?.();
       reset({
         roleFamily: RoleFamily.OFFICE_PROFESSIONAL,
@@ -369,10 +382,10 @@ export function HireInquiryForm({ onSuccess }: { onSuccess?: () => void }) {
         numberOfProfessionals: 1,
         currency: 'NGN',
         location: 'Lagos, Nigeria',
-        companyName: '',
-        contactName: '',
-        email: '',
-        phone: '',
+        companyName: prefill?.companyName ?? '',
+        contactName: prefill?.contactName ?? '',
+        email: prefill?.email ?? '',
+        phone: prefill?.phone ?? '',
         roleTitle: '',
         requirements: '',
         additionalNotes: '',

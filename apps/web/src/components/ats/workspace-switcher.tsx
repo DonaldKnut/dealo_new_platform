@@ -103,7 +103,7 @@ export function WorkspaceSwitcher({
                     <span className="min-w-0 flex-1">
                       <span className={cn('block truncate text-sm font-semibold', active ? 'text-brand' : 'text-foreground')}>{w.name}</span>
                       <span className="block truncate text-[11px] text-muted">
-                        {ROLE_LABEL[w.role]} · dealo.africa/careers/{w.slug}
+                        {ROLE_LABEL[w.role]} · dealonetwork.com/careers/{w.slug}
                       </span>
                     </span>
                     {active ? <Check className="h-4 w-4 shrink-0 text-brand" /> : null}

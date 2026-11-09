@@ -17,6 +17,7 @@ import type { AuthUser } from '../auth/auth.types';
 import { assertEmailVerified } from '../auth/verified-email';
 import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
 import { ApplicationsService, applicationPayload } from './applications.service';
@@ -47,6 +48,7 @@ export class HiringService {
     private readonly applications: ApplicationsService,
     private readonly email: EmailService,
     private readonly webhooks: WebhooksService,
+    private readonly notifications: NotificationsService,
     config: ConfigService<AppEnv, true>,
   ) {
     this.appUrl = config.get('APP_URL', { infer: true }).replace(/\/$/, '');
@@ -144,6 +146,12 @@ export class HiringService {
           ? { status: InterviewStatus.SCHEDULED, startsAt: new Date(input.startsAt) }
           : { status: InterviewStatus.PROPOSED, slotOptions: slots.sort((a, b) => a.getTime() - b.getTime()), bookingTokenHash: hash(token!) }),
       },
+    });
+    await this.notifications.notify([application.userId], {
+      type: 'ats.interview',
+      title: token ? `Pick a time for your ${application.job.title} interview` : `Interview booked for ${application.job.title}`,
+      body: token ? `${access.organization.name} sent you times. Check your email for the link.` : `${access.organization.name} · ${lagosTime(interview.startsAt!)}`,
+      link: '/dashboard/interviews',
     });
 
     if (token) {

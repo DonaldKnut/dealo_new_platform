@@ -357,7 +357,7 @@ async function main(): Promise<void> {
       data: {
         name: 'Dealo',
         slug: 'dealo',
-        website: 'https://dealo.africa',
+        website: 'https://dealonetwork.com',
         about:
           'Dealo helps companies in Nigeria and across Africa hire office professionals and skilled trades people, then manages them on site.',
         brandColor: '#0f766e',

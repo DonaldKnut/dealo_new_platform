@@ -15,7 +15,7 @@ import { FormModalShell } from './form-modal-shell';
 import { useModal } from './modal-context';
 
 export function ModalHost() {
-  const { openModal, close } = useModal();
+  const { openModal, close, hirePrefill } = useModal();
 
   return (
     <>
@@ -27,7 +27,7 @@ export function ModalHost() {
         promoFill
         illustration={<HireIllustration />}
       >
-        <HireInquiryForm />
+        <HireInquiryForm prefill={hirePrefill} />
       </FormModalShell>
 
       <FormModalShell

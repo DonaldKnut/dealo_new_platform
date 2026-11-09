@@ -8,8 +8,17 @@ import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
 import { EmailService } from '../email/email.service';
 import { hireInquiryAckEmail } from '../email/email.templates';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
+
+const STATUS_LABEL: Record<HireInquiryStatus, string> = {
+  NEW: 'received',
+  CONTACTED: 'in progress: we have contacted you',
+  QUALIFIED: 'qualified: we are finding people',
+  CONVERTED: 'filled',
+  CLOSED: 'closed',
+};
 
 @Injectable()
 export class HireInquiryService {
@@ -18,12 +27,18 @@ export class HireInquiryService {
     private readonly auditLog: AuditLogService,
     private readonly emailService: EmailService,
     private readonly webhooks: WebhooksService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async create(input: HireInquiryInput, principal?: AuthUser) {
     const email = normalizeEmail(input.email);
     const viaApiKey = principal?.authType === 'api_key' ? principal : undefined;
+    const signedIn = principal?.authType === 'jwt' ? principal : undefined;
     const isTest = viaApiKey?.apiKeyEnvironment === 'TEST';
+    // A request sent from the dashboard belongs to the sender's company, so the whole team sees it.
+    const membership = signedIn
+      ? await this.prisma.organizationMember.findFirst({ where: { userId: signedIn.id }, orderBy: { createdAt: 'asc' }, select: { organizationId: true } })
+      : null;
 
     const inquiry = await this.prisma.hireInquiry.create({
       data: {
@@ -45,7 +60,7 @@ export class HireInquiryService {
         requirements: input.requirements,
         additionalNotes: input.additionalNotes,
         apiKeyId: viaApiKey?.apiKeyId ?? null,
-        organizationId: viaApiKey?.organizationId ?? null,
+        organizationId: viaApiKey?.organizationId ?? membership?.organizationId ?? null,
         isTest,
       },
     });
@@ -75,6 +90,19 @@ export class HireInquiryService {
           roleTitle: inquiry.roleTitle,
         }),
       );
+      const people = `${inquiry.numberOfProfessionals} ${inquiry.numberOfProfessionals === 1 ? 'person' : 'people'}`;
+      await this.notifications.notifyStaff({
+        type: 'hire_request.created',
+        title: `New hire request: ${inquiry.roleTitle}`,
+        body: `${inquiry.companyName} needs ${people} in ${inquiry.location}.`,
+        link: '/dashboard/requests',
+      });
+      await this.notifications.notifyEmails([inquiry.email], {
+        type: 'hire_request.received',
+        title: `We got your request for ${inquiry.roleTitle}`,
+        body: 'Dealo will contact you within 48 hours with next steps.',
+        link: '/dashboard/requests',
+      });
     }
 
     return {
@@ -128,6 +156,14 @@ export class HireInquiryService {
       this.webhooks.dispatchHireInquiryEvent(WebhookEvent.HIRE_INQUIRY_STATUS_UPDATED, inquiry, {
         previousStatus: existing.status,
       });
+      if (!inquiry.isTest) {
+        await this.notifications.notifyEmails([inquiry.email], {
+          type: 'hire_request.status',
+          title: `Your request for ${inquiry.roleTitle} is ${STATUS_LABEL[inquiry.status]}`,
+          body: inquiry.companyName,
+          link: '/dashboard/requests',
+        });
+      }
     }
 
     return inquiry;

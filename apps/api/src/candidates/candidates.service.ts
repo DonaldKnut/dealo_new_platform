@@ -8,6 +8,7 @@ import type {
 
 import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class CandidatesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   listCandidates() {
@@ -188,6 +190,15 @@ export class CandidatesService {
       actorId,
       metadata: { hireInquiryId: input.hireInquiryId },
     });
+
+    if (!inquiry.isTest) {
+      await this.notifications.notifyEmails([inquiry.email], {
+        type: 'shortlist.created',
+        title: `Your shortlist for ${inquiry.roleTitle} has started`,
+        body: 'Dealo is adding checked candidates. You will see them under Shortlists.',
+        link: '/dashboard/talent',
+      });
+    }
 
     return shortlist;
   }

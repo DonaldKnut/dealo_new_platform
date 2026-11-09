@@ -8,6 +8,7 @@ import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
 import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailPreferencesService } from './email-preferences.service';
 
@@ -20,6 +21,7 @@ export class NewsletterService {
     private readonly emailService: EmailService,
     private readonly auditLog: AuditLogService,
     private readonly preferences: EmailPreferencesService,
+    private readonly notifications: NotificationsService,
     config: ConfigService<AppEnv, true>,
   ) {
     this.siteUrl = config.get('APP_URL', { infer: true });
@@ -135,6 +137,14 @@ export class NewsletterService {
         sent: results.filter((r) => r.ok).length,
         failed: results.filter((r) => !r.ok).length,
       },
+    });
+
+    const delivered = results.filter((r) => r.ok).length;
+    await this.notifications.notify([user.id], {
+      type: 'newsletter.sent',
+      title: `Campaign sent: ${campaign.subject}`,
+      body: `${delivered} delivered, ${results.length - delivered} failed, ${everyone.length - recipients.length} opted out.`,
+      link: '/dashboard/newsletter',
     });
 
     return {

@@ -7,6 +7,7 @@ import { WebhooksModule } from '../webhooks/webhooks.module';
 import { ApplicationsService } from './applications.service';
 import { AtsAccessService } from './ats-access.service';
 import { AtsEventsService } from './ats-events.service';
+import { AtsNotificationsService } from './ats-notifications.service';
 import { AtsToolsService } from './ats-tools.service';
 import { AtsApiController, AtsController, CandidateLinksController, CareersController } from './ats.controller';
 import { HiringService } from './hiring.service';
@@ -16,7 +17,7 @@ import { WorkspacesService } from './workspaces.service';
 @Module({
   imports: [AiModule, WebhooksModule, OpsModule, ApiKeysModule],
   controllers: [AtsController, AtsApiController, CareersController, CandidateLinksController],
-  providers: [AtsAccessService, AtsEventsService, WorkspacesService, JobsService, ApplicationsService, HiringService, AtsToolsService],
+  providers: [AtsAccessService, AtsEventsService, AtsNotificationsService, WorkspacesService, JobsService, ApplicationsService, HiringService, AtsToolsService],
   exports: [AtsAccessService, AtsEventsService, ApplicationsService, HiringService, JobsService, AtsToolsService],
 })
 export class AtsModule {}

@@ -26,6 +26,7 @@ import { HireInquiryModule } from './hire-inquiry/hire-inquiry.module';
 import { MailModule } from './mail/mail.module';
 import { MediaModule } from './media/media.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { OpsModule } from './ops/ops.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -60,6 +61,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     ]),
     PrismaModule,
     CommonModule,
+    NotificationsModule,
     EmailModule,
     PaymentsModule,
     RootModule,

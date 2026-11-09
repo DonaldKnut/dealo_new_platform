@@ -30,7 +30,7 @@ export class ApiKeyOrJwtGuard extends AuthGuard('jwt') implements CanActivate {
 
     if (isPublic) {
       // Still try API key / JWT so scoped public routes can see the principal when provided.
-      await this.tryAttachPrincipal(context);
+      if (!(await this.tryAttachPrincipal(context))) await this.tryAttachCookieUser(context);
       return true;
     }
 
@@ -52,6 +52,17 @@ export class ApiKeyOrJwtGuard extends AuthGuard('jwt') implements CanActivate {
       throw err || new UnauthorizedException('Authentication required');
     }
     return user;
+  }
+
+  /** Public routes stay open to visitors; a valid sign-in cookie only adds who is asking. */
+  private async tryAttachCookieUser(context: ExecutionContext): Promise<void> {
+    const request = context.switchToHttp().getRequest<{ cookies?: Record<string, unknown> }>();
+    if (typeof request.cookies?.access_token !== 'string') return;
+    try {
+      await super.canActivate(context);
+    } catch {
+      // Expired or invalid cookie: carry on as a visitor.
+    }
   }
 
   private async tryAttachPrincipal(context: ExecutionContext): Promise<boolean> {

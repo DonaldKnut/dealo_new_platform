@@ -116,9 +116,12 @@ model User {
   lastLoginAt          DateTime?
   /// Job-seeker premium (resume builder). Granted by admins until Paystack plans launch.
   premiumUntil         DateTime?
+  /// True for a new Google/LinkedIn account until the person confirms their role and name.
+  onboardingPending    Boolean?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
 
+  notifications           Notification[]
   resumes                 Resume[]
   roles                   UserRoleAssignment[]
   refreshTokens           RefreshToken[]
@@ -135,6 +138,23 @@ model User {
 
   @@index([googleId])
   @@index([linkedinId])
+}
+
+model Notification {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String    @db.ObjectId
+  /// Dotted event name, e.g. hire_request.created or ats.application.created.
+  type      String
+  title     String
+  body      String?
+  /// In-app path the notification opens.
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
 }
 
 model Role {

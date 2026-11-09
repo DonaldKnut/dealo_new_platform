@@ -2,7 +2,6 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Bell,
   Briefcase,
   Building2,
   ChevronRight,
@@ -19,6 +18,7 @@ import {
   PanelLeftClose,
   MapPinCheck,
   PanelLeftOpen,
+  Plus,
   Radar,
   ScrollText,
   Send,
@@ -34,19 +34,21 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { BrandLogo } from '@/components/brand-logo';
+import { DashboardSessionContext } from '@/components/dashboard/dashboard-session';
 import { DashboardTour } from '@/components/dashboard/dashboard-tour';
+import { NotificationCenter } from '@/components/dashboard/notification-center';
+import { OnboardingModal } from '@/components/dashboard/onboarding-modal';
+import { UserAvatar, UserMenu } from '@/components/dashboard/user-menu';
+import { useModal } from '@/components/modals/modal-context';
 import type { TranslationKey } from '@/components/i18n/dictionaries';
 import { LanguageSwitcher } from '@/components/i18n/language-switcher';
 import { useLocale } from '@/components/i18n/locale-context';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useToast } from '@/components/ui/toast';
-import {
-  getDashboardHome,
-  getRoleGroup,
-  type AuthSessionUser,
-} from '@/hooks/use-auth-session';
+import { getDashboardHome, getRoleGroup, type AuthSessionUser } from '@/hooks/use-auth-session';
 import { ApiError, apiFetch } from '@/lib/api';
+import { atsApi } from '@/lib/ats-api';
 import { logClientAudit } from '@/lib/client-audit';
 import { fetchAuthMe } from '@/lib/dashboard-api';
 import { VerifyEmailBanner } from '@/components/dashboard/verify-email-banner';
@@ -305,6 +307,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthSessionUser | null>(null);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const { open: openModal } = useModal();
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(SIDEBAR_KEY) === '1');
@@ -346,6 +350,42 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, router, attempt]);
 
+  const userId = user?.id;
+  const isEmployer = user ? getRoleGroup(user.roles) === 'employer' : false;
+  const onboarding = Boolean(user?.needsOnboarding);
+  useEffect(() => {
+    if (!userId || !isEmployer || onboarding) return;
+    let active = true;
+    atsApi
+      .workspaces()
+      .then((list) => active && setCompanyName(list[0]?.name ?? null))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [userId, isEmployer, onboarding]);
+
+  const finishOnboarding = async () => {
+    const me = await fetchAuthMe();
+    setUser(me);
+    router.replace(
+      getRoleGroup(me.roles) === 'employer'
+        ? '/dashboard/organization'
+        : getDashboardHome(me.roles),
+    );
+  };
+
+  const openHireRequest = () =>
+    openModal('hire', {
+      hirePrefill: user
+        ? {
+            contactName: `${user.firstName} ${user.lastName}`.trim(),
+            email: user.email,
+            companyName: companyName ?? undefined,
+          }
+        : undefined,
+    });
+
   const nav = useMemo(() => {
     if (!user) return employerNav;
     const group = getRoleGroup(user.roles);
@@ -374,9 +414,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const userName = user
-    ? `${user.firstName} ${user.lastName}`.trim() || user.email
-    : 'Dealo user';
+  const userName = user ? `${user.firstName} ${user.lastName}`.trim() || user.email : 'Dealo user';
   const homeHref = user ? getDashboardHome(user.roles) : '/dashboard';
   const whatsapp = whatsappHref(whatsappMessageFor(pathname, t('wa.prefill')));
   const roleGroup = user ? getRoleGroup(user.roles) : 'employer';
@@ -403,7 +441,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         key={item.href}
         initial={opts.scope === 'drawer' ? { opacity: 0, x: -12 } : false}
         animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: opts.scope === 'drawer' ? 0.04 + opts.index * 0.03 : 0, duration: 0.24 }}
+        transition={{
+          delay: opts.scope === 'drawer' ? 0.04 + opts.index * 0.03 : 0,
+          duration: 0.24,
+        }}
       >
         <Link
           href={item.href}
@@ -495,7 +536,9 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         {sessionError ? (
           <div className="max-w-sm space-y-3">
             <p className="font-display text-xl">We can’t reach Dealo right now</p>
-            <p className="text-sm text-muted">{sessionError} Our servers may be waking up; this can take up to a minute.</p>
+            <p className="text-sm text-muted">
+              {sessionError} Our servers may be waking up; this can take up to a minute.
+            </p>
             <div className="flex justify-center gap-2">
               <button
                 type="button"
@@ -514,7 +557,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         ) : (
           <p className="flex items-center gap-2 text-sm text-muted" role="status">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" aria-hidden /> Checking your account…
+            <span
+              className="h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent"
+              aria-hidden
+            />{' '}
+            Checking your account…
           </p>
         )}
       </div>
@@ -522,257 +569,289 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="flex min-h-screen">
-        <motion.aside
-          data-tour="sidebar"
-          animate={{ width: collapsed ? 84 : 256 }}
-          transition={{ type: 'spring', stiffness: 280, damping: 30 }}
-          className="sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-surface/50 p-3 lg:flex"
-        >
-          <div data-tour="sidebar-controls" className={cn(collapsed ? 'space-y-2' : 'space-y-3')}>
-            <div className={cn('flex items-center', collapsed ? 'justify-center' : 'justify-between')}>
-              {!collapsed ? <BrandLogo href={homeHref} /> : null}
-              <button
-                type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted transition hover:text-foreground"
-                aria-label={collapsed ? t('dash.expand') : t('dash.collapse')}
-                onClick={toggleCollapsed}
-              >
-                {collapsed ? (
-                  <PanelLeftOpen className="h-4 w-4" />
-                ) : (
-                  <PanelLeftClose className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-
-            {!collapsed ? (
-              <div className="rounded-xl border border-border bg-surface-elevated/80 px-3 py-2.5">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand">
-                    {t('dash.workspace')}
-                  </p>
-                  <InfoTooltip
-                    label="Workspace"
-                    content="Your role decides which menu items you see. Admins see platform tools; employers and talent see their own workspace."
-                  />
-                </div>
-                <p className="mt-1 text-sm font-medium text-foreground">{roleLabel}</p>
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mt-6 flex-1 overflow-y-auto">
-            <NavItems compact={collapsed} scope="sidebar" />
-          </div>
-
-          <button
-            type="button"
-            onClick={logout}
-            className={cn(
-              'mt-4 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground',
-              collapsed && 'justify-center px-2',
-            )}
+    <DashboardSessionContext.Provider value={{ user, setUser, companyName }}>
+      <div className="min-h-screen bg-background text-foreground">
+        {user.needsOnboarding ? <OnboardingModal user={user} onDone={finishOnboarding} /> : null}
+        <div className="flex min-h-screen">
+          <motion.aside
+            data-tour="sidebar"
+            animate={{ width: collapsed ? 84 : 256 }}
+            transition={{ type: 'spring', stiffness: 280, damping: 30 }}
+            className="sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden border-r border-border bg-surface/50 p-3 lg:flex"
           >
-            <motion.span whileHover={{ x: 2 }}>
-              <LogOut className="h-4 w-4" />
-            </motion.span>
-            {!collapsed ? t('dash.signOut') : null}
-          </button>
-        </motion.aside>
-
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 border-b border-border bg-background/90 pt-[var(--safe-top)] backdrop-blur-md">
-            <div className="flex h-14 items-center justify-between gap-2 px-2.5 min-[230px]:px-3 min-[340px]:h-16 min-[340px]:gap-3 min-[340px]:px-5 sm:px-6">
-              <div className="flex min-w-0 items-center gap-2 min-[340px]:gap-3">
-                <button
-                  type="button"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border min-[340px]:h-10 min-[340px]:w-10 lg:hidden"
-                  aria-label="Open navigation"
-                  onClick={() => setMobileOpen(true)}
-                >
-                  <Menu className="h-4 w-4" />
-                </button>
-                <div className="min-w-0 lg:hidden">
-                  <BrandLogo href={homeHref} />
-                </div>
-                <div className="hidden items-center text-sm text-muted sm:flex">
-                  {roleLabel}
-                  <ChevronRight className="mx-1 inline h-3.5 w-3.5" />
-                  <span className="text-foreground">Dashboard</span>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-1.5 min-[340px]:gap-2 sm:gap-3">
-                <div
-                  data-tour="header-helpers"
-                  className="flex items-center gap-1.5 min-[340px]:gap-2"
-                >
-                  <DashboardTour />
-                  <LanguageSwitcher className="hidden md:inline-flex" />
-                </div>
-                {whatsapp ? (
-                  <a
-                    href={whatsapp}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Chat with us on WhatsApp"
-                    title="Chat with us on WhatsApp"
-                    className="hidden h-9 items-center justify-center gap-1.5 rounded-full bg-[#25D366] px-2.5 text-sm font-semibold text-[#073b1f] transition hover:brightness-95 min-[300px]:inline-flex min-[340px]:h-10 min-[340px]:px-3"
-                  >
-                    <WhatsAppIcon className="h-4 w-4" />
-                    <span className="hidden xl:inline">Chat with us</span>
-                  </a>
-                ) : null}
-                <button
-                  type="button"
-                  className="hidden h-9 w-9 items-center justify-center rounded-full border border-border min-[280px]:inline-flex min-[340px]:h-10 min-[340px]:w-10"
-                  aria-label="Notifications"
-                >
-                  <motion.span whileHover={{ rotate: 12 }}>
-                    <Bell className="h-4 w-4" />
-                  </motion.span>
-                </button>
-                <ThemeToggle />
-                <div className="hidden max-w-[11rem] truncate rounded-full border border-border bg-surface-elevated px-3 py-1.5 text-sm sm:block">
-                  {userName}
-                </div>
-              </div>
-            </div>
-          </header>
-
-          <motion.main
-            key={pathname}
-            data-tour="main-content"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="dash-atmosphere flex-1 px-2.5 py-5 min-[230px]:px-3 min-[340px]:px-5 min-[340px]:py-6 sm:px-6 sm:py-8"
-          >
-            {user && user.isEmailVerified === false ? (
-              <VerifyEmailBanner
-                email={user.email}
-                onVerified={() => setUser((current) => (current ? { ...current, isEmailVerified: true } : current))}
-              />
-            ) : null}
-            {children}
-          </motion.main>
-          <div className="h-[calc(4.25rem+var(--safe-bottom))] lg:hidden" aria-hidden />
-        </div>
-      </div>
-
-      <nav
-        aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 pb-[var(--safe-bottom)] backdrop-blur-md lg:hidden"
-      >
-        <div className="mx-auto flex max-w-lg items-stretch px-0.5 min-[340px]:px-2">
-          {nav.slice(0, 4).map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
+            <div data-tour="sidebar-controls" className={cn(collapsed ? 'space-y-2' : 'space-y-3')}>
+              <div
                 className={cn(
-                  'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
-                  active ? 'text-brand' : 'text-muted hover:text-foreground',
+                  'flex items-center',
+                  collapsed ? 'justify-center' : 'justify-between',
                 )}
               >
-                {active ? (
-                  <motion.span
-                    layoutId="dash-tab-active"
-                    className="absolute inset-x-2 top-0 h-[3px] rounded-b-full bg-brand"
-                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-                  />
-                ) : null}
-                <motion.span whileTap={{ scale: 0.85 }} className="inline-flex">
-                  <Icon className="h-[18px] w-[18px]" />
-                </motion.span>
-                <span className="hidden max-w-full truncate px-0.5 min-[300px]:block">{t(item.labelKey)}</span>
-              </Link>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium text-muted transition-colors hover:text-foreground"
-          >
-            <motion.span whileTap={{ scale: 0.85 }} className="inline-flex">
-              <Menu className="h-[18px] w-[18px]" />
-            </motion.span>
-            <span className="hidden min-[300px]:block">{t('dash.more')}</span>
-          </button>
-        </div>
-      </nav>
+                {!collapsed ? <BrandLogo href={homeHref} /> : null}
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted transition hover:text-foreground"
+                  aria-label={collapsed ? t('dash.expand') : t('dash.collapse')}
+                  onClick={toggleCollapsed}
+                >
+                  {collapsed ? (
+                    <PanelLeftOpen className="h-4 w-4" />
+                  ) : (
+                    <PanelLeftClose className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
 
-      <AnimatePresence>
-        {mobileOpen ? (
-          <motion.div
-            className="fixed inset-0 z-50 lg:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+              {!collapsed ? (
+                <div className="rounded-xl border border-border bg-surface-elevated/80 px-3 py-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand">
+                      {t('dash.workspace')}
+                    </p>
+                    <InfoTooltip
+                      label="Workspace"
+                      content="Your role decides which menu items you see. Admins see platform tools; employers and talent see their own workspace."
+                    />
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-foreground">{roleLabel}</p>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-6 flex-1 overflow-y-auto">
+              <NavItems compact={collapsed} scope="sidebar" />
+            </div>
+
             <button
               type="button"
-              className="absolute inset-0 bg-black/40"
-              aria-label="Close navigation"
-              onClick={() => setMobileOpen(false)}
-            />
-            <motion.aside
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-              className="safe-bottom absolute inset-y-0 left-0 flex w-[min(18rem,88vw)] flex-col border-r border-border bg-background p-3 pt-[max(0.75rem,var(--safe-top))] min-[340px]:p-4"
+              onClick={logout}
+              className={cn(
+                'mt-4 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground',
+                collapsed && 'justify-center px-2',
+              )}
             >
-              <div className="mb-4 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <BrandLogo href={homeHref} />
+              <motion.span whileHover={{ x: 2 }}>
+                <LogOut className="h-4 w-4" />
+              </motion.span>
+              {!collapsed ? t('dash.signOut') : null}
+            </button>
+          </motion.aside>
+
+          <div className="flex min-w-0 flex-1 flex-col">
+            <header className="sticky top-0 z-30 border-b border-border bg-background/90 pt-[var(--safe-top)] backdrop-blur-md">
+              <div className="flex h-14 items-center justify-between gap-2 px-2.5 min-[230px]:px-3 min-[340px]:h-16 min-[340px]:gap-3 min-[340px]:px-5 sm:px-6">
+                <div className="flex min-w-0 items-center gap-2 min-[340px]:gap-3">
+                  <button
+                    type="button"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border min-[340px]:h-10 min-[340px]:w-10 lg:hidden"
+                    aria-label="Open navigation"
+                    onClick={() => setMobileOpen(true)}
+                  >
+                    <Menu className="h-4 w-4" />
+                  </button>
+                  <div className="min-w-0 lg:hidden">
+                    <BrandLogo href={homeHref} />
+                  </div>
+                  <div className="hidden items-center text-sm text-muted sm:flex">
+                    {roleLabel}
+                    <ChevronRight className="mx-1 inline h-3.5 w-3.5" />
+                    <span className="text-foreground">Dashboard</span>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Close navigation"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition hover:border-brand hover:text-brand"
-                  onClick={() => setMobileOpen(false)}
+                <div className="flex shrink-0 items-center gap-1.5 min-[340px]:gap-2 sm:gap-3">
+                  <div
+                    data-tour="header-helpers"
+                    className="flex items-center gap-1.5 min-[340px]:gap-2"
+                  >
+                    <DashboardTour />
+                    <LanguageSwitcher className="hidden md:inline-flex" />
+                  </div>
+                  {whatsapp ? (
+                    <a
+                      href={whatsapp}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Chat with us on WhatsApp"
+                      title="Chat with us on WhatsApp"
+                      className="hidden h-9 items-center justify-center gap-1.5 rounded-full bg-[#25D366] px-2.5 text-sm font-semibold text-[#073b1f] transition hover:brightness-95 min-[300px]:inline-flex min-[340px]:h-10 min-[340px]:px-3"
+                    >
+                      <WhatsAppIcon className="h-4 w-4" />
+                      <span className="hidden xl:inline">Chat with us</span>
+                    </a>
+                  ) : null}
+                  {roleGroup === 'employer' ? (
+                    <button
+                      type="button"
+                      onClick={openHireRequest}
+                      className="btn-primary hidden h-10 px-4 text-sm lg:inline-flex"
+                    >
+                      <Plus className="h-4 w-4" /> Request a hire
+                    </button>
+                  ) : null}
+                  <NotificationCenter />
+                  <span className="hidden min-[380px]:inline-flex">
+                    <ThemeToggle />
+                  </span>
+                  <UserMenu roleLabel={roleLabel} onLogout={() => void logout()} />
+                </div>
+              </div>
+            </header>
+
+            <motion.main
+              key={pathname}
+              data-tour="main-content"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              className="dash-atmosphere flex-1 px-2.5 py-5 min-[230px]:px-3 min-[340px]:px-5 min-[340px]:py-6 sm:px-6 sm:py-8"
+            >
+              {user && user.isEmailVerified === false ? (
+                <VerifyEmailBanner
+                  email={user.email}
+                  onVerified={() =>
+                    setUser((current) =>
+                      current ? { ...current, isEmailVerified: true } : current,
+                    )
+                  }
+                />
+              ) : null}
+              {children}
+            </motion.main>
+            <div className="h-[calc(4.25rem+var(--safe-bottom))] lg:hidden" aria-hidden />
+          </div>
+        </div>
+
+        <nav
+          aria-label="Primary"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 pb-[var(--safe-bottom)] backdrop-blur-md lg:hidden"
+        >
+          <div className="mx-auto flex max-w-lg items-stretch px-0.5 min-[340px]:px-2">
+            {nav.slice(0, 4).map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
+                    active ? 'text-brand' : 'text-muted hover:text-foreground',
+                  )}
                 >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="mb-3 rounded-xl border border-border bg-surface-elevated/80 px-3 py-2">
-                <p className="truncate text-sm font-medium text-foreground">{userName}</p>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand">{roleLabel}</p>
-              </div>
-              <div className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1">
-                <NavItems scope="drawer" onNavigate={() => setMobileOpen(false)} />
-              </div>
-              <div className="mt-3 space-y-1 border-t border-border pt-3">
-                {whatsapp ? (
-                  <a
-                    href={whatsapp}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  {active ? (
+                    <motion.span
+                      layoutId="dash-tab-active"
+                      className="absolute inset-x-2 top-0 h-[3px] rounded-b-full bg-brand"
+                      transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                    />
+                  ) : null}
+                  <motion.span whileTap={{ scale: 0.85 }} className="inline-flex">
+                    <Icon className="h-[18px] w-[18px]" />
+                  </motion.span>
+                  <span className="hidden max-w-full truncate px-0.5 min-[300px]:block">
+                    {t(item.labelKey)}
+                  </span>
+                </Link>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium text-muted transition-colors hover:text-foreground"
+            >
+              <motion.span whileTap={{ scale: 0.85 }} className="inline-flex">
+                <Menu className="h-[18px] w-[18px]" />
+              </motion.span>
+              <span className="hidden min-[300px]:block">{t('dash.more')}</span>
+            </button>
+          </div>
+        </nav>
+
+        <AnimatePresence>
+          {mobileOpen ? (
+            <motion.div
+              className="fixed inset-0 z-50 lg:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <button
+                type="button"
+                className="absolute inset-0 bg-black/40"
+                aria-label="Close navigation"
+                onClick={() => setMobileOpen(false)}
+              />
+              <motion.aside
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+                className="safe-bottom absolute inset-y-0 left-0 flex w-[min(18rem,88vw)] flex-col border-r border-border bg-background p-3 pt-[max(0.75rem,var(--safe-top))] min-[340px]:p-4"
+              >
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <BrandLogo href={homeHref} />
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Close navigation"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border transition hover:border-brand hover:text-brand"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="mb-3 flex items-center gap-3 rounded-xl border border-border bg-surface-elevated/80 px-3 py-2">
+                  <UserAvatar user={user} className="h-9 w-9 text-xs" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{userName}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand">
+                      {roleLabel}
+                    </p>
+                  </div>
+                </div>
+                {roleGroup === 'employer' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      openHireRequest();
+                    }}
+                    className="btn-primary mb-3 w-full text-sm"
+                  >
+                    <Plus className="h-4 w-4" /> Request a hire
+                  </button>
+                ) : null}
+                <div className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1">
+                  <NavItems scope="drawer" onNavigate={() => setMobileOpen(false)} />
+                </div>
+                <div className="mt-3 space-y-1 border-t border-border pt-3">
+                  {whatsapp ? (
+                    <a
+                      href={whatsapp}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground"
+                    >
+                      <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
+                      Chat with us on WhatsApp
+                    </a>
+                  ) : null}
+                  <LanguageSwitcher variant="row" />
+                  <button
+                    type="button"
+                    onClick={logout}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground"
                   >
-                    <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
-                    Chat with us on WhatsApp
-                  </a>
-                ) : null}
-                <LanguageSwitcher variant="row" />
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground"
-                >
-                  <LogOut className="h-4 w-4" />
-                  {t('dash.signOut')}
-                </button>
-              </div>
-            </motion.aside>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </div>
+                    <LogOut className="h-4 w-4" />
+                    {t('dash.signOut')}
+                  </button>
+                </div>
+              </motion.aside>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
+    </DashboardSessionContext.Provider>
   );
 }

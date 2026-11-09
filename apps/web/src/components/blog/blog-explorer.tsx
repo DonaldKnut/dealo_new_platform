@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
+import { BlogCoverArt } from '@/components/blog/blog-cover-art';
 import type { ExternalRead } from '@/lib/blog-reading';
 import { cn } from '@/lib/utils';
 
@@ -28,31 +29,36 @@ function formatDate(iso: string | null) {
     : 'Guide';
 }
 
-function Cover({ src, alt, sizes, className }: { src: string | null; alt: string; sizes: string; className?: string }) {
-  if (!src) {
+function Cover({ post, sizes, compact }: { post: BlogCard; sizes: string; compact?: boolean }) {
+  if (!post.coverImage) {
     return (
-      <div
-        className={cn(
-          'absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,var(--hero-glow),transparent_60%),linear-gradient(135deg,var(--brand-soft),var(--surface))]',
-          className,
-        )}
+      <BlogCoverArt
+        slug={post.slug}
+        category={post.category}
+        compact={compact}
+        className="transition-transform duration-700 ease-out group-hover:scale-105"
       />
     );
   }
   return (
     <Image
-      src={src}
-      alt={alt}
+      src={post.coverImage}
+      alt=""
       fill
       sizes={sizes}
-      className={cn('object-cover transition-transform duration-700 ease-out group-hover:scale-105', className)}
+      className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
     />
   );
 }
 
 function Meta({ post, light = false }: { post: BlogCard; light?: boolean }) {
   return (
-    <p className={cn('flex flex-wrap items-center gap-x-3 gap-y-1 text-xs', light ? 'text-white/75' : 'text-muted')}>
+    <p
+      className={cn(
+        'flex flex-wrap items-center gap-x-3 gap-y-1 text-xs',
+        light ? 'text-white/75' : 'text-muted',
+      )}
+    >
       <span>{formatDate(post.publishedAt)}</span>
       <span className="inline-flex items-center gap-1">
         <Clock3 className="h-3 w-3" />
@@ -73,7 +79,10 @@ export function BlogExplorer({ posts, reading }: { posts: BlogCard[]; reading: E
   }, []);
 
   const categories = useMemo(
-    () => ['All', ...Array.from(new Set(posts.map((post) => post.category).filter(Boolean) as string[]))],
+    () => [
+      'All',
+      ...Array.from(new Set(posts.map((post) => post.category).filter(Boolean) as string[])),
+    ],
     [posts],
   );
 
@@ -81,7 +90,8 @@ export function BlogExplorer({ posts, reading }: { posts: BlogCard[]; reading: E
   const filtered = posts.filter(
     (post) =>
       (category === 'All' || post.category === category) &&
-      (!term || `${post.title} ${post.excerpt} ${post.tags.join(' ')}`.toLowerCase().includes(term)),
+      (!term ||
+        `${post.title} ${post.excerpt} ${post.tags.join(' ')}`.toLowerCase().includes(term)),
   );
   const showFeature = category === 'All' && !term;
   const featured = showFeature ? posts.filter((post) => post.featured).slice(0, 2) : [];
@@ -107,7 +117,9 @@ export function BlogExplorer({ posts, reading }: { posts: BlogCard[]; reading: E
             onClick={() => setCategory(cat)}
             className={cn(
               'relative shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors',
-              category === cat ? 'text-white dark:text-[#071f14]' : 'text-muted hover:text-foreground',
+              category === cat
+                ? 'text-white dark:text-[#071f14]'
+                : 'text-muted hover:text-foreground',
             )}
           >
             {category === cat ? (
@@ -138,7 +150,7 @@ export function BlogExplorer({ posts, reading }: { posts: BlogCard[]; reading: E
                   index === 0 && 'lg:min-h-[26rem]',
                 )}
               >
-                <Cover src={post.coverImage} alt="" sizes="(max-width: 1024px) 100vw, 60vw" />
+                <Cover post={post} sizes="(max-width: 1024px) 100vw, 60vw" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#071f14] via-[#071f14]/60 to-transparent" />
                 <div className="relative z-10">
                   <span className="inline-flex items-center gap-1 rounded-full bg-[#7cff4d] px-2.5 py-0.5 text-[11px] font-bold text-[#071f14]">
@@ -147,7 +159,9 @@ export function BlogExplorer({ posts, reading }: { posts: BlogCard[]; reading: E
                   <h2
                     className={cn(
                       'mt-3 font-display font-semibold leading-tight',
-                      index === 0 ? 'text-2xl min-[340px]:text-3xl sm:text-4xl' : 'text-xl min-[340px]:text-2xl',
+                      index === 0
+                        ? 'text-2xl min-[340px]:text-3xl sm:text-4xl'
+                        : 'text-xl min-[340px]:text-2xl',
                     )}
                   >
                     {post.title}
@@ -167,7 +181,9 @@ export function BlogExplorer({ posts, reading }: { posts: BlogCard[]; reading: E
       ) : null}
 
       {rest.length === 0 && featured.length === 0 ? (
-        <p className="mt-12 text-center text-sm text-muted">No articles match. Try another word or topic.</p>
+        <p className="mt-12 text-center text-sm text-muted">
+          No articles match. Try another word or topic.
+        </p>
       ) : (
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout">
@@ -185,8 +201,12 @@ export function BlogExplorer({ posts, reading }: { posts: BlogCard[]; reading: E
                   className="group flex h-full flex-col overflow-hidden rounded-[1.25rem] border border-border bg-surface-elevated/90 transition hover:-translate-y-1 hover:border-brand/40 hover:shadow-[0_24px_50px_-28px_rgba(4,47,46,0.45)]"
                 >
                   <div className="relative aspect-[16/10] overflow-hidden">
-                    <Cover src={post.coverImage} alt="" sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
-                    {post.category ? (
+                    <Cover
+                      post={post}
+                      compact
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
+                    {post.category && post.coverImage ? (
                       <span className="absolute left-3 top-3 rounded-full bg-background/90 px-2.5 py-0.5 text-[11px] font-semibold text-brand backdrop-blur">
                         {post.category}
                       </span>
@@ -215,7 +235,9 @@ export function BlogExplorer({ posts, reading }: { posts: BlogCard[]; reading: E
           <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="eyebrow">Further reading</p>
-              <h2 className="display-title mt-2 text-2xl text-foreground min-[340px]:text-3xl">From trusted sources</h2>
+              <h2 className="display-title mt-2 text-2xl text-foreground min-[340px]:text-3xl">
+                From trusted sources
+              </h2>
             </div>
             <p className="max-w-sm text-xs text-muted">
               Reports and guides we use ourselves. Links open the original source.
@@ -231,7 +253,9 @@ export function BlogExplorer({ posts, reading }: { posts: BlogCard[]; reading: E
                 className="group flex flex-col rounded-2xl border border-border bg-surface/70 p-4 transition hover:border-brand/40 hover:bg-surface-elevated"
               >
                 <div className="flex items-center justify-between gap-2 text-[11px] text-muted">
-                  <span className="font-semibold uppercase tracking-wide text-brand">{item.topic}</span>
+                  <span className="font-semibold uppercase tracking-wide text-brand">
+                    {item.topic}
+                  </span>
                   <span>{item.year}</span>
                 </div>
                 <p className="mt-2 font-semibold leading-snug text-foreground">{item.title}</p>

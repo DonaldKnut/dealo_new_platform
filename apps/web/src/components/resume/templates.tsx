@@ -101,7 +101,7 @@ function Footer({ P, branding }: { P: Prims; branding: boolean }) {
   return (
     <P.View fixed style={{ position: 'absolute', bottom: 12, left: 0, right: 0, alignItems: 'center' }}>
       <P.Text style={{ fontSize: 7, color: '#94a3b8', letterSpacing: 0.5 }}>
-        Made with Dealo · dealo.africa/resume-builder
+        Made with Dealo · dealonetwork.com/resume-builder
       </P.Text>
     </P.View>
   );

@@ -2,10 +2,20 @@
 
 import { BLOG_CATEGORIES } from '@dealo/shared';
 import { motion } from 'framer-motion';
-import { ExternalLink, ImageIcon, LoaderCircle, Newspaper, Pencil, Plus, Sparkles, Star, Trash2 } from 'lucide-react';
+import {
+  ExternalLink,
+  LoaderCircle,
+  Newspaper,
+  Pencil,
+  Plus,
+  Sparkles,
+  Star,
+  Trash2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { BlogCoverArt } from '@/components/blog/blog-cover-art';
 import { DashHero, StatusChip } from '@/components/dashboard/dashboard-ui';
 import { FormField } from '@/components/forms/form-field';
 import { FormModal } from '@/components/ui/form-modal';
@@ -63,6 +73,10 @@ export function DashboardBlogPanel() {
   const refresh = async () => {
     setPosts(await fetchBlogAdmin());
   };
+
+  const coverTakenBy = coverImage.trim()
+    ? posts.find((post) => post.id !== editingId && post.coverImage?.trim() === coverImage.trim())
+    : undefined;
 
   useEffect(() => {
     let active = true;
@@ -141,7 +155,10 @@ export function DashboardBlogPanel() {
     try {
       if (editingId) await updateBlogPost(editingId, payload);
       else await createBlogPost(payload);
-      toast.success(editingId ? 'Post updated' : 'Post created', status === 'PUBLISHED' ? 'It is live on the blog.' : undefined);
+      toast.success(
+        editingId ? 'Post updated' : 'Post created',
+        status === 'PUBLISHED' ? 'It is live on the blog.' : undefined,
+      );
       setOpen(false);
       await refresh();
     } catch (err) {
@@ -225,14 +242,14 @@ export function DashboardBlogPanel() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={post.coverImage} alt="" className="h-full w-full object-cover" />
               ) : (
-                <span className="flex h-full w-full items-center justify-center text-muted">
-                  <ImageIcon className="h-5 w-5" />
-                </span>
+                <BlogCoverArt slug={post.slug} category={post.category ?? null} compact />
               )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="flex items-start gap-1.5 break-words font-medium text-foreground">
-                {post.featured ? <Star className="mt-0.5 h-4 w-4 shrink-0 fill-amber-400 text-amber-400" /> : null}
+                {post.featured ? (
+                  <Star className="mt-0.5 h-4 w-4 shrink-0 fill-amber-400 text-amber-400" />
+                ) : null}
                 {post.title}
               </p>
               <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -243,14 +260,26 @@ export function DashboardBlogPanel() {
             </div>
             <div className="flex flex-wrap gap-2">
               {post.status === 'PUBLISHED' ? (
-                <Link href={`/blog/${post.slug}`} target="_blank" className="btn-secondary px-3 py-2 text-xs">
+                <Link
+                  href={`/blog/${post.slug}`}
+                  target="_blank"
+                  className="btn-secondary px-3 py-2 text-xs"
+                >
                   <ExternalLink className="h-3.5 w-3.5" /> View
                 </Link>
               ) : null}
-              <button type="button" className="btn-secondary px-3 py-2 text-xs" onClick={() => startEdit(post)}>
+              <button
+                type="button"
+                className="btn-secondary px-3 py-2 text-xs"
+                onClick={() => startEdit(post)}
+              >
                 <Pencil className="h-3.5 w-3.5" /> Edit
               </button>
-              <button type="button" className="btn-secondary px-3 py-2 text-xs text-danger" onClick={() => void remove(post)}>
+              <button
+                type="button"
+                className="btn-secondary px-3 py-2 text-xs text-danger"
+                onClick={() => void remove(post)}
+              >
                 <Trash2 className="h-3.5 w-3.5" /> Delete
               </button>
             </div>
@@ -271,12 +300,22 @@ export function DashboardBlogPanel() {
               Cancel
             </button>
             <button type="submit" form="blog-form" className="btn-primary" disabled={saving}>
-              {saving ? 'Saving…' : editingId ? 'Update post' : status === 'PUBLISHED' ? 'Publish post' : 'Save draft'}
+              {saving
+                ? 'Saving…'
+                : editingId
+                  ? 'Update post'
+                  : status === 'PUBLISHED'
+                    ? 'Publish post'
+                    : 'Save draft'}
             </button>
           </>
         }
       >
-        <form id="blog-form" onSubmit={save} className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <form
+          id="blog-form"
+          onSubmit={save}
+          className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]"
+        >
           <div className="min-w-0 space-y-4">
             {!editingId ? (
               <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-brand/40 bg-gradient-to-br from-brand-soft/60 to-amber-300/10 p-3 sm:flex-row">
@@ -286,8 +325,17 @@ export function DashboardBlogPanel() {
                   value={aiTopic}
                   onChange={(e) => setAiTopic(e.target.value)}
                 />
-                <button type="button" className="btn-secondary shrink-0 text-sm" disabled={aiBusy || aiTopic.trim().length < 4} onClick={draftWithAi}>
-                  {aiBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                <button
+                  type="button"
+                  className="btn-secondary shrink-0 text-sm"
+                  disabled={aiBusy || aiTopic.trim().length < 4}
+                  onClick={draftWithAi}
+                >
+                  {aiBusy ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
                   Draft with AI
                 </button>
               </div>
@@ -303,14 +351,37 @@ export function DashboardBlogPanel() {
                 required
               />
             </FormField>
-            <FormField label="Web address" hint={<span className="break-all">dealo.africa/blog/{slug || 'your-post'}</span>}>
-              <input className="input-field" value={slug} onChange={(e) => setSlug(slugify(e.target.value))} required />
+            <FormField
+              label="Web address"
+              hint={<span className="break-all">dealonetwork.com/blog/{slug || 'your-post'}</span>}
+            >
+              <input
+                className="input-field"
+                value={slug}
+                onChange={(e) => setSlug(slugify(e.target.value))}
+                required
+              />
             </FormField>
-            <FormField label="Excerpt" hint="One or two sentences shown on the blog list and in Google.">
-              <textarea className="input-field min-h-[4.5rem]" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} required />
+            <FormField
+              label="Excerpt"
+              hint="One or two sentences shown on the blog list and in Google."
+            >
+              <textarea
+                className="input-field min-h-[4.5rem]"
+                value={excerpt}
+                onChange={(e) => setExcerpt(e.target.value)}
+                required
+              />
             </FormField>
-            <FormField label="Content" hint="Use the toolbar for headings, lists, links and images. Tap HTML to edit the code directly.">
-              <RichHtmlEditor value={content} onChange={setContent} placeholder="Write your post. Start with a short intro paragraph…" />
+            <FormField
+              label="Content"
+              hint="Use the toolbar for headings, lists, links and images. Tap HTML to edit the code directly."
+            >
+              <RichHtmlEditor
+                value={content}
+                onChange={setContent}
+                placeholder="Write your post. Start with a short intro paragraph…"
+              />
             </FormField>
           </div>
 
@@ -324,7 +395,9 @@ export function DashboardBlogPanel() {
                     onClick={() => setStatus(s.id)}
                     className={cn(
                       'rounded-lg px-1 py-1.5 text-[11px] font-semibold transition',
-                      status === s.id ? 'bg-brand text-white dark:text-[#071f14]' : 'text-muted hover:text-foreground',
+                      status === s.id
+                        ? 'bg-brand text-white dark:text-[#071f14]'
+                        : 'text-muted hover:text-foreground',
                     )}
                   >
                     {s.label}
@@ -333,14 +406,23 @@ export function DashboardBlogPanel() {
               </div>
             </FormField>
             <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border p-3 text-sm">
-              <input type="checkbox" checked={featured} onChange={(e) => setFeatured(e.target.checked)} className="mt-1 accent-[var(--brand)]" />
+              <input
+                type="checkbox"
+                checked={featured}
+                onChange={(e) => setFeatured(e.target.checked)}
+                className="mt-1 accent-[var(--brand)]"
+              />
               <span>
                 <span className="font-semibold text-foreground">Feature this post</span>
                 <span className="block text-xs text-muted">Shown big at the top of the blog.</span>
               </span>
             </label>
             <FormField label="Category">
-              <select className="input-field" value={category} onChange={(e) => setCategory(e.target.value)}>
+              <select
+                className="input-field"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              >
                 <option value="">No category</option>
                 {BLOG_CATEGORIES.map((item) => (
                   <option key={item} value={item}>
@@ -350,20 +432,57 @@ export function DashboardBlogPanel() {
               </select>
             </FormField>
             <FormField label="Tags" hint="Separate with commas.">
-              <input className="input-field" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="hiring, lagos" />
+              <input
+                className="input-field"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="hiring, lagos"
+              />
             </FormField>
-            <FormField label="Cover image link" optional>
-              <input className="input-field" type="url" placeholder="https://…" value={coverImage} onChange={(e) => setCoverImage(e.target.value)} />
+            <FormField
+              label="Cover image link"
+              optional
+              help="Use a picture no other post uses. Leave it empty and the site makes a cover for you."
+              hint={
+                coverTakenBy ? (
+                  <span className="text-danger">
+                    Already the cover of “{coverTakenBy.title}”. The site will show a generated
+                    cover here instead.
+                  </span>
+                ) : undefined
+              }
+            >
+              <input
+                className="input-field"
+                type="url"
+                placeholder="https://…"
+                value={coverImage}
+                onChange={(e) => setCoverImage(e.target.value)}
+              />
               {coverImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={coverImage} alt="Cover preview" className="mt-2 h-28 w-full rounded-xl border border-border object-cover" />
+                <img
+                  src={coverImage}
+                  alt="Cover preview"
+                  className="mt-2 h-28 w-full rounded-xl border border-border object-cover"
+                />
               ) : null}
             </FormField>
             <FormField label="SEO title" optional>
-              <input className="input-field" value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} maxLength={70} />
+              <input
+                className="input-field"
+                value={seoTitle}
+                onChange={(e) => setSeoTitle(e.target.value)}
+                maxLength={70}
+              />
             </FormField>
             <FormField label="SEO description" optional>
-              <textarea className="input-field min-h-[4.5rem]" value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} maxLength={160} />
+              <textarea
+                className="input-field min-h-[4.5rem]"
+                value={seoDescription}
+                onChange={(e) => setSeoDescription(e.target.value)}
+                maxLength={160}
+              />
             </FormField>
           </div>
         </form>

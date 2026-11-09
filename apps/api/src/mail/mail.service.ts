@@ -9,6 +9,7 @@ import { normalizeEmail } from '../common/normalize-email';
 import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
 import { EmailPreferencesService } from '../newsletter/email-preferences.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -20,6 +21,7 @@ export class MailService {
     private readonly emailService: EmailService,
     private readonly auditLog: AuditLogService,
     private readonly preferences: EmailPreferencesService,
+    private readonly notifications: NotificationsService,
     config: ConfigService<AppEnv, true>,
   ) {
     this.siteUrl = config.get('APP_URL', { infer: true });
@@ -57,6 +59,12 @@ export class MailService {
       entityId: userId,
       actorId: actor.id,
       metadata: { email, subject: input.subject },
+    });
+
+    await this.notifications.notify([userId], {
+      type: 'mail.message',
+      title: input.subject,
+      body: `Dealo sent you an email. ${(input.bodyText ?? stripHtml(input.bodyHtml)).slice(0, 160)}`,
     });
 
     return { ok: true, email };
@@ -97,6 +105,18 @@ export class MailService {
         sent: results.filter((r) => r.ok).length,
         failed: results.filter((r) => !r.ok).length,
       },
+    });
+
+    const sent = results.filter((r) => r.ok);
+    await this.notifications.notifyEmails(
+      sent.map((r) => r.email),
+      { type: 'mail.broadcast', title: input.subject, body: (input.bodyText ?? stripHtml(input.bodyHtml)).slice(0, 200) },
+    );
+    await this.notifications.notify([actor.id], {
+      type: 'mail.broadcast_sent',
+      title: `Broadcast sent: ${input.subject}`,
+      body: `${sent.length} delivered, ${results.length - sent.length} failed, ${everyone.length - recipients.length} opted out.`,
+      link: '/dashboard/mail',
     });
 
     return {

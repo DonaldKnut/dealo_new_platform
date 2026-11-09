@@ -16,10 +16,12 @@ import { ApiCookieAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
   forgotPasswordSchema,
   loginSchema,
+  onboardingSchema,
   registerSchema,
   resetPasswordSchema,
   type ForgotPasswordInput,
   type LoginInput,
+  type OnboardingInput,
   type RegisterInput,
   type ResetPasswordInput,
 } from '@dealo/shared';
@@ -194,6 +196,19 @@ export class AuthController {
   @ApiOkResponse({ description: 'Current authenticated user' })
   me(@CurrentUser() user: AuthUser) {
     return this.authService.me(user.id);
+  }
+
+  @Post('onboarding')
+  @HttpCode(200)
+  @ApiCookieAuth()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOkResponse({ description: 'Role and details chosen after a first Google or LinkedIn sign-in' })
+  completeOnboarding(
+    @Body(new ZodValidationPipe(onboardingSchema)) body: OnboardingInput,
+    @CurrentUser() user: AuthUser,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.completeOnboarding(user.id, body, res);
   }
 
   @Public()

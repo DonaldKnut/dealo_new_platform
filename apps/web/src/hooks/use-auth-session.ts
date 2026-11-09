@@ -11,6 +11,9 @@ export type AuthSessionUser = {
   lastName: string;
   roles: string[];
   isEmailVerified?: boolean;
+  avatarUrl?: string | null;
+  /** New Google/LinkedIn account that has not picked a role yet. */
+  needsOnboarding?: boolean;
 };
 
 const STAFF_ROLES = new Set([

@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from '@/lib/api-base';
+import { withUniqueCovers } from '@/lib/blog-format';
 import type { BlogPost } from '@/lib/dashboard-api';
 
 export async function fetchPublishedPosts(): Promise<BlogPost[]> {
@@ -7,7 +8,7 @@ export async function fetchPublishedPosts(): Promise<BlogPost[]> {
       next: { revalidate: 60 },
     });
     if (!response.ok) return [];
-    return (await response.json()) as BlogPost[];
+    return withUniqueCovers((await response.json()) as BlogPost[]);
   } catch {
     return [];
   }

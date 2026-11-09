@@ -77,7 +77,7 @@ async function bootstrap(): Promise<void> {
       ].join('\n'),
     )
     .setVersion('1.0.0')
-    .setContact('Dealo API', 'https://dealo.com', 'api@dealo.com')
+    .setContact('Dealo API', 'https://dealonetwork.com', 'api@dealonetwork.com')
     .addServer(apiUrl, 'Current environment')
     .addServer('http://localhost:4000', 'Local development')
     .addCookieAuth('access_token')

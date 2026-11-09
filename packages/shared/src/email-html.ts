@@ -58,7 +58,7 @@ export function inlineEmailStyles(body: string) {
 
 export function renderEmailHtml(body: string, opts: { siteUrl?: string; preheader?: string; footerNote?: string; unsubscribeUrl?: string } = {}) {
   if (/<html[\s>]/i.test(body)) return body;
-  const site = (opts.siteUrl ?? 'https://dealo.ng').replace(/\/$/, '');
+  const site = (opts.siteUrl ?? 'https://dealonetwork.com').replace(/\/$/, '');
   const preheader = opts.preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeAttr(opts.preheader)}</div>` : '';
   const footer = opts.footerNote ?? 'You are getting this email because you have a Dealo account or asked for Dealo updates.';
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head>

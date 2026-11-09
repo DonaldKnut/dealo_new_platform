@@ -11,7 +11,7 @@ Each sign-in button only appears on the Dealo login page once its keys are set, 
 
 Throughout this guide:
 
-- **Your website address** is your Vercel address, for example `https://dealo-new-platform.vercel.app` (or your own domain later, like `https://dealo.ng`).
+- **Your website address** is your Vercel address, for example `https://dealo-new-platform.vercel.app` (or your own domain later, like `https://dealonetwork.com`).
 - **Your API address** is your Render address, for example `https://dealo-api.onrender.com`.
 
 Replace these with your real addresses everywhere below.
@@ -183,4 +183,4 @@ What happens behind the scenes:
 | Signed in, but the dashboard sends you back to sign in | `COOKIE_DOMAIN` is set on Render (delete it), or `NEXT_PUBLIC_API_URL` on Vercel is wrong. Redeploy Vercel after fixing. |
 | Dashboard says **"We can't reach Dealo right now"** | The API on Render is asleep, crashed, or cannot reach the database. Open Render → **Logs**. A database "auth" error means `DATABASE_URL` is wrong. |
 
-Need to change the address later (for example when you move to `dealo.ng`)? Update `APP_URL` and `CORS_ORIGIN` on Render, `NEXT_PUBLIC_APP_URL` on Vercel, and add the new redirect URLs in Google and LinkedIn. You can keep the old ones until the move is finished.
+Need to change the address later (for example when you move to `dealonetwork.com`)? Update `APP_URL` and `CORS_ORIGIN` on Render, `NEXT_PUBLIC_APP_URL` on Vercel, and add the new redirect URLs in Google and LinkedIn. You can keep the old ones until the move is finished.

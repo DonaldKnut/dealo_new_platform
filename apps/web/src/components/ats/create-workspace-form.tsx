@@ -52,7 +52,7 @@ function CareersPreview({ name, slug, logoUrl }: { name: string; slug: string; l
           <span className="h-2 w-2 rounded-full bg-amber-300" />
           <span className="h-2 w-2 rounded-full bg-emerald-300" />
           <span className="ml-2 min-w-0 flex-1 truncate rounded-md bg-white px-2 py-0.5 text-[10px] text-slate-500 dark:bg-white/10 dark:text-slate-300">
-            dealo.africa/careers/<strong className="text-slate-800 dark:text-white">{slug || 'your-company'}</strong>
+            dealonetwork.com/careers/<strong className="text-slate-800 dark:text-white">{slug || 'your-company'}</strong>
           </span>
         </div>
         <div className="p-4">
@@ -209,7 +209,7 @@ export function CreateWorkspaceForm({ onCreated, onCancel }: { onCreated: (id: s
                     check === 'taken' ? 'border-danger' : check === 'ok' ? 'border-brand/60' : 'border-border',
                   )}
                 >
-                  <span className="hidden shrink-0 border-r border-border bg-surface px-3 py-2.5 text-xs text-muted min-[400px]:block">dealo.africa/careers/</span>
+                  <span className="hidden shrink-0 border-r border-border bg-surface px-3 py-2.5 text-xs text-muted min-[400px]:block">dealonetwork.com/careers/</span>
                   <input
                     className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm outline-none"
                     value={slug}

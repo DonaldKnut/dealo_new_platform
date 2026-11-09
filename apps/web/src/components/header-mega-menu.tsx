@@ -10,7 +10,6 @@ import {
   ChevronDown,
   Code2,
   CreditCard,
-  FileJson,
   FileText,
   Handshake,
   Kanban,
@@ -20,7 +19,6 @@ import {
   ShieldCheck,
   UserRound,
   Users,
-  Webhook,
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -75,14 +73,6 @@ const apiDefs: MegaItemDef[] = [
     badge: 'Free',
   },
   { href: '/developers#plans', titleKey: 'mega.api.plans.title', descKey: 'mega.api.plans.desc', icon: CreditCard },
-  { href: '/developers#webhooks', titleKey: 'mega.api.webhooks.title', descKey: 'mega.api.webhooks.desc', icon: Webhook },
-  {
-    href: `${API_ORIGIN}/api/openapi.json`,
-    titleKey: 'mega.api.spec.title',
-    descKey: 'mega.api.spec.desc',
-    icon: FileJson,
-    external: true,
-  },
 ];
 
 const offerDefs: MegaItemDef[] = [
@@ -116,12 +106,6 @@ const offerDefs: MegaItemDef[] = [
     descKey: 'mega.professionals.desc',
     icon: UserRound,
   },
-  {
-    href: '/developers',
-    titleKey: 'mega.developers.title',
-    descKey: 'mega.developers.desc',
-    icon: Code2,
-  },
 ];
 
 const resourceDefs: MegaItemDef[] = [
@@ -143,18 +127,6 @@ const resourceDefs: MegaItemDef[] = [
     titleKey: 'mega.blog.title',
     descKey: 'mega.blog.desc',
     icon: Newspaper,
-  },
-  {
-    href: '/for-employers',
-    titleKey: 'mega.employerInsights.title',
-    descKey: 'mega.employerInsights.desc',
-    icon: BookOpen,
-  },
-  {
-    href: '/for-professionals',
-    titleKey: 'mega.careerInsights.title',
-    descKey: 'mega.careerInsights.desc',
-    icon: BookOpen,
   },
 ];
 

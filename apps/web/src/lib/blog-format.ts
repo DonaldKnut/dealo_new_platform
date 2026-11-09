@@ -2,7 +2,10 @@ import type { BlogCard } from '@/components/blog/blog-explorer';
 import type { BlogPost } from '@/lib/dashboard-api';
 
 export function readMinutes(content: string) {
-  const words = content.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+  const words = content
+    .replace(/<[^>]+>/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean).length;
   return Math.max(1, Math.round(words / 200));
 }
 
@@ -19,6 +22,29 @@ export function toBlogCard(post: BlogPost): BlogCard {
     publishedAt: post.publishedAt,
     readMinutes: readMinutes(post.content),
   };
+}
+
+/**
+ * Each picture belongs to one post so the blog never shows the same thumbnail twice. Featured posts
+ * claim first (they are the biggest cards), then the newest; the others get generated cover art.
+ */
+export function withUniqueCovers<
+  T extends { coverImage: string | null; publishedAt: string | null; featured?: boolean },
+>(posts: T[]): T[] {
+  const owner = new Map<string, T>();
+  const byPriority = [...posts].sort(
+    (a, b) =>
+      Number(Boolean(b.featured)) - Number(Boolean(a.featured)) ||
+      (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''),
+  );
+  for (const post of byPriority) {
+    const key = post.coverImage?.trim();
+    if (key && !owner.has(key)) owner.set(key, post);
+  }
+  return posts.map((post) => {
+    const key = post.coverImage?.trim();
+    return key && owner.get(key) !== post ? { ...post, coverImage: null } : post;
+  });
 }
 
 /** Minimal HTML allowlist for admin-authored content. */

@@ -1,16 +1,18 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UserRole, type Prisma } from '@prisma/client';
+import { UserRole, WorkspaceRole, type Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 import type { Response } from 'express';
-import type { LoginInput, RegisterInput } from '@dealo/shared';
+import type { LoginInput, OnboardingInput, RegisterInput } from '@dealo/shared';
 
+import { RESERVED_SLUGS } from '../ats/workspaces.service';
 import { CandidatesService } from '../candidates/candidates.service';
 import { normalizeEmail } from '../common/normalize-email';
 import type { AppEnv } from '../config/env.validation';
@@ -161,6 +163,7 @@ export class AuthService {
             avatarUrl: profile.avatarUrl,
             authProvider: provider,
             isEmailVerified: true,
+            onboardingPending: true,
             lastLoginAt: new Date(),
             roles: {
               create: [{ roleId: role.id }],
@@ -276,12 +279,76 @@ export class AuthService {
     return { success: true };
   }
 
-  async me(userId: string): Promise<AuthUser & { isEmailVerified: boolean }> {
+  async me(userId: string): Promise<AuthUser & { isEmailVerified: boolean; avatarUrl: string | null; needsOnboarding: boolean }> {
     const user = await this.usersService.findById(userId);
     if (!user || !user.isActive) {
       throw new UnauthorizedException();
     }
-    return { ...this.toAuthUser(user), isEmailVerified: user.isEmailVerified };
+    return {
+      ...this.toAuthUser(user),
+      isEmailVerified: user.isEmailVerified,
+      avatarUrl: user.avatarUrl ?? null,
+      needsOnboarding: user.onboardingPending === true,
+    };
+  }
+
+  /** Sets the role and details a new Google/LinkedIn account chose, then re-issues cookies so the new role applies at once. */
+  async completeOnboarding(userId: string, input: OnboardingInput, res: Response) {
+    const user = await this.usersService.findById(userId);
+    if (!user || !user.isActive) throw new UnauthorizedException();
+    if (user.onboardingPending !== true) throw new BadRequestException('Your account is already set up');
+
+    const roles = await this.prisma.role.findMany({ where: { code: { in: [UserRole.EMPLOYER, UserRole.TALENT] } } });
+    const chosen = roles.find((role) => role.code === input.role);
+    if (!chosen) throw new ConflictException('Requested role is not available');
+
+    await this.prisma.userRoleAssignment.deleteMany({ where: { userId, roleId: { in: roles.map((role) => role.id) } } });
+    await this.prisma.userRoleAssignment.create({ data: { userId, roleId: chosen.id } });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { firstName: input.firstName, lastName: input.lastName, onboardingPending: false },
+    });
+
+    const phone = input.phone || undefined;
+    if (input.role === UserRole.TALENT) {
+      const candidate = await this.candidatesService.ensureCandidateForUser({ ...user, firstName: input.firstName, lastName: input.lastName });
+      await this.prisma.candidate.update({
+        where: { id: candidate.id },
+        data: {
+          fullName: `${input.firstName} ${input.lastName}`.trim(),
+          ...(phone ? { phone } : {}),
+          ...(input.roleTitle ? { roleTitle: input.roleTitle } : {}),
+          ...(input.location ? { location: input.location } : {}),
+        },
+      });
+    } else if (input.companyName) {
+      await this.createCompany(userId, input.companyName);
+    }
+
+    await this.prisma.refreshToken.updateMany({ where: { userId, ...NOT_REVOKED }, data: { revokedAt: new Date() } });
+    const updated = await this.usersService.findById(userId);
+    const authUser = this.toAuthUser(updated!);
+    await this.setAuthCookies(res, authUser, { rememberMe: true });
+    return { user: authUser };
+  }
+
+  /** Someone invited to a team already belongs to that company, so only create one for founders. */
+  private async createCompany(userId: string, name: string) {
+    if (await this.prisma.organizationMember.count({ where: { userId } })) return;
+    const base =
+      name
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 50) || 'company';
+    let slug = RESERVED_SLUGS.has(base) ? `${base}-${randomBytes(2).toString('hex')}` : base;
+    for (let attempt = 0; attempt < 5 && (await this.prisma.organization.findUnique({ where: { slug }, select: { id: true } })); attempt++) {
+      slug = `${base}-${randomBytes(2).toString('hex')}`;
+    }
+    await this.prisma.organization.create({
+      data: { name, slug, members: { create: { userId, role: WorkspaceRole.OWNER, isOwner: true } } },
+    });
   }
 
   async verifyEmail(token: string) {

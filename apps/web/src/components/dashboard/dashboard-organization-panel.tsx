@@ -1,114 +1,162 @@
 'use client';
 
-import { LoaderCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Briefcase, Globe, Loader2, MailCheck, Plus, Settings2, UsersRound } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
 
-import { ApiError, apiFetch } from '@/lib/api';
+import { AtsTeamPanel } from '@/components/ats/ats-team-panel';
+import { AtsWorkspaceProvider, useAtsWorkspace } from '@/components/ats/ats-workspace';
+import { CreateWorkspaceForm } from '@/components/ats/create-workspace-form';
+import { WorkspaceSwitcher } from '@/components/ats/workspace-switcher';
+import { useOpenHireRequest } from '@/components/dashboard/dashboard-session';
+import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
+import { FormModal } from '@/components/ui/form-modal';
+import { ROLE_LABEL } from '@/lib/ats-api';
 
-type Org = {
-  id: string;
-  name: string;
-  slug: string;
-  isOwner: boolean;
-  title: string | null;
-  members: Array<{
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    title: string | null;
-    isOwner: boolean;
-  }>;
-};
+const STEPS = [
+  {
+    icon: Plus,
+    title: 'Create your company',
+    text: 'One account for your business, with its own careers page.',
+  },
+  {
+    icon: MailCheck,
+    title: 'Invite your team',
+    text: 'Each person gets an email link. They join once they click it and sign in.',
+  },
+  {
+    icon: Briefcase,
+    title: 'Hire together',
+    text: 'Everyone sees your hire requests, jobs and applicants.',
+  },
+];
 
-export function DashboardOrganizationPanel() {
-  const [orgs, setOrgs] = useState<Org[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const data = await apiFetch<Org[]>('/dashboard/organization');
-        if (active) {
-          setOrgs(data);
-          setError(null);
-        }
-      } catch (err) {
-        if (active) {
-          setError(err instanceof ApiError ? err.message : 'Unable to load organization.');
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+function OrganizationContent() {
+  const { loading, error, workspaces, current, orgId, select, reload } = useAtsWorkspace();
+  const openHireRequest = useOpenHireRequest();
+  const [creating, setCreating] = useState(false);
 
   if (loading) {
     return (
       <div className="flex min-h-[30vh] items-center justify-center gap-2 text-sm text-muted">
-        <LoaderCircle className="h-4 w-4 animate-spin" />
-        Loading organization…
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading your company…
+      </div>
+    );
+  }
+
+  if (error && !workspaces.length) {
+    return (
+      <DashPanel>
+        <p className="text-sm text-danger">{error}</p>
+      </DashPanel>
+    );
+  }
+
+  if (!workspaces.length) {
+    return (
+      <div className="space-y-6">
+        <DashHero
+          eyebrow="Organization"
+          title="Set up your company account"
+          subtitle="Bring your team onto Dealo. Teammates join through an email invite and see the same requests, jobs and applicants."
+        />
+        <div className="grid gap-3 sm:grid-cols-3">
+          {STEPS.map((step, i) => (
+            <div
+              key={step.title}
+              className="rounded-2xl border border-border bg-surface-elevated/70 p-4"
+            >
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-soft text-brand">
+                <step.icon className="h-4 w-4" />
+              </span>
+              <p className="mt-3 text-sm font-semibold text-foreground">
+                {i + 1}. {step.title}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted">{step.text}</p>
+            </div>
+          ))}
+        </div>
+        <DashPanel title="Your company">
+          <CreateWorkspaceForm onCreated={() => void reload()} />
+        </DashPanel>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="eyebrow">Organization</p>
-        <h1 className="display-title mt-2 text-3xl">Company account</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted">
-          Memberships linked to your Dealo account. Invite flows expand in a later phase.
-        </p>
+      <DashHero
+        eyebrow="Organization"
+        title={current?.workspace.name ?? 'Company account'}
+        subtitle="Your company on Dealo. Invite teammates by email; they join as soon as they open the link and sign in."
+        actions={
+          <>
+            <button type="button" onClick={openHireRequest} className="btn-primary">
+              <Briefcase className="h-4 w-4" /> Request a hire
+            </button>
+            <Link href="/dashboard/ats/settings" className="btn-secondary">
+              <Settings2 className="h-4 w-4" /> Company profile
+            </Link>
+          </>
+        }
+      />
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <WorkspaceSwitcher
+          workspaces={workspaces}
+          currentId={orgId}
+          onSelect={select}
+          onCreate={() => setCreating(true)}
+          meta={
+            current
+              ? `${ROLE_LABEL[current.myRole]} · ${current.usage.seats}/${current.usage.maxSeats} seats`
+              : 'Loading…'
+          }
+        />
+        {current?.workspace.careersEnabled ? (
+          <Link
+            href={`/careers/${current.workspace.slug}`}
+            target="_blank"
+            className="btn-secondary w-full text-sm sm:w-auto"
+          >
+            <Globe className="h-4 w-4" /> Careers page
+          </Link>
+        ) : null}
       </div>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
-
-      {orgs.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-surface-elevated/70 p-6">
-          <h2 className="font-display text-xl">No organization yet</h2>
-          <p className="mt-2 text-sm text-muted">
-            Submit a hire request or ask Dealo to attach your company account. Member invites ship
-            next.
-          </p>
-          <button type="button" className="btn-secondary mt-5" disabled>
-            Invite member
-          </button>
-        </div>
+      {current ? (
+        <AtsTeamPanel />
       ) : (
-        orgs.map((org) => (
-          <section key={org.id} className="rounded-2xl border border-border p-6">
-            <h2 className="font-display text-xl">{org.name}</h2>
-            <p className="mt-1 text-xs text-muted">
-              {org.slug}
-              {org.isOwner ? ' · Owner' : ''}
-            </p>
-            <ul className="mt-4 divide-y divide-border">
-              {org.members.map((member) => (
-                <li
-                  key={member.id}
-                  className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {member.firstName} {member.lastName}
-                    </p>
-                    <p className="text-xs text-muted">{member.email}</p>
-                  </div>
-                  <span className="text-xs text-muted">
-                    {member.title || (member.isOwner ? 'Owner' : 'Member')}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))
+        <div className="flex min-h-[20vh] items-center justify-center text-muted">
+          <UsersRound className="h-5 w-5 animate-pulse" />
+        </div>
       )}
+
+      <FormModal
+        open={creating}
+        onClose={() => setCreating(false)}
+        size="xl"
+        icon={Plus}
+        title="Add another company"
+        description="A separate company or brand, with its own team, jobs and careers page."
+      >
+        <CreateWorkspaceForm
+          onCancel={() => setCreating(false)}
+          onCreated={async (id) => {
+            setCreating(false);
+            select(id);
+            await reload();
+          }}
+        />
+      </FormModal>
     </div>
+  );
+}
+
+export function DashboardOrganizationPanel() {
+  return (
+    <AtsWorkspaceProvider>
+      <OrganizationContent />
+    </AtsWorkspaceProvider>
   );
 }

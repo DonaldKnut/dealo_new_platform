@@ -1,11 +1,12 @@
 'use client';
 
-import { Kanban, LoaderCircle, Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import { Kanban, LoaderCircle, Plus, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 import { SourcingPanel } from '@/components/ai/sourcing-panel';
+import { useOpenHireRequest } from '@/components/dashboard/dashboard-session';
+import { HIRE_REQUEST_CREATED_EVENT } from '@/components/hire-inquiry-form';
 import { useToast } from '@/components/ui/toast';
 import { isStaffRole } from '@/hooks/use-auth-session';
 import { ApiError } from '@/lib/api';
@@ -39,6 +40,13 @@ export function DashboardRequestsPanel() {
   const [jobFor, setJobFor] = useState<string | null>(null);
   const router = useRouter();
   const toast = useToast();
+  const openHireRequest = useOpenHireRequest();
+
+  useEffect(() => {
+    const refresh = () => void fetchDashboardRequests().then(setRows).catch(() => undefined);
+    window.addEventListener(HIRE_REQUEST_CREATED_EVENT, refresh);
+    return () => window.removeEventListener(HIRE_REQUEST_CREATED_EVENT, refresh);
+  }, []);
 
   const load = async () => {
     const [data, me] = await Promise.all([fetchDashboardRequests(), fetchAuthMe()]);
@@ -121,9 +129,9 @@ export function DashboardRequestsPanel() {
               : 'Track the status of your open hiring requests.'}
           </p>
         </div>
-        <Link href="/hire" className="btn-primary w-full min-[400px]:w-auto">
-          New request
-        </Link>
+        <button type="button" onClick={openHireRequest} className="btn-primary w-full min-[400px]:w-auto">
+          <Plus className="h-4 w-4" /> New request
+        </button>
       </div>
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}

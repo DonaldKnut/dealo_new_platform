@@ -13,6 +13,7 @@ import type {
 import type { AuthUser } from '../auth/auth.types';
 import { AuditLogService } from '../common/audit-log.service';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 const STAFF_ROLES: UserRole[] = [
@@ -32,6 +33,7 @@ export class SupportService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly auditLog: AuditLogService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async create(input: SupportTicketCreateInput, user: AuthUser) {
@@ -67,6 +69,15 @@ export class SupportService {
     });
 
     await this.notifyAdmins(ticket);
+    await this.notifications.notifyStaff(
+      {
+        type: 'support.ticket_created',
+        title: `New support ticket: ${ticket.subject}`,
+        body: `${`${ticket.requester.firstName} ${ticket.requester.lastName}`.trim() || ticket.requester.email} · ${ticket.priority}`,
+        link: '/dashboard/support',
+      },
+      user.id,
+    );
 
     return ticket;
   }
@@ -167,6 +178,18 @@ export class SupportService {
       actorId: user.id,
       metadata: { internal: message.internal },
     });
+
+    if (!message.internal) {
+      const reply = {
+        type: 'support.reply',
+        title: staff ? `Dealo replied: ${ticket.subject}` : `New reply on ticket: ${ticket.subject}`,
+        body: input.body.slice(0, 200),
+        link: '/dashboard/support',
+      };
+      if (staff) await this.notifications.notify([ticket.requesterId], reply);
+      else if (ticket.assigneeId) await this.notifications.notify([ticket.assigneeId], reply);
+      else await this.notifications.notifyStaff(reply, user.id);
+    }
 
     return message;
   }

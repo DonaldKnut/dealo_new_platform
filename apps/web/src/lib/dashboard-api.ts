@@ -7,6 +7,8 @@ export type DashboardUserCore = {
   lastName: string;
   roles: string[];
   isEmailVerified?: boolean;
+  avatarUrl?: string | null;
+  needsOnboarding?: boolean;
 };
 
 export const resendVerificationEmail = () =>

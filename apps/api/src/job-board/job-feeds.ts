@@ -70,7 +70,7 @@ export const NIGERIA_PLACES = [
 
 export const isNigeria = (location: string) => /^(nigeria|ng|naija)$/i.test(location.trim());
 
-const USER_AGENT = 'DealoJobBoard/1.0 (+https://dealo.ng/jobs)';
+const USER_AGENT = 'DealoJobBoard/1.0 (+https://dealonetwork.com/jobs)';
 
 async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' }, signal: AbortSignal.timeout(20_000) });
@@ -402,7 +402,7 @@ export async function fetchCareerjet(affid: string, pages = 2): Promise<FeedJob[
       page: String(page),
       user_ip: '0.0.0.0',
       user_agent: USER_AGENT,
-      url: 'https://dealo.ng/jobs',
+      url: 'https://dealonetwork.com/jobs',
     });
     const body = await getJson<{ type?: string; jobs?: CareerjetJob[]; error?: string }>(`https://public.api.careerjet.net/search?${params}`);
     if (body.error) throw new Error(`Careerjet: ${body.error}`);

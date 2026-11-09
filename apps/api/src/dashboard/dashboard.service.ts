@@ -465,7 +465,12 @@ export class DashboardService {
 
   async requests(user: AuthUser) {
     const canManageAll = this.canManageAll(user);
-    const where = canManageAll ? {} : { email: normalizeEmail(user.email) };
+    const orgIds = canManageAll
+      ? []
+      : (await this.prisma.organizationMember.findMany({ where: { userId: user.id }, select: { organizationId: true } })).map((m) => m.organizationId);
+    const where = canManageAll
+      ? {}
+      : { OR: [{ email: normalizeEmail(user.email) }, ...(orgIds.length ? [{ organizationId: { in: orgIds } }] : [])] };
 
     return this.prisma.hireInquiry.findMany({
       where,
