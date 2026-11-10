@@ -34,7 +34,7 @@ export function ModalHost() {
         open={openModal === 'login'}
         onClose={close}
         title="Welcome back"
-        subtitle="Sign in as a company or a worker."
+        subtitle="Hiring or looking for work, pick up where you left off."
         promoFill
         illustration={<AuthIllustration />}
       >

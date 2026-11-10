@@ -26,6 +26,11 @@ import {
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { AtsHowItWorks } from '@/components/marketing/ats-how-it-works';
+import { AtsIntegrations } from '@/components/marketing/ats-integrations';
+import { AtsPricingTeaser } from '@/components/marketing/ats-pricing-teaser';
+import { AtsSocialProof } from '@/components/marketing/ats-social-proof';
+import { AtsStatsStrip } from '@/components/marketing/ats-stats-strip';
 import { CtaBanner } from '@/components/marketing/cta-banner';
 import { FeatureAdGrid } from '@/components/marketing/feature-ad-grid';
 import { PageHero } from '@/components/marketing/page-hero';
@@ -171,7 +176,7 @@ function PipelineDemo() {
 
   useEffect(() => {
     if (reduceMotion || isPaused) return;
-    const timer = window.setInterval(() => setTick((v) => v + 1), 2600);
+    const timer = window.setInterval(() => setTick((v) => v + 1), 5000);
     return () => window.clearInterval(timer);
   }, [reduceMotion, isPaused]);
 
@@ -272,8 +277,8 @@ function PipelineDemo() {
                     exit={{ opacity: 0, y: -14, scale: 0.96 }}
                     transition={{
                       type: 'spring',
-                      stiffness: 280,
-                      damping: 26,
+                      stiffness: 180,
+                      damping: 30,
                     }}
                     className="group relative rounded-xl border border-border/90 bg-surface-elevated p-3 shadow-xs transition hover:border-brand/40 hover:shadow-md dark:bg-surface-elevated"
                   >
@@ -393,6 +398,9 @@ export default function AtsPage() {
         <PipelineDemo />
       </section>
 
+      {/* Stats KPI strip */}
+      <AtsStatsStrip />
+
       <div id="how" className="scroll-mt-24">
         <FeatureAdGrid
           eyebrow="What you get"
@@ -411,6 +419,12 @@ export default function AtsPage() {
           ]}
         />
       </div>
+
+      {/* How it works — 5-step interactive flow */}
+      <AtsHowItWorks onStart={() => void startFree()} />
+
+      {/* Social proof testimonials */}
+      <AtsSocialProof onStart={() => void startFree()} />
 
       <section id="trust" className="container-page scroll-mt-24 py-10 min-[340px]:py-14">
         <div className="rounded-[1.5rem] border border-border bg-surface-elevated/80 p-4 min-[340px]:p-8">
@@ -461,6 +475,12 @@ export default function AtsPage() {
           </div>
         </div>
       </section>
+
+      {/* Integrations */}
+      <AtsIntegrations onStart={() => void startFree()} />
+
+      {/* Pricing teaser */}
+      <AtsPricingTeaser onStart={() => void startFree()} onContact={() => open('contact')} />
 
       <CtaBanner />
     </div>

@@ -17,19 +17,19 @@ const slides = [
     body: 'Tell us the role. We find, check, shortlist, interview, and place.',
   },
   {
+    eyebrow: 'For job seekers',
+    title: 'Get seen by employers who are hiring now.',
+    body: 'Build your profile once. Dealo matches you to real roles in office work and skilled trades.',
+  },
+  {
     eyebrow: 'Managed staffing',
     title: 'Let Dealo run staffing for your team.',
     body: 'Clear terms. Dealo handles hiring and stays with you after placement.',
   },
   {
-    eyebrow: 'Talent network',
-    title: 'Professionals ready for real roles.',
-    body: 'Checked profiles, shortlists, and clear interview steps — in one place.',
-  },
-  {
-    eyebrow: 'Checked shortlists',
-    title: 'Office talent and skilled trades, screened first.',
-    body: 'Review ready candidates before interviews — for Nigeria, Africa, and inbound teams.',
+    eyebrow: 'Free CV builder',
+    title: 'A CV that gets you shortlisted.',
+    body: 'Make a clean CV in minutes, apply to jobs and track every application in one place.',
   },
 ] as const;
 

@@ -15,7 +15,7 @@ export default function LoginPage() {
       <AuthPageHeader
         eyebrow="Sign in"
         title="Welcome back"
-        subtitle="See your hire requests, candidates, and account settings."
+        subtitle="Hiring? Pick up your requests and candidates. Looking for work? See your profile, applications and job matches."
       />
       <LoginForm variant="page" />
     </>
