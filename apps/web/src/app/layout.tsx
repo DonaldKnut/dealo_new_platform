@@ -4,6 +4,7 @@ import { Fraunces, Manrope } from 'next/font/google';
 import { Providers } from '@/components/providers';
 import { OrganizationJsonLd } from '@/components/seo/json-ld';
 import { SiteChrome } from '@/components/site-chrome';
+import { APP_URL } from '@/lib/seo';
 import './globals.css';
 
 const display = Fraunces({
@@ -18,23 +19,40 @@ const body = Manrope({
   display: 'swap',
 });
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-
 export const metadata: Metadata = {
   title: {
     default: 'Dealo — Hire talent in Nigeria, Africa & globally',
     template: '%s · Dealo',
   },
   description:
-    'Hire checked office staff and skilled trades in Nigeria and across Africa. Dealo shortlists talent for Lagos employers and inbound global hiring.',
+    'Hire checked office staff and skilled trades in Nigeria and across Africa, or find a job and build a CV that gets interviews. Dealo shortlists talent for Lagos employers and global teams.',
   metadataBase: new URL(APP_URL),
   keywords: [
     'hire talent Nigeria',
+    'recruitment agency Lagos',
+    'staffing agency Nigeria',
     'skilled trades staffing Africa',
     'recruit office staff Lagos',
     'managed staffing Nigeria',
-    'inbound Africa hiring',
+    'jobs in Nigeria',
+    'jobs in Lagos',
+    'free CV builder Nigeria',
+    'ATS Nigeria',
   ],
+  category: 'business',
+  creator: 'Dealo',
+  publisher: 'Dealo',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 },
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+      : undefined,
+  },
   openGraph: {
     type: 'website',
     locale: 'en_NG',

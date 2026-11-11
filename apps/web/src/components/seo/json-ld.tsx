@@ -1,4 +1,4 @@
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+import { APP_URL } from '@/lib/seo';
 
 export function OrganizationJsonLd() {
   const data = {
@@ -35,11 +35,26 @@ export function OrganizationJsonLd() {
         url: APP_URL,
         name: 'Dealo',
         publisher: { '@id': `${APP_URL}/#organization` },
+        inLanguage: 'en-NG',
         potentialAction: {
           '@type': 'SearchAction',
-          target: `${APP_URL}/blog?q={search_term_string}`,
+          target: { '@type': 'EntryPoint', urlTemplate: `${APP_URL}/jobs?q={search_term_string}` },
           'query-input': 'required name=search_term_string',
         },
+      },
+      {
+        '@type': 'EmploymentAgency',
+        '@id': `${APP_URL}/#agency`,
+        name: 'Dealo',
+        url: APP_URL,
+        parentOrganization: { '@id': `${APP_URL}/#organization` },
+        address: { '@type': 'PostalAddress', addressLocality: 'Lagos', addressCountry: 'NG' },
+        areaServed: [
+          { '@type': 'City', name: 'Lagos' },
+          { '@type': 'City', name: 'Abuja' },
+          { '@type': 'Country', name: 'Nigeria' },
+        ],
+        priceRange: '₦₦',
       },
       {
         '@type': 'Service',

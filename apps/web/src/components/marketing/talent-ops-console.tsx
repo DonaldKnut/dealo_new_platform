@@ -193,7 +193,7 @@ const CANDIDATES_BY_CAT: Record<CategoryKey, CandidateDef[]> = {
 
 const SLIDE_ORDER: CategoryKey[] = ['engineering', 'trades', 'product', 'finance'];
 
-const SLIDE_MS = 4800;
+const SLIDE_MS = 8000;
 
 export function TalentOpsConsole() {
   const { open } = useModal();

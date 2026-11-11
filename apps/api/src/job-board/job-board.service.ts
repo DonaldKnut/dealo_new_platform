@@ -188,19 +188,30 @@ export class JobBoardService {
     const dealoWhere = this.dealoWhere(input);
     const externalWhere = this.externalWhere(input);
 
-    const [dealoRows, dealoTotal, externalRows, externalTotal, facets] = await Promise.all([
+    // With no place chosen, Nigerian listings come before remote and overseas ones; otherwise the
+    // newest European feed rows would fill every first page.
+    const localFirst = wantExternal && !input.location;
+    const inNigeria: Prisma.ExternalJobWhereInput = { OR: NIGERIA_PLACES.map((place) => ({ location: ci(place) })) };
+    const localWhere: Prisma.ExternalJobWhereInput = { AND: [externalWhere, inNigeria] };
+    const restWhere: Prisma.ExternalJobWhereInput = localFirst ? { AND: [externalWhere, { NOT: inNigeria }] } : externalWhere;
+
+    const [dealoRows, dealoTotal, localRows, localTotal, restRows, restTotal, facets] = await Promise.all([
       wantDealo ? this.prisma.job.findMany({ where: dealoWhere, orderBy: { publishedAt: 'desc' }, take, select: DEALO_JOB_SELECT }) : [],
       wantDealo ? this.prisma.job.count({ where: dealoWhere }) : 0,
-      wantExternal ? this.prisma.externalJob.findMany({ where: externalWhere, orderBy: { publishedAt: 'desc' }, take, select: EXTERNAL_LIST_SELECT }) : [],
-      wantExternal ? this.prisma.externalJob.count({ where: externalWhere }) : 0,
+      localFirst ? this.prisma.externalJob.findMany({ where: localWhere, orderBy: { publishedAt: 'desc' }, take, select: EXTERNAL_LIST_SELECT }) : [],
+      localFirst ? this.prisma.externalJob.count({ where: localWhere }) : 0,
+      wantExternal ? this.prisma.externalJob.findMany({ where: restWhere, orderBy: { publishedAt: 'desc' }, take, select: EXTERNAL_LIST_SELECT }) : [],
+      wantExternal ? this.prisma.externalJob.count({ where: restWhere }) : 0,
       this.facets(input, wantDealo, wantExternal),
     ]);
 
-    const merged = [...dealoRows.map((j) => this.fromDealo(j)), ...externalRows.map((j) => this.fromExternal(j))].sort(
-      (a, b) => Date.parse(b.postedAt) - Date.parse(a.postedAt),
-    );
+    const byDate = (a: JobListing, b: JobListing) => Date.parse(b.postedAt) - Date.parse(a.postedAt);
+    const dealo = dealoRows.map((j) => this.fromDealo(j));
+    const local = localRows.map((j) => this.fromExternal(j));
+    const rest = restRows.map((j) => this.fromExternal(j));
+    const merged = localFirst ? [...[...dealo, ...local].sort(byDate), ...rest.sort(byDate)] : [...dealo, ...rest].sort(byDate);
     const start = (input.page - 1) * input.pageSize;
-    const total = dealoTotal + externalTotal;
+    const total = dealoTotal + localTotal + restTotal;
     return {
       items: merged.slice(start, start + input.pageSize),
       total,

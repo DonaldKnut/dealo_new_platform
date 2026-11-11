@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { AuthIssueDialog, authIssueFromError } from '@/components/auth/auth-issue-dialog';
 import { AuthField } from '@/components/auth/auth-field';
 import { AuthNavLink } from '@/components/forms/auth-nav-link';
 import { AuthDivider, SocialSignIn } from '@/components/forms/oauth-google-button';
@@ -42,6 +43,7 @@ export function LoginForm({
   const { serverError, serverMessage, setServerError, setServerMessage, clear } =
     useServerFormStatus();
   const [hydrated, setHydrated] = useState(false);
+  const [issue, setIssue] = useState<ReturnType<typeof authIssueFromError>>(null);
 
   const {
     register,
@@ -60,9 +62,6 @@ export function LoginForm({
   });
 
   useEffect(() => {
-    // Google and LinkedIn send people back here with ?error= when sign-in did not work.
-    const oauthError = new URLSearchParams(window.location.search).get('error');
-    if (oauthError) setServerError(oauthError.slice(0, 200));
     const remembered = loadRememberedAuth();
     if (remembered?.rememberMe) {
       reset({
@@ -101,15 +100,18 @@ export function LoginForm({
       router.push(safeNext ?? getDashboardHome(result.user?.roles ?? []));
       router.refresh();
     } catch (error) {
+      const code = authIssueFromError(error);
       const message = error instanceof ApiError ? error.message : 'We could not sign you in.';
       setServerError(message);
+      if (code) setIssue(code);
       toast.error('Sign in failed', message);
     }
   });
 
   return (
     <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>
-      <SocialSignIn />
+      <AuthIssueDialog code={issue} open={Boolean(issue)} onClose={() => setIssue(null)} />
+      <SocialSignIn intent="signin" verb="Sign in" />
       <AuthDivider />
 
       <AuthField
@@ -156,6 +158,23 @@ export function LoginForm({
       </div>
 
       <FormStatus error={serverError} message={serverMessage} />
+      {issue === 'EMAIL_UNVERIFIED' ? (
+        <button
+          type="button"
+          className="text-sm font-semibold text-brand hover:underline"
+          onClick={async () => {
+            const email = watch('email');
+            try {
+              await apiFetch('/auth/request-verification', { method: 'POST', json: { email } });
+              toast.success('Check your inbox', 'If that email is on Dealo, we sent a fresh confirmation link.');
+            } catch {
+              toast.error('Could not send', 'Wait a minute and try again.');
+            }
+          }}
+        >
+          Send the confirmation link again
+        </button>
+      ) : null}
 
       <button type="submit" className="btn-primary w-full" disabled={!canSubmit || isSubmitting}>
         {isSubmitting ? 'Signing in…' : 'Sign in'}

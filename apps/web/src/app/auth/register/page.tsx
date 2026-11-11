@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Create account',
   description: 'Join Dealo as a company or a professional. Free for professionals.',
   alternates: { canonical: '/auth/register' },
+  robots: { index: false, follow: true },
 };
 
 export default function RegisterPage() {

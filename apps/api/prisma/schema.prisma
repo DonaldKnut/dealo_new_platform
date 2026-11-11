@@ -114,6 +114,9 @@ model User {
   passwordResetToken   String?
   passwordResetExpires DateTime?
   lastLoginAt          DateTime?
+  /// Optional so accounts created before lockouts still load.
+  failedLoginCount     Int?
+  lockedUntil          DateTime?
   /// Job-seeker premium (resume builder). Granted by admins until Paystack plans launch.
   premiumUntil         DateTime?
   /// True for a new Google/LinkedIn account until the person confirms their role and name.

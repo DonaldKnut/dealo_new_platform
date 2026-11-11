@@ -1,16 +1,26 @@
 import type { MetadataRoute } from 'next';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+import { APP_URL } from '@/lib/seo';
+
+const PRIVATE = [
+  '/dashboard',
+  '/api',
+  '/auth/',
+  '/offline',
+  '/book/',
+  '/offer/',
+  '/ats/invite/',
+  '/resume-builder/new',
+  '/resume-builder/cover-letter',
+  '/*?job=',
+  '/*?apply=',
+];
 
 export default function robots(): MetadataRoute.Robots {
+  const isProduction = APP_URL.startsWith('https://') && !process.env.VERCEL_ENV?.match(/preview|development/);
   return {
-    rules: [
-      {
-        userAgent: '*',
-        allow: '/',
-        disallow: ['/dashboard', '/api', '/auth/reset-password', '/auth/forgot-password', '/offline', '/book/', '/offer/', '/ats/invite/'],
-      },
-    ],
+    // Preview deployments copy the whole site; keep them out of the index.
+    rules: isProduction ? [{ userAgent: '*', allow: '/', disallow: PRIVATE }] : [{ userAgent: '*', disallow: '/' }],
     sitemap: `${APP_URL}/sitemap.xml`,
     host: APP_URL,
   };

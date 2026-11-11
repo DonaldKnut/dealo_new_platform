@@ -2,14 +2,43 @@ import { z } from 'zod';
 
 import { UserRole } from '../enums';
 
+const COMMON_PASSWORDS = new Set([
+  'password',
+  'password1',
+  'password12',
+  'password123',
+  '12345678',
+  '123456789',
+  '1234567890',
+  'qwerty123',
+  'qwertyuiop',
+  'dealo1234',
+  'dealo12345',
+  'nigeria123',
+  'welcome1',
+  'welcome12',
+  'welcome123',
+  'abc12345',
+  'iloveyou1',
+  'admin1234',
+  'letmein1',
+  'monkey123',
+  'passw0rd',
+  'changeme1',
+]);
+
+/** Long enough to resist stuffing, with a letter and a number. No special-character theatre. */
+export const passwordSchema = z
+  .string()
+  .min(10, 'Use at least 10 characters')
+  .max(128)
+  .regex(/[A-Za-z]/, 'Password must include a letter')
+  .regex(/[0-9]/, 'Password must include a number')
+  .refine((value) => !COMMON_PASSWORDS.has(value.toLowerCase()), 'Choose a less common password');
+
 export const registerSchema = z.object({
   email: z.string().email().max(255),
-  password: z
-    .string()
-    .min(8)
-    .max(128)
-    .regex(/[A-Za-z]/, 'Password must include a letter')
-    .regex(/[0-9]/, 'Password must include a number'),
+  password: passwordSchema,
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
   role: z.enum([UserRole.EMPLOYER, UserRole.TALENT]),
@@ -52,12 +81,7 @@ export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),
-  password: z
-    .string()
-    .min(8)
-    .max(128)
-    .regex(/[A-Za-z]/, 'Password must include a letter')
-    .regex(/[0-9]/, 'Password must include a number'),
+  password: passwordSchema,
 });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

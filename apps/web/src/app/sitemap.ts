@@ -2,46 +2,41 @@ import type { MetadataRoute } from 'next';
 
 import { fetchPublishedPosts } from '@/lib/blog-public';
 import { fetchCareersIndex } from '@/lib/careers-public';
+import { APP_URL } from '@/lib/seo';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+type Freq = NonNullable<MetadataRoute.Sitemap[number]['changeFrequency']>;
 
-const STATIC_PATHS = [
-  '/',
-  '/about',
-  '/services',
-  '/services/direct-recruitment',
-  '/services/managed-staffing',
-  '/how-it-works',
-  '/for-employers',
-  '/for-professionals',
-  '/developers',
-  '/ats',
-  '/jobs',
-  '/resume-builder',
-  '/faq',
-  '/hire',
-  '/contact',
-  '/blog',
-  '/auth/login',
-  '/auth/register',
+const STATIC_PAGES: { path: string; priority: number; freq: Freq }[] = [
+  { path: '/', priority: 1, freq: 'weekly' },
+  { path: '/jobs', priority: 0.95, freq: 'daily' },
+  { path: '/hire', priority: 0.9, freq: 'monthly' },
+  { path: '/services', priority: 0.9, freq: 'monthly' },
+  { path: '/services/direct-recruitment', priority: 0.85, freq: 'monthly' },
+  { path: '/services/managed-staffing', priority: 0.85, freq: 'monthly' },
+  { path: '/for-employers', priority: 0.85, freq: 'monthly' },
+  { path: '/for-professionals', priority: 0.85, freq: 'monthly' },
+  { path: '/resume-builder', priority: 0.85, freq: 'monthly' },
+  { path: '/hiring-agents', priority: 0.8, freq: 'monthly' },
+  { path: '/ats', priority: 0.8, freq: 'monthly' },
+  { path: '/how-it-works', priority: 0.75, freq: 'monthly' },
+  { path: '/blog', priority: 0.8, freq: 'weekly' },
+  { path: '/faq', priority: 0.7, freq: 'monthly' },
+  { path: '/about', priority: 0.6, freq: 'yearly' },
+  { path: '/contact', priority: 0.6, freq: 'yearly' },
+  { path: '/developers', priority: 0.5, freq: 'monthly' },
+  { path: '/privacy', priority: 0.2, freq: 'yearly' },
+  { path: '/terms', priority: 0.2, freq: 'yearly' },
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [posts, careers] = await Promise.all([fetchPublishedPosts(), fetchCareersIndex()]);
   const now = new Date();
 
-  const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.map((path) => ({
+  const staticEntries: MetadataRoute.Sitemap = STATIC_PAGES.map(({ path, priority, freq }) => ({
     url: `${APP_URL}${path}`,
     lastModified: now,
-    changeFrequency: path === '/jobs' ? 'daily' : path === '/' || path === '/blog' ? 'weekly' : 'monthly',
-    priority:
-      path === '/'
-        ? 1
-        : ['/hire', '/blog', '/services', '/for-employers', '/resume-builder', '/jobs'].includes(path)
-          ? 0.9
-          : path.startsWith('/auth')
-            ? 0.3
-            : 0.7,
+    changeFrequency: freq,
+    priority,
   }));
 
   const blogEntries: MetadataRoute.Sitemap = posts.map((post) => ({

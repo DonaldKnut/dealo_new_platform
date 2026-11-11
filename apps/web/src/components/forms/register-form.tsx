@@ -4,8 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { UserRole, registerSchema, type RegisterInput } from '@dealo/shared';
 import { LockKeyhole, Mail, User } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+import { AuthIssueDialog, authIssueFromError } from '@/components/auth/auth-issue-dialog';
 import { AuthField } from '@/components/auth/auth-field';
 import { AuthRoleDropdown } from '@/components/auth/auth-role-dropdown';
 import { AuthNavLink } from '@/components/forms/auth-nav-link';
@@ -30,6 +32,7 @@ export function RegisterForm({
   const toast = useToast();
   const { serverError, serverMessage, setServerError, setServerMessage, clear } =
     useServerFormStatus();
+  const [issue, setIssue] = useState<ReturnType<typeof authIssueFromError>>(null);
 
   const {
     register,
@@ -64,15 +67,18 @@ export function RegisterForm({
       toast.success('Account created', result.message);
       onSuccess?.();
     } catch (error) {
+      const code = authIssueFromError(error);
       const message = error instanceof ApiError ? error.message : 'We could not create your account.';
       setServerError(message);
+      if (code) setIssue(code);
       toast.error('Sign up failed', message);
     }
   });
 
   return (
     <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>
-      <SocialSignIn role={role === UserRole.TALENT ? 'TALENT' : 'EMPLOYER'} />
+      <AuthIssueDialog code={issue} open={Boolean(issue)} onClose={() => setIssue(null)} />
+      <SocialSignIn role={role === UserRole.TALENT ? 'TALENT' : 'EMPLOYER'} intent="signup" verb="Sign up" />
       <AuthDivider />
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -108,7 +114,7 @@ export function RegisterForm({
         type="password"
         revealable
         autoComplete="new-password"
-        placeholder="8 or more, with a letter and a number"
+        placeholder="10 or more, with a letter and a number"
         error={errors.password?.message}
         {...register('password')}
       />

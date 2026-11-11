@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   HttpCode,
-  HttpException,
   Post,
   Query,
   Req,
@@ -11,9 +10,9 @@ import {
   ServiceUnavailableException,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { ApiCookieAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
+  AuthIssue,
   forgotPasswordSchema,
   loginSchema,
   onboardingSchema,
@@ -34,12 +33,23 @@ import type { AppEnv } from '../config/env.validation';
 import { CurrentUser } from '../common/current-user.decorator';
 import { Public } from '../common/public.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { authCodeOf } from './auth-errors';
 import { AuthService } from './auth.service';
 import type { AuthUser } from './auth.types';
+import { GoogleOAuthGuard } from './google-oauth.guard';
 import type { GoogleProfileUser } from './google.strategy';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 const LINKEDIN_STATE_COOKIE = 'li_oauth_state';
+const GOOGLE_STATE_COOKIE = 'g_oauth_state';
+
+function oauthIntent(raw: string | undefined): 'signin' | 'signup' {
+  return raw === 'signup' ? 'signup' : 'signin';
+}
+
+function oauthHome(intent: 'signin' | 'signup') {
+  return intent === 'signup' ? '/auth/register' : '/auth/login';
+}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -50,9 +60,19 @@ export class AuthController {
     private readonly config: ConfigService<AppEnv, true>,
   ) {}
 
+  private setOauthStateCookie(res: Response, name: string, nonce: string) {
+    res.cookie(name, nonce, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: this.config.get('COOKIE_SECURE', { infer: true }),
+      path: '/',
+      maxAge: 10 * 60_000,
+    });
+  }
+
   @Public()
   @Post('register')
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   register(@Body(new ZodValidationPipe(registerSchema)) body: RegisterInput) {
     return this.authService.register(body);
   }
@@ -60,7 +80,7 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(200)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle({ default: { limit: 8, ttl: 60_000 } })
   login(
     @Body(new ZodValidationPipe(loginSchema)) body: LoginInput,
     @Res({ passthrough: true }) res: Response,
@@ -70,18 +90,29 @@ export class AuthController {
 
   @Public()
   @Get('google')
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  googleAuth(@Query('role') role: string | undefined, @Res() res: Response) {
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  googleAuth(
+    @Query('role') role: string | undefined,
+    @Query('intent') intentRaw: string | undefined,
+    @Res() res: Response,
+  ) {
     if (!this.authService.isGoogleConfigured()) {
       throw new ServiceUnavailableException(
         'Google sign-in is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.',
       );
     }
 
-    const statePayload =
-      role === 'EMPLOYER' || role === 'TALENT'
-        ? Buffer.from(JSON.stringify({ role }), 'utf8').toString('base64url')
-        : '';
+    const intent = oauthIntent(intentRaw);
+    const nonce = randomBytes(16).toString('base64url');
+    const state = Buffer.from(
+      JSON.stringify({
+        n: nonce,
+        intent,
+        role: role === 'EMPLOYER' || role === 'TALENT' ? role : undefined,
+      }),
+      'utf8',
+    ).toString('base64url');
+    this.setOauthStateCookie(res, GOOGLE_STATE_COOKIE, nonce);
     const params = new URLSearchParams({
       client_id: this.config.get('GOOGLE_CLIENT_ID', { infer: true })!,
       redirect_uri: this.authService.oauthCallbackUrl('google'),
@@ -89,30 +120,31 @@ export class AuthController {
       scope: 'email profile',
       access_type: 'online',
       prompt: 'select_account',
+      state,
     });
-    if (statePayload) {
-      params.set('state', statePayload);
-    }
 
     return res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
   }
 
   @Public()
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleOAuthGuard)
   async googleCallback(
-    @Req() req: Request & { user: GoogleProfileUser },
+    @Req() req: Request & { user?: GoogleProfileUser },
     @Res() res: Response,
   ) {
-    if (!this.authService.isGoogleConfigured()) {
-      throw new ServiceUnavailableException('Google sign-in is not configured');
-    }
-
     const appUrl = this.config.get('APP_URL', { infer: true }).replace(/\/$/, '');
+    const expected = (req.cookies as Record<string, string> | undefined)?.[GOOGLE_STATE_COOKIE];
+    res.clearCookie(GOOGLE_STATE_COOKIE, { path: '/' });
+    const profile = req.user;
+    const intent = profile?.intent === 'signup' ? 'signup' : 'signin';
+    const fail = (code: string) => res.redirect(`${appUrl}${oauthHome(intent)}?auth=${encodeURIComponent(code)}&provider=google`);
+    if (!this.authService.isGoogleConfigured()) return fail(AuthIssue.OAUTH_FAILED);
+    if (!profile || !expected || profile.stateNonce !== expected) return fail(AuthIssue.OAUTH_FAILED);
     try {
-      await this.authService.loginWithGoogle(req.user, res);
+      await this.authService.loginWithGoogle(profile, res, intent);
     } catch (err) {
-      return res.redirect(`${appUrl}/auth/login?error=${encodeURIComponent(err instanceof HttpException ? err.message : 'Google sign-in failed. Please try again.')}`);
+      return fail(authCodeOf(err));
     }
     return res.redirect(`${appUrl}/dashboard`);
   }
@@ -135,21 +167,26 @@ export class AuthController {
 
   @Public()
   @Get('linkedin')
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  linkedinAuth(@Query('role') role: string | undefined, @Res() res: Response) {
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  linkedinAuth(
+    @Query('role') role: string | undefined,
+    @Query('intent') intentRaw: string | undefined,
+    @Res() res: Response,
+  ) {
     if (!this.authService.isLinkedinConfigured()) {
       throw new ServiceUnavailableException('LinkedIn sign-in is not configured. Add LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET.');
     }
     const nonce = randomBytes(16).toString('base64url');
-    const state = Buffer.from(JSON.stringify({ n: nonce, role: role === 'EMPLOYER' || role === 'TALENT' ? role : undefined }), 'utf8').toString('base64url');
-    // The nonce must come back with LinkedIn's redirect; it stops someone else's sign-in being forced onto this browser.
-    res.cookie(LINKEDIN_STATE_COOKIE, nonce, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: this.config.get('COOKIE_SECURE', { infer: true }),
-      path: '/',
-      maxAge: 10 * 60_000,
-    });
+    const intent = oauthIntent(intentRaw);
+    const state = Buffer.from(
+      JSON.stringify({
+        n: nonce,
+        intent,
+        role: role === 'EMPLOYER' || role === 'TALENT' ? role : undefined,
+      }),
+      'utf8',
+    ).toString('base64url');
+    this.setOauthStateCookie(res, LINKEDIN_STATE_COOKIE, nonce);
     return res.redirect(this.authService.linkedinAuthorizeUrl(state));
   }
 
@@ -163,23 +200,31 @@ export class AuthController {
     @Res() res: Response,
   ) {
     const appUrl = this.config.get('APP_URL', { infer: true }).replace(/\/$/, '');
-    const fail = (reason: string) => res.redirect(`${appUrl}/auth/login?error=${encodeURIComponent(reason)}`);
-    const expected = (req.cookies as Record<string, string> | undefined)?.[LINKEDIN_STATE_COOKIE];
-    res.clearCookie(LINKEDIN_STATE_COOKIE, { path: '/' });
-    if (error) return fail(error === 'user_cancelled_login' || error === 'user_cancelled_authorize' ? 'LinkedIn sign-in was cancelled' : 'LinkedIn sign-in failed');
-    let parsed: { n?: string; role?: 'EMPLOYER' | 'TALENT' } = {};
+    let parsed: { n?: string; role?: 'EMPLOYER' | 'TALENT'; intent?: 'signin' | 'signup' } = {};
     try {
       parsed = JSON.parse(Buffer.from(state ?? '', 'base64url').toString('utf8')) as typeof parsed;
     } catch {
       parsed = {};
     }
-    if (!code || !expected || parsed.n !== expected) return fail('LinkedIn sign-in expired. Please try again.');
+    const intent = parsed.intent === 'signup' ? 'signup' : 'signin';
+    const fail = (authCode: string) =>
+      res.redirect(`${appUrl}${oauthHome(intent)}?auth=${encodeURIComponent(authCode)}&provider=linkedin`);
+    const expected = (req.cookies as Record<string, string> | undefined)?.[LINKEDIN_STATE_COOKIE];
+    res.clearCookie(LINKEDIN_STATE_COOKIE, { path: '/' });
+    if (error) {
+      return fail(
+        error === 'user_cancelled_login' || error === 'user_cancelled_authorize'
+          ? AuthIssue.OAUTH_CANCELLED
+          : AuthIssue.OAUTH_FAILED,
+      );
+    }
+    if (!code || !expected || parsed.n !== expected) return fail(AuthIssue.OAUTH_FAILED);
     try {
       const profile = await this.authService.linkedinProfile(code);
-      await this.authService.loginWithProvider('linkedin', { ...profile, intendedRole: parsed.role }, res);
+      await this.authService.loginWithProvider('linkedin', { ...profile, intendedRole: parsed.role }, res, intent);
       return res.redirect(`${appUrl}/dashboard`);
     } catch (err) {
-      return fail(err instanceof HttpException ? err.message : 'LinkedIn sign-in failed. Please try again.');
+      return fail(authCodeOf(err));
     }
   }
 
@@ -219,6 +264,14 @@ export class AuthController {
     return this.authService.verifyEmail(token);
   }
 
+  @Public()
+  @Post('request-verification')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 3, ttl: 10 * 60_000 } })
+  requestVerification(@Body(new ZodValidationPipe(forgotPasswordSchema)) body: ForgotPasswordInput) {
+    return this.authService.requestVerification(body.email);
+  }
+
   @Post('resend-verification')
   @HttpCode(200)
   @ApiCookieAuth()
@@ -230,7 +283,7 @@ export class AuthController {
   @Public()
   @Post('forgot-password')
   @HttpCode(200)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
   forgotPassword(
     @Body(new ZodValidationPipe(forgotPasswordSchema)) body: ForgotPasswordInput,
   ) {

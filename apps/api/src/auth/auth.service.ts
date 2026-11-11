@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpStatus,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -10,16 +11,45 @@ import { UserRole, WorkspaceRole, type Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 import type { Response } from 'express';
-import type { LoginInput, OnboardingInput, RegisterInput } from '@dealo/shared';
+import { AuthIssue, type LoginInput, type OnboardingInput, type RegisterInput } from '@dealo/shared';
 
 import { RESERVED_SLUGS } from '../ats/workspaces.service';
 import { CandidatesService } from '../candidates/candidates.service';
+import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
 import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import { AuthFlowException } from './auth-errors';
 import type { AuthUser, JwtPayload } from './auth.types';
+
+const LOCK_AFTER = 8;
+const LOCK_MS = 15 * 60_000;
+const INVALID_LOGIN = 'Invalid email or password';
+
+const DISPOSABLE_EMAIL_HOSTS = new Set([
+  'mailinator.com',
+  'guerrillamail.com',
+  'guerrillamail.org',
+  'sharklasers.com',
+  'grr.la',
+  'tempmail.com',
+  'temp-mail.org',
+  '10minutemail.com',
+  '10minutemail.net',
+  'trashmail.com',
+  'yopmail.com',
+  'yopmail.fr',
+  'getnada.com',
+  'nada.ltd',
+  'discard.email',
+  'mailnesia.com',
+  'maildrop.cc',
+  'throwaway.email',
+  'fakeinbox.com',
+  'emailondeck.com',
+]);
 
 /** MongoDB: a token that was never revoked has no `revokedAt` at all, which `revokedAt: null` does not match. */
 export const NOT_REVOKED = { OR: [{ revokedAt: null }, { revokedAt: { isSet: false } }] } satisfies Prisma.RefreshTokenWhereInput;
@@ -33,13 +63,24 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService<AppEnv, true>,
     private readonly emailService: EmailService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async register(input: RegisterInput) {
     const email = normalizeEmail(input.email);
+    const host = email.split('@')[1] ?? '';
+    if (DISPOSABLE_EMAIL_HOSTS.has(host)) {
+      throw new BadRequestException('Use a lasting email address, not a temporary inbox');
+    }
+
     const existing = await this.prisma.user.findUnique({ where: { email } });
+    const passwordHash = await argon2.hash(input.password);
     if (existing) {
-      throw new ConflictException('An account with this email already exists');
+      throw new AuthFlowException(
+        AuthIssue.ACCOUNT_EXISTS,
+        'An account with this email already exists. Sign in instead.',
+        HttpStatus.CONFLICT,
+      );
     }
 
     const role = await this.prisma.role.findUnique({ where: { code: input.role } });
@@ -47,7 +88,6 @@ export class AuthService {
       throw new ConflictException('Requested role is not available');
     }
 
-    const passwordHash = await argon2.hash(input.password);
     const emailVerifyToken = randomBytes(32).toString('hex');
 
     const user = await this.prisma.user.create({
@@ -68,40 +108,71 @@ export class AuthService {
     }
 
     await this.sendVerificationEmail(email, emailVerifyToken, true);
+    await this.auditLog.record({
+      action: 'AUTH_REGISTER',
+      entityType: 'User',
+      entityId: user.id,
+      actorId: user.id,
+      metadata: { method: 'local', role: input.role },
+    });
 
     return {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      message: 'Registration successful. Please verify your email.',
+      message: 'Account created. Check your email for a confirmation link before you sign in.',
     };
   }
 
   async login(input: LoginInput, res: Response) {
     const user = await this.usersService.findByEmail(input.email);
-    if (!user || !user.isActive) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
-
-    if (!user.passwordHash) {
-      throw new UnauthorizedException(
-        'This account uses Google sign-in. Continue with Google, or set a password via reset.',
+    if (user?.lockedUntil && user.lockedUntil > new Date()) {
+      throw new AuthFlowException(
+        AuthIssue.ACCOUNT_LOCKED,
+        'Too many sign-in attempts. Wait 15 minutes and try again.',
+        HttpStatus.TOO_MANY_REQUESTS,
       );
     }
 
-    const valid = await argon2.verify(user.passwordHash, input.password);
-    if (!valid) {
-      throw new UnauthorizedException('Invalid email or password');
+    if (user && !user.passwordHash) {
+      throw new AuthFlowException(
+        AuthIssue.OAUTH_ONLY,
+        'This email uses Google or LinkedIn. Continue with that button.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+
+    const dummy = await this.dummyPasswordHash();
+    const valid = user?.passwordHash ? await argon2.verify(user.passwordHash, input.password) : await argon2.verify(dummy, input.password).catch(() => false);
+
+    if (!user || !user.isActive || !valid) {
+      if (user?.isActive) await this.recordFailedLogin(user.id, user.failedLoginCount ?? 0);
+      throw new UnauthorizedException(INVALID_LOGIN);
+    }
+
+    if (!user.isEmailVerified) {
+      throw new AuthFlowException(
+        AuthIssue.EMAIL_UNVERIFIED,
+        'Confirm your email first. Open the link we sent when you created the account.',
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: { lastLoginAt: new Date(), failedLoginCount: 0, lockedUntil: null },
     });
 
     const authUser = this.toAuthUser(user);
     await this.setAuthCookies(res, authUser, { rememberMe: Boolean(input.rememberMe) });
+    await this.auditLog.record({
+      action: 'AUTH_LOGIN',
+      entityType: 'User',
+      entityId: user.id,
+      actorId: user.id,
+      metadata: { method: 'local' },
+    });
 
     return {
       user: authUser,
@@ -109,29 +180,73 @@ export class AuthService {
   }
 
   loginWithGoogle(
-    profile: { googleId: string; email: string; firstName: string; lastName: string; avatarUrl?: string; intendedRole?: 'EMPLOYER' | 'TALENT' },
+    profile: {
+      googleId: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl?: string;
+      intendedRole?: 'EMPLOYER' | 'TALENT';
+    },
     res: Response,
+    intent: 'signin' | 'signup' = 'signin',
   ) {
     const { googleId, ...rest } = profile;
-    return this.loginWithProvider('google', { ...rest, providerId: googleId }, res);
+    return this.loginWithProvider('google', { ...rest, providerId: googleId }, res, intent);
   }
 
   /**
-   * Signs in (or signs up) with Google or LinkedIn. A provider email is only linked to an existing
-   * Dealo account when the provider says it is verified, so nobody can take over an account.
+   * Sign-in only logs in an existing Dealo user. Create-account only opens a new one.
+   * A provider email is linked to an existing account on sign-in when the provider marked it verified.
    */
   async loginWithProvider(
     provider: 'google' | 'linkedin',
-    profile: { providerId: string; email: string; firstName: string; lastName: string; avatarUrl?: string; intendedRole?: 'EMPLOYER' | 'TALENT' },
+    profile: {
+      providerId: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      avatarUrl?: string;
+      intendedRole?: 'EMPLOYER' | 'TALENT';
+    },
     res: Response,
+    intent: 'signin' | 'signup' = 'signin',
   ) {
     const idField = provider === 'google' ? 'googleId' : 'linkedinId';
     const label = provider === 'google' ? 'Google' : 'LinkedIn';
-    let user = provider === 'google' ? await this.usersService.findByGoogleId(profile.providerId) : await this.usersService.findByLinkedinId(profile.providerId);
+    let user =
+      provider === 'google'
+        ? await this.usersService.findByGoogleId(profile.providerId)
+        : await this.usersService.findByLinkedinId(profile.providerId);
 
-    if (!user) {
+    if (user) {
+      if (intent === 'signup') {
+        throw new AuthFlowException(
+          AuthIssue.ACCOUNT_EXISTS,
+          `This ${label} login already has a Dealo account. Sign in instead.`,
+          HttpStatus.CONFLICT,
+        );
+      }
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          lastLoginAt: new Date(),
+          avatarUrl: user.avatarUrl ?? profile.avatarUrl,
+          failedLoginCount: 0,
+          lockedUntil: null,
+        },
+      });
+      user = await this.usersService.findById(user.id);
+    } else {
       const existingByEmail = await this.usersService.findByEmail(profile.email);
       if (existingByEmail) {
+        if (intent === 'signup') {
+          throw new AuthFlowException(
+            AuthIssue.ACCOUNT_EXISTS,
+            'An account with this email already exists. Sign in instead.',
+            HttpStatus.CONFLICT,
+          );
+        }
         const providers = new Set(existingByEmail.authProvider.split('+'));
         if (!existingByEmail.passwordHash) providers.delete('local');
         providers.add(provider);
@@ -144,9 +259,22 @@ export class AuthService {
             isEmailVerified: true,
             emailVerifyToken: null,
             lastLoginAt: new Date(),
+            failedLoginCount: 0,
+            lockedUntil: null,
           },
         });
         user = await this.usersService.findById(existingByEmail.id);
+      } else if (intent === 'signin') {
+        await this.auditLog.record({
+          action: 'AUTH_OAUTH_NO_ACCOUNT',
+          entityType: 'Auth',
+          metadata: { provider },
+        });
+        throw new AuthFlowException(
+          AuthIssue.NO_ACCOUNT,
+          `We didn’t find a Dealo account for that ${label} login. Create an account first.`,
+          HttpStatus.NOT_FOUND,
+        );
       } else {
         const roleCode = profile.intendedRole === 'TALENT' ? UserRole.TALENT : UserRole.EMPLOYER;
         const role = await this.prisma.role.findUnique({ where: { code: roleCode } });
@@ -171,20 +299,22 @@ export class AuthService {
           },
         });
         user = await this.usersService.findById(created.id);
+        await this.auditLog.record({
+          action: 'AUTH_REGISTER',
+          entityType: 'User',
+          entityId: created.id,
+          actorId: created.id,
+          metadata: { method: provider, role: roleCode },
+        });
       }
-    } else {
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          lastLoginAt: new Date(),
-          avatarUrl: user.avatarUrl ?? profile.avatarUrl,
-        },
-      });
-      user = await this.usersService.findById(user.id);
     }
 
     if (!user || !user.isActive) {
-      throw new UnauthorizedException(`Unable to sign in with ${label}`);
+      throw new AuthFlowException(
+        AuthIssue.ACCOUNT_DISABLED,
+        `Unable to sign in with ${label}`,
+        HttpStatus.UNAUTHORIZED,
+      );
     }
 
     if (user.roles.includes(UserRole.TALENT)) {
@@ -193,6 +323,13 @@ export class AuthService {
 
     const authUser = this.toAuthUser(user);
     await this.setAuthCookies(res, authUser, { rememberMe: true });
+    await this.auditLog.record({
+      action: 'AUTH_LOGIN',
+      entityType: 'User',
+      entityId: user.id,
+      actorId: user.id,
+      metadata: { method: provider },
+    });
     return { user: authUser };
   }
 
@@ -375,6 +512,22 @@ export class AuthService {
     return { success: true };
   }
 
+  /** Always succeeds so attackers cannot probe which emails are registered. */
+  async requestVerification(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizeEmail(email) },
+      select: { id: true, email: true, isEmailVerified: true },
+    });
+    if (!user || user.isEmailVerified) return { success: true };
+    const token = randomBytes(32).toString('hex');
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerifyToken: this.hashToken(token) },
+    });
+    await this.sendVerificationEmail(user.email, token, false);
+    return { success: true };
+  }
+
   async resendVerification(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -459,6 +612,10 @@ export class AuthService {
         passwordHash,
         passwordResetToken: null,
         passwordResetExpires: null,
+        failedLoginCount: 0,
+        lockedUntil: null,
+        isEmailVerified: true,
+        emailVerifyToken: null,
       },
     });
 
@@ -611,5 +768,33 @@ export class AuthService {
 
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private dummyHash: Promise<string> | null = null;
+
+  /** Same cost as a real password check, so missing accounts don't answer faster. */
+  private dummyPasswordHash() {
+    this.dummyHash ??= argon2.hash('dealo-timing-pad');
+    return this.dummyHash;
+  }
+
+  private async recordFailedLogin(userId: string, previous: number) {
+    const failedLoginCount = previous + 1;
+    const lockedUntil = failedLoginCount >= LOCK_AFTER ? new Date(Date.now() + LOCK_MS) : null;
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { failedLoginCount, lockedUntil },
+    });
+    if (lockedUntil) {
+      await this.prisma.refreshToken.updateMany({
+        where: { userId, ...NOT_REVOKED },
+        data: { revokedAt: new Date() },
+      });
+      throw new AuthFlowException(
+        AuthIssue.ACCOUNT_LOCKED,
+        'Too many sign-in attempts. Wait 15 minutes and try again.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
   }
 }

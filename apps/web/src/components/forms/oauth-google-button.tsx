@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { apiFetch } from '@/lib/api';
-import { getGoogleAuthUrl, getOAuthUrl } from '@/lib/api-base';
+import { getOAuthUrl, type OAuthIntent } from '@/lib/api-base';
 
 let providersCache: Promise<{ google: boolean; linkedin: boolean }> | null = null;
 
@@ -11,9 +11,11 @@ let providersCache: Promise<{ google: boolean; linkedin: boolean }> | null = nul
 export function SocialSignIn({
   role,
   verb = 'Continue',
+  intent = 'signin',
 }: {
   role?: 'EMPLOYER' | 'TALENT';
   verb?: string;
+  intent?: OAuthIntent;
 }) {
   const [providers, setProviders] = useState<{ google: boolean; linkedin: boolean } | null>(null);
 
@@ -48,13 +50,14 @@ export function SocialSignIn({
         <OAuthGoogleButton
           verb={verb}
           role={role}
+          intent={intent}
           adaptive={hasBoth}
         />
       ) : null}
 
       {providers.linkedin ? (
         <a
-          href={getOAuthUrl('linkedin', role)}
+          href={getOAuthUrl('linkedin', { role, intent })}
           className="group relative flex h-11 sm:h-12 w-full items-center justify-center gap-2.5 sm:gap-3 rounded-xl border border-border/80 bg-surface-elevated px-4 text-xs sm:text-sm font-semibold text-foreground shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-[#0A66C2]/40 hover:bg-[#0A66C2]/[0.03] hover:shadow-md hover:shadow-[#0a66c2]/5 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A66C2]/40 focus-visible:ring-offset-2 no-underline dark:bg-surface-elevated/90 dark:hover:border-[#0A66C2]/50 dark:hover:bg-[#0A66C2]/10"
         >
           <svg aria-hidden viewBox="0 0 24 24" className="h-4.5 w-4.5 shrink-0 transition-transform duration-200 group-hover:scale-105" fill="#0A66C2">
@@ -80,16 +83,18 @@ export function OAuthGoogleButton({
   label,
   verb = 'Continue',
   role,
+  intent = 'signin',
   adaptive = false,
 }: {
   label?: string;
   verb?: string;
   role?: 'EMPLOYER' | 'TALENT';
+  intent?: OAuthIntent;
   adaptive?: boolean;
 }) {
   return (
     <a
-      href={getGoogleAuthUrl(role)}
+      href={getOAuthUrl('google', { role, intent })}
       className="group relative flex h-11 sm:h-12 w-full items-center justify-center gap-2.5 sm:gap-3 rounded-xl border border-border/80 bg-surface-elevated px-4 text-xs sm:text-sm font-semibold text-foreground shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-surface/60 hover:shadow-md hover:shadow-slate-200/50 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 no-underline dark:bg-surface-elevated/90 dark:hover:border-slate-600 dark:hover:bg-surface/50 dark:hover:shadow-black/40"
     >
       <svg aria-hidden viewBox="0 0 24 24" className="h-4.5 w-4.5 shrink-0 transition-transform duration-200 group-hover:scale-105" fill="none">

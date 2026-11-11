@@ -12,6 +12,7 @@ import { UsersModule } from '../users/users.module';
 import { ApiKeyOrJwtGuard } from './api-key-or-jwt.guard';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { GoogleOAuthGuard } from './google-oauth.guard';
 import { GoogleStrategy } from './google.strategy';
 import { JwtStrategy } from './jwt.strategy';
 import { PermissionsGuard } from './permissions.guard';
@@ -39,6 +40,7 @@ import { VerifiedEmailGuard } from './verified-email';
     AuthService,
     JwtStrategy,
     GoogleStrategy,
+    GoogleOAuthGuard,
     {
       provide: APP_GUARD,
       useClass: ApiKeyOrJwtGuard,

@@ -21,11 +21,19 @@ export function apiFileHref(url: string): string {
 }
 
 export type OAuthProvider = 'google' | 'linkedin';
+export type OAuthIntent = 'signin' | 'signup';
 
-export function getOAuthUrl(provider: OAuthProvider, role?: 'EMPLOYER' | 'TALENT'): string {
-  return `${getApiBaseUrl()}/auth/${provider}${role ? `?role=${role}` : ''}`;
+export function getOAuthUrl(
+  provider: OAuthProvider,
+  opts?: { role?: 'EMPLOYER' | 'TALENT'; intent?: OAuthIntent },
+): string {
+  const params = new URLSearchParams();
+  if (opts?.role) params.set('role', opts.role);
+  params.set('intent', opts?.intent ?? 'signin');
+  const query = params.toString();
+  return `${getApiBaseUrl()}/auth/${provider}?${query}`;
 }
 
-export function getGoogleAuthUrl(role?: 'EMPLOYER' | 'TALENT'): string {
-  return getOAuthUrl('google', role);
+export function getGoogleAuthUrl(role?: 'EMPLOYER' | 'TALENT', intent: OAuthIntent = 'signin'): string {
+  return getOAuthUrl('google', { role, intent });
 }

@@ -14,6 +14,8 @@ export type GoogleProfileUser = {
   lastName: string;
   avatarUrl?: string;
   intendedRole?: 'EMPLOYER' | 'TALENT';
+  intent: 'signin' | 'signup';
+  stateNonce?: string;
 };
 
 @Injectable()
@@ -43,22 +45,31 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     profile: Profile,
     done: VerifyCallback,
   ): void {
-    const email = profile.emails?.[0]?.value;
+    const emailEntry = profile.emails?.[0];
+    const email = emailEntry?.value;
     if (!email) {
       done(new UnauthorizedException('Google account did not return an email'), undefined);
       return;
     }
+    if (emailEntry?.verified === false) {
+      done(new UnauthorizedException('Your Google email is not verified'), undefined);
+      return;
+    }
 
     let intendedRole: 'EMPLOYER' | 'TALENT' | undefined;
+    let intent: 'signin' | 'signup' = 'signin';
+    let stateNonce: string | undefined;
     const state = typeof req.query?.state === 'string' ? req.query.state : undefined;
     try {
       if (state) {
         const parsed = JSON.parse(Buffer.from(state, 'base64url').toString('utf8')) as {
+          n?: string;
           role?: string;
+          intent?: string;
         };
-        if (parsed.role === 'EMPLOYER' || parsed.role === 'TALENT') {
-          intendedRole = parsed.role;
-        }
+        if (parsed.role === 'EMPLOYER' || parsed.role === 'TALENT') intendedRole = parsed.role;
+        if (parsed.intent === 'signup' || parsed.intent === 'signin') intent = parsed.intent;
+        if (parsed.n) stateNonce = parsed.n;
       }
     } catch {
       intendedRole = undefined;
@@ -71,6 +82,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       lastName: profile.name?.familyName || 'User',
       avatarUrl: profile.photos?.[0]?.value,
       intendedRole,
+      intent,
+      stateNonce,
     };
 
     done(null, user);

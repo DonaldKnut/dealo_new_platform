@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: 'Sign in',
   description: 'Sign in to Dealo as a company or a professional.',
   alternates: { canonical: '/auth/login' },
+  robots: { index: false, follow: true },
 };
 
 export default function LoginPage() {

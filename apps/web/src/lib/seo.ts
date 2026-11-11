@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 
-export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+/** A missing env var on Vercel must never publish localhost canonicals or a localhost sitemap. */
+export const APP_URL = (
+  process.env.NEXT_PUBLIC_APP_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? 'https://dealonetwork.com' : 'http://localhost:3000')
+).replace(/\/$/, '');
 export const DEFAULT_OG_IMAGE = '/opengraph-image';
 
 /** Per-page metadata with its own canonical URL and matching social cards. */

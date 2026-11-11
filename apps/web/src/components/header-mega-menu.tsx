@@ -89,12 +89,6 @@ const offerDefs: MegaItemDef[] = [
     icon: Handshake,
   },
   {
-    href: '/how-it-works',
-    titleKey: 'mega.how.title',
-    descKey: 'mega.how.desc',
-    icon: Route,
-  },
-  {
     href: '/for-employers',
     titleKey: 'mega.employers.title',
     descKey: 'mega.employers.desc',
@@ -121,6 +115,12 @@ const resourceDefs: MegaItemDef[] = [
     titleKey: 'mega.cv.title',
     descKey: 'mega.cv.desc',
     icon: FileText,
+  },
+  {
+    href: '/how-it-works',
+    titleKey: 'mega.how.title',
+    descKey: 'mega.how.desc',
+    icon: Route,
   },
   {
     href: '/blog',

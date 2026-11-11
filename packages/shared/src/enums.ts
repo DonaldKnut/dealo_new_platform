@@ -136,6 +136,19 @@ export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
 /** Error `code` the API returns when an action needs a confirmed email address. */
 export const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED' as const;
 
+/** Stable auth issue codes. The website maps these to a toast + modal — never raw exception text. */
+export const AuthIssue = {
+  NO_ACCOUNT: 'NO_ACCOUNT',
+  ACCOUNT_EXISTS: 'ACCOUNT_EXISTS',
+  ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+  EMAIL_UNVERIFIED: 'EMAIL_UNVERIFIED',
+  OAUTH_ONLY: 'OAUTH_ONLY',
+  OAUTH_FAILED: 'OAUTH_FAILED',
+  OAUTH_CANCELLED: 'OAUTH_CANCELLED',
+  ACCOUNT_DISABLED: 'ACCOUNT_DISABLED',
+} as const;
+export type AuthIssueCode = (typeof AuthIssue)[keyof typeof AuthIssue];
+
 export const DEFAULT_CURRENCY = 'NGN' as const;
 export const DEFAULT_TIMEZONE = 'Africa/Lagos' as const;
 

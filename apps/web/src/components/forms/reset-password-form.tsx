@@ -80,7 +80,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         type="password"
         revealable
         autoComplete="new-password"
-        placeholder="Min. 8 chars, letter + number"
+        placeholder="10 or more, with a letter and a number"
         error={errors.password?.message}
         {...register('password')}
       />

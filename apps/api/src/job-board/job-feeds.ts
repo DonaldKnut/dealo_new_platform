@@ -305,7 +305,32 @@ type JoobleJob = {
 };
 
 /** Jooble needs a search word, so a spread of common Nigerian job searches is pulled each run. */
-const JOOBLE_SEARCHES = ['manager', 'sales', 'engineer', 'accountant', 'driver', 'admin', 'customer service', 'marketing', 'technician', 'teacher', 'nurse', 'developer'];
+const JOOBLE_SEARCHES = [
+  'manager',
+  'sales',
+  'engineer',
+  'accountant',
+  'driver',
+  'admin',
+  'customer service',
+  'marketing',
+  'technician',
+  'teacher',
+  'nurse',
+  'developer',
+  'human resources',
+  'finance',
+  'operations',
+  'business development',
+  'logistics',
+  'banking',
+  'security',
+  'electrician',
+  'cashier',
+  'chef',
+  'graduate trainee',
+  'internship',
+];
 
 type JoobleBody = { jobs?: JoobleJob[]; totalCount?: number; message?: string };
 
@@ -324,7 +349,11 @@ async function joobleSearch(key: string, route: (typeof JOOBLE_ROUTES)[number], 
     body: JSON.stringify({ keywords, ...(route.location ? { location: route.location } : {}), page: '1', ResultOnPage: '50' }),
     signal: AbortSignal.timeout(20_000),
   });
-  if (res.status === 401 || res.status === 403) throw new Error(`Jooble refused the key on ${route.host} (${res.status}). Check JOOBLE_API_KEY.`);
+  if (res.status === 401 || res.status === 403) {
+    throw new Error(
+      `Jooble refused the key on ${route.host} (${res.status}). Keys only work on the country site they were issued for; get a Nigerian key at https://ng.jooble.org/api/about and set JOOBLE_API_KEY.`,
+    );
+  }
   if (!res.ok) return { jobs: [] as JoobleJob[], note: `${route.host} answered ${res.status}` };
   const body = (await res.json().catch(() => ({}))) as JoobleBody;
   return { jobs: body.jobs ?? [], note: `${route.host}${route.location ? ` / ${route.location}` : ''}: total ${body.totalCount ?? 0}${body.message ? ` (${body.message})` : ''}` };
