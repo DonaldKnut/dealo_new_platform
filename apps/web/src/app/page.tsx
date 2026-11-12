@@ -8,6 +8,7 @@ import { CtaBanner } from '@/components/marketing/cta-banner';
 import { HeroSection } from '@/components/marketing/hero-section';
 import { HomeFeatureAds } from '@/components/marketing/home-feature-ads';
 import { HomeStats } from '@/components/marketing/home-stats';
+import { JobAgentPromo } from '@/components/marketing/job-agent-promo';
 import { MarqueeStrip } from '@/components/marketing/marquee-strip';
 import { PricingPackages } from '@/components/marketing/pricing-packages';
 import { ProcessRail } from '@/components/marketing/process-rail';
@@ -33,6 +34,7 @@ export default function HomePage() {
       <MarqueeStrip />
       <HomeStats />
       <AiAgentsShowcase />
+      <JobAgentPromo />
       <ResumeBuilderPromo />
       <CoverageScope />
       <ServiceSpotlight />

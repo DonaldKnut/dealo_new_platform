@@ -16,6 +16,7 @@ const STATIC_PAGES: { path: string; priority: number; freq: Freq }[] = [
   { path: '/for-employers', priority: 0.85, freq: 'monthly' },
   { path: '/for-professionals', priority: 0.85, freq: 'monthly' },
   { path: '/resume-builder', priority: 0.85, freq: 'monthly' },
+  { path: '/job-agent', priority: 0.85, freq: 'monthly' },
   { path: '/hiring-agents', priority: 0.8, freq: 'monthly' },
   { path: '/ats', priority: 0.8, freq: 'monthly' },
   { path: '/how-it-works', priority: 0.75, freq: 'monthly' },

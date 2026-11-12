@@ -256,6 +256,12 @@ const talentNav: NavItem[] = [
     help: 'Build, edit and download CVs and cover letters.',
   },
   {
+    href: '/dashboard/job-agent',
+    labelKey: 'dash.nav.jobAgent',
+    icon: Radar,
+    help: 'Your AI agent finds jobs that fit your CV around the clock and applies for you.',
+  },
+  {
     href: '/dashboard/applications',
     labelKey: 'dash.nav.applications',
     icon: Send,

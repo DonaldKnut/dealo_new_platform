@@ -1,5 +1,6 @@
 import { agentsEn, agentsFr, agentsKo, agentsZh } from './agents-copy';
 import { homeEn, homeFr, homeKo, homeZh } from './home-copy';
+import { jobAgentEn, jobAgentFr, jobAgentKo, jobAgentZh } from './job-agent-copy';
 import { pagesEn, pagesFr, pagesKo, pagesZh } from './pages-copy';
 
 export const LOCALES = ['en', 'fr', 'zh', 'ko'] as const;
@@ -160,14 +161,14 @@ const enCore = {
   'tour.5.accent': 'Help & languages',
   'tour.5.title': 'Help & language',
   'tour.5.body':
-    'Need help? Tap the headphones button at the bottom right to ask for help. Admins get an email. You can change the language at the top of the page.',
+    'Need help? Tap the glowing Dealo AI Assistant button at the bottom right (or press Ctrl + /). It answers instantly, and a person is one tap away. You can change the language at the top of the page.',
   'tour.6.accent': 'Staff tools',
   'tour.6.title': 'Only for admins',
   'tour.6.body':
     'Admins and Super Admins also see Audit logs, Mail users, and Support. Companies and workers cannot email everyone or see the full site logs.',
 } as const;
 
-const en = { ...enCore, ...homeEn, ...pagesEn, ...agentsEn };
+const en = { ...enCore, ...homeEn, ...pagesEn, ...agentsEn, ...jobAgentEn };
 export type TranslationKey = keyof typeof en;
 
 type Dictionary = Record<TranslationKey, string>;
@@ -324,7 +325,7 @@ const frCore: Record<keyof typeof enCore, string> = {
     'Admin / Super Admin voient aussi Audit, Mail et Support. Les employeurs et talents n’ont pas ces accès.',
 };
 
-const fr: Dictionary = { ...frCore, ...homeFr, ...pagesFr, ...agentsFr };
+const fr: Dictionary = { ...frCore, ...homeFr, ...pagesFr, ...agentsFr, ...jobAgentFr };
 
 const zhCore: Record<keyof typeof enCore, string> = {
   'nav.offer': '我们提供',
@@ -472,7 +473,7 @@ const zhCore: Record<keyof typeof enCore, string> = {
   'tour.6.body': '管理员还可看到审计、群发邮件与支持队列。普通用户没有这些权限。',
 };
 
-const zh: Dictionary = { ...zhCore, ...homeZh, ...pagesZh, ...agentsZh };
+const zh: Dictionary = { ...zhCore, ...homeZh, ...pagesZh, ...agentsZh, ...jobAgentZh };
 
 const koCore: Record<keyof typeof enCore, string> = {
   'nav.offer': '제공 서비스',
@@ -626,7 +627,7 @@ const koCore: Record<keyof typeof enCore, string> = {
     '관리자/슈퍼관리자는 감사 로그, 메일, 지원 대기열도 봅니다. 일반 사용자는 이 권한이 없습니다.',
 };
 
-const ko: Dictionary = { ...koCore, ...homeKo, ...pagesKo, ...agentsKo };
+const ko: Dictionary = { ...koCore, ...homeKo, ...pagesKo, ...agentsKo, ...jobAgentKo };
 
 export const dictionaries: Record<Locale, Dictionary> = {
   en: en as Dictionary,

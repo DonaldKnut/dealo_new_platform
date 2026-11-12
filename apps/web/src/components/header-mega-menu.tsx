@@ -15,6 +15,7 @@ import {
   Kanban,
   KeyRound,
   Newspaper,
+  Radar,
   Route,
   ShieldCheck,
   UserRound,
@@ -51,7 +52,8 @@ const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/ap
 );
 
 const aiDefs: MegaItemDef[] = [
-  { href: '/hiring-agents', titleKey: 'mega.ai.agents.title', descKey: 'mega.ai.agents.desc', icon: Bot, badge: 'New' },
+  { href: '/job-agent', titleKey: 'mega.ai.jobAgent.title', descKey: 'mega.ai.jobAgent.desc', icon: Radar, badge: 'New' },
+  { href: '/hiring-agents', titleKey: 'mega.ai.agents.title', descKey: 'mega.ai.agents.desc', icon: Bot },
   { href: '/ats', titleKey: 'mega.ai.ats.title', descKey: 'mega.ai.ats.desc', icon: Kanban, badge: 'New' },
   { href: '/ats#trust', titleKey: 'mega.ai.trust.title', descKey: 'mega.ai.trust.desc', icon: ShieldCheck },
 ];
