@@ -21,16 +21,35 @@ import {
   Zap,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
+import { useModal } from '@/components/modals/modal-context';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
+import { isStaffRole, useAuthSession } from '@/hooks/use-auth-session';
 import { TRIGGER_LABEL } from '@/lib/agents-api';
 import { cn } from '@/lib/utils';
 import { whatsappHref } from '@/lib/whatsapp';
 
 import { AGENT_LOOK, formatNaira } from './agent-meta';
 
-const START = '/dashboard/ats/agents';
+const STAFF_START = '/dashboard/ats/agents';
+
+function PrimaryCta({ className, children }: { className?: string; children: ReactNode }) {
+  const { open } = useModal();
+  const { user } = useAuthSession();
+  if (user && isStaffRole(user.roles)) {
+    return (
+      <Link href={STAFF_START} className={className}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" className={className} onClick={() => open('hire')}>
+      {children}
+    </button>
+  );
+}
 
 export function HiringAgentsLanding() {
   return (
@@ -70,9 +89,9 @@ function Hero() {
             Seven specialist agents that screen CVs, write job posts, find candidates, follow up, book interviews and brief your team every morning. Built for hiring in Nigeria. A person approves every step.
           </p>
           <div className="mt-8 flex flex-col gap-3 min-[400px]:flex-row">
-            <Link href={START} className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 px-6 py-3 text-sm font-semibold text-[#042016] shadow-[0_18px_40px_-12px_rgba(16,185,129,0.7)] transition hover:brightness-110">
-              Start free · {AGENT_PLANS.FREE.monthlyRuns} runs a month <ArrowRight className="h-4 w-4" />
-            </Link>
+            <PrimaryCta className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 px-6 py-3 text-sm font-semibold text-[#042016] shadow-[0_18px_40px_-12px_rgba(16,185,129,0.7)] transition hover:brightness-110">
+              Request talent <ArrowRight className="h-4 w-4" />
+            </PrimaryCta>
             <a href="#demo" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
               <Eye className="h-4 w-4" /> See it work
             </a>
@@ -439,7 +458,7 @@ function Pricing() {
       period: 'forever',
       blurb: 'For small teams trying AI hiring.',
       features: [`${AGENT_PLANS.FREE.monthlyRuns} agent runs a month`, 'All 7 agents', 'Automatic screening, follow-up and scheduling', 'Daily briefing email', 'Dealo ATS and careers page included'],
-      cta: { label: 'Start free', href: START },
+      cta: { label: 'Request talent', href: '/hire' },
       highlight: false,
     },
     {
@@ -448,7 +467,7 @@ function Pricing() {
       period: 'per workspace / month',
       blurb: 'For teams hiring every week.',
       features: [`${AGENT_PLANS.PRO.monthlyRuns.toLocaleString()} agent runs a month`, 'Everything in Free', 'Priority help from Dealo recruiters', 'Early access to new agents', 'Pay by card, transfer or USSD with Paystack'],
-      cta: { label: 'Go Pro', href: `${START}?plan=pro` },
+      cta: { label: 'Talk to Dealo', href: '/hire' },
       highlight: true,
     },
     {
@@ -553,18 +572,18 @@ function FinalCta() {
       <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#0f766e] to-[#04140f] p-8 text-center text-white sm:p-14">
         <div aria-hidden className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-emerald-300/30 blur-3xl" />
         <Clock3 className="relative mx-auto h-8 w-8 text-emerald-200" />
-        <h2 className="relative mx-auto mt-4 max-w-2xl font-display text-3xl sm:text-4xl">Give your recruiters their afternoons back.</h2>
-        <p className="relative mx-auto mt-3 max-w-xl text-white/75">Turn on your first agent in two minutes. Free for {AGENT_PLANS.FREE.monthlyRuns} runs every month.</p>
+        <h2 className="relative mx-auto mt-4 max-w-2xl font-display text-3xl sm:text-4xl">Let Dealo’s team put the agents to work for you.</h2>
+        <p className="relative mx-auto mt-3 max-w-xl text-white/75">Request talent and our recruiters use these agents behind the scenes. You get a checked shortlist.</p>
         <div className="relative mt-8 flex flex-col justify-center gap-3 min-[400px]:flex-row">
-          <Link href={START} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#04140f] transition hover:bg-emerald-50">
-            <Bot className="h-4 w-4" /> Start free
-          </Link>
-          <Link href="/ats" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
-            <MessagesSquare className="h-4 w-4" /> About Dealo ATS
-          </Link>
+          <PrimaryCta className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#04140f] transition hover:bg-emerald-50">
+            <Bot className="h-4 w-4" /> Request talent
+          </PrimaryCta>
+          <button type="button" onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
+            <MessagesSquare className="h-4 w-4" /> See how agents work
+          </button>
         </div>
         <p className="relative mt-6 inline-flex items-center gap-1.5 text-xs text-white/60">
-          <ShieldCheck className="h-3.5 w-3.5" /> No card needed · a person approves every step
+          <ShieldCheck className="h-3.5 w-3.5" /> A person at Dealo approves every step
         </p>
       </div>
     </section>

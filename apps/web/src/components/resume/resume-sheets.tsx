@@ -11,12 +11,12 @@ import { ApiError } from '@/lib/api';
 import { resumeApi } from '@/lib/resume-api';
 
 const PREMIUM_FEATURES = [
-  { icon: Palette, title: '4 premium templates', body: 'Executive, Minimal, Artisan and Compact.' },
+  { icon: Palette, title: 'Premium templates & fonts', body: 'Executive to Compact, plus Source Serif, DM Sans and more.' },
   { icon: Sparkles, title: 'AI writing help', body: 'Stronger bullet points and a profile written for you.' },
-  { icon: Target, title: 'Tailor to a job', body: 'Paste a job advert and see what to change.' },
+  { icon: Target, title: 'Job Agent + tailor', body: 'More daily applies, AI cover notes, email apply, and job-fit tips.' },
   { icon: FileText, title: 'More CVs and cover letters', body: 'Keep up to 20 of each.' },
   { icon: Stamp, title: 'No Dealo footer', body: 'Your PDF carries only your name.' },
-  { icon: Crown, title: 'Any colour and font', body: 'Match your style or industry.' },
+  { icon: Crown, title: 'Any colour and art', body: 'Match your industry with full colour and corner art.' },
 ];
 
 export function PremiumSheet({

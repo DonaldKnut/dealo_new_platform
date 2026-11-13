@@ -13,6 +13,8 @@ const STATIC_PAGES: { path: string; priority: number; freq: Freq }[] = [
   { path: '/services', priority: 0.9, freq: 'monthly' },
   { path: '/services/direct-recruitment', priority: 0.85, freq: 'monthly' },
   { path: '/services/managed-staffing', priority: 0.85, freq: 'monthly' },
+  { path: '/services/contract-cover', priority: 0.8, freq: 'monthly' },
+  { path: '/services/talent-training', priority: 0.8, freq: 'monthly' },
   { path: '/for-employers', priority: 0.85, freq: 'monthly' },
   { path: '/for-professionals', priority: 0.85, freq: 'monthly' },
   { path: '/resume-builder', priority: 0.85, freq: 'monthly' },
@@ -25,6 +27,7 @@ const STATIC_PAGES: { path: string; priority: number; freq: Freq }[] = [
   { path: '/about', priority: 0.6, freq: 'yearly' },
   { path: '/contact', priority: 0.6, freq: 'yearly' },
   { path: '/developers', priority: 0.5, freq: 'monthly' },
+  { path: '/developers/job-agent', priority: 0.55, freq: 'monthly' },
   { path: '/privacy', priority: 0.2, freq: 'yearly' },
   { path: '/terms', priority: 0.2, freq: 'yearly' },
 ];

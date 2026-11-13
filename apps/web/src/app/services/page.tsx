@@ -1,6 +1,6 @@
 'use client';
 
-import { Building2, Handshake, ShieldCheck, Workflow } from 'lucide-react';
+import { Building2, GraduationCap, Handshake, ShieldCheck, Timer, Workflow } from 'lucide-react';
 import Link from 'next/link';
 
 import { useLocale } from '@/components/i18n/locale-context';
@@ -60,6 +60,22 @@ export default function ServicesPage() {
           <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">
             {t('svc.managed.body')}
           </p>
+        </Link>
+        <Link
+          href="/services/contract-cover"
+          className="ui-card min-h-[11rem] p-6 transition hover:border-brand/40 min-[340px]:p-8"
+        >
+          <Timer className="h-6 w-6 text-brand" />
+          <h2 className="mt-4 font-display text-2xl text-foreground">{t('svc.cover.title')}</h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">{t('svc.cover.body')}</p>
+        </Link>
+        <Link
+          href="/services/talent-training"
+          className="ui-card min-h-[11rem] p-6 transition hover:border-brand/40 min-[340px]:p-8"
+        >
+          <GraduationCap className="h-6 w-6 text-brand" />
+          <h2 className="mt-4 font-display text-2xl text-foreground">{t('svc.train.title')}</h2>
+          <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">{t('svc.train.body')}</p>
         </Link>
       </section>
 

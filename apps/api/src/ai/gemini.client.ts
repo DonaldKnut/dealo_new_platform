@@ -74,4 +74,68 @@ export class GeminiClient {
     }
     return result.data;
   }
+
+  /**
+   * Streams plain text for a multi-turn chat. Yields text pieces as Gemini produces them.
+   * `signal` stops the upstream request when the visitor closes the chat.
+   */
+  async *streamText(
+    system: string,
+    turns: GeminiTurn[],
+    options: { signal?: AbortSignal; temperature?: number; maxOutputTokens?: number } = {},
+  ): AsyncGenerator<string> {
+    if (!this.apiKey) {
+      throw new ServiceUnavailableException('AI is not configured. Set GEMINI_API_KEY on the API.');
+    }
+    const timeout = AbortSignal.timeout(60_000);
+    const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
+    const response = await fetch(`${ENDPOINT}/${encodeURIComponent(this.model)}:streamGenerateContent?alt=sse`, {
+      method: 'POST',
+      signal,
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: turns.map((turn) => ({ role: turn.role, parts: [{ text: turn.text }] })),
+        generationConfig: { temperature: options.temperature ?? 0.5, maxOutputTokens: options.maxOutputTokens ?? 1400 },
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+        ],
+      }),
+    });
+    if (!response.ok || !response.body) {
+      const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
+      this.logger.warn(`Gemini stream error ${response.status}: ${body?.error?.message ?? 'unknown'}`);
+      throw new ServiceUnavailableException('The AI service did not respond. Please try again.');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let boundary = buffer.indexOf('\n');
+      while (boundary !== -1) {
+        const line = buffer.slice(0, boundary).trim();
+        buffer = buffer.slice(boundary + 1);
+        boundary = buffer.indexOf('\n');
+        if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        try {
+          const chunk = JSON.parse(payload) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+          const text = chunk.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('') ?? '';
+          if (text) yield text;
+        } catch {
+          // A partial or keep-alive line; the next one carries on.
+        }
+      }
+    }
+  }
 }
+
+export type GeminiTurn = { role: 'user' | 'model'; text: string };

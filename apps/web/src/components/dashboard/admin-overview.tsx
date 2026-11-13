@@ -183,6 +183,37 @@ export function AdminOverview({
             </div>
           </DashPanel>
 
+          <DashPanel title="Partner job sync">
+            <p className="text-xs text-muted">
+              Jobs other sites pushed to Dealo so Job Agents can apply.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {[
+                { label: 'Partner orgs', value: workspace.partners?.orgs ?? 0 },
+                { label: 'Open synced jobs', value: workspace.partners?.jobsOpen ?? 0 },
+                { label: 'All synced jobs', value: workspace.partners?.jobsTotal ?? 0 },
+                { label: 'Applications in', value: workspace.partners?.applications ?? 0 },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-xl border border-border px-3 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-muted">{stat.label}</p>
+                  <p className="mt-1 font-display text-2xl tabular-nums">{stat.value}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 grid gap-2">
+              <QuickLink
+                href="/developers/job-agent"
+                label="Partner guide"
+                description="How boards sync jobs and get CVs"
+              />
+              <QuickLink
+                href="/dashboard/api-keys"
+                label="Partner API keys"
+                description="Issue keys for job boards and HR tools"
+              />
+            </div>
+          </DashPanel>
+
           <DashPanel
             title="Content & outreach"
             action={<Newspaper className="h-4 w-4 text-brand" />}

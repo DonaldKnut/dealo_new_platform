@@ -5,7 +5,6 @@ import {
   ArrowRight,
   BadgeCheck,
   BriefcaseBusiness,
-  CheckCircle2,
   Flame,
   HardHat,
   Quote,
@@ -14,7 +13,7 @@ import {
   Users,
 } from 'lucide-react';
 import Image from 'next/image';
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useLocale } from '@/components/i18n/locale-context';
 import { useModal } from '@/components/modals/modal-context';
@@ -47,8 +46,7 @@ const TALENT_PROFILES: TalentProfile[] = [
     experience: '8 yrs • Fintech systems',
     avatarGradient: 'from-teal-500 to-cyan-600',
     initials: 'TB',
-    avatarSrc:
-      'https://res.cloudinary.com/dyaetoldv/image/upload/v1793441975/download_60_yzzufy.jpg',
+    avatarSrc: 'https://res.cloudinary.com/dyaetoldv/image/upload/v1793441975/download_60_yzzufy.jpg',
     highlight: 'Built reliable payment systems used by large Nigerian teams.',
     availability: 'now',
   },
@@ -62,8 +60,7 @@ const TALENT_PROFILES: TalentProfile[] = [
     experience: '8 yrs • Corporate finance',
     avatarGradient: 'from-violet-500 to-teal-600',
     initials: 'ZM',
-    avatarSrc:
-      'https://res.cloudinary.com/dyaetoldv/image/upload/v1793440891/download_59_ivf7ts.jpg',
+    avatarSrc: 'https://res.cloudinary.com/dyaetoldv/image/upload/v1793440891/download_59_ivf7ts.jpg',
     highlight: 'Kept books clean across multi-entity operations.',
     availability: 'now',
   },
@@ -106,8 +103,7 @@ const TALENT_PROFILES: TalentProfile[] = [
     experience: '7 yrs • Industrial & estate installs',
     avatarGradient: 'from-yellow-500 to-teal-700',
     initials: 'CE',
-    avatarSrc:
-      'https://res.cloudinary.com/dyaetoldv/image/upload/v1793442088/Erasty_Nangolo_o06a6x.jpg',
+    avatarSrc: 'https://res.cloudinary.com/dyaetoldv/image/upload/v1793442088/Erasty_Nangolo_o06a6x.jpg',
     highlight: 'Handles clean installs and safe fault repairs on live sites.',
     availability: 'now',
   },
@@ -121,75 +117,112 @@ const TALENT_PROFILES: TalentProfile[] = [
     experience: '8 yrs • Structural & workshop work',
     avatarGradient: 'from-slate-500 to-teal-700',
     initials: 'MA',
-    avatarSrc:
-      'https://res.cloudinary.com/dyaetoldv/image/upload/v1793442128/Espoir_bash_nloy7p.jpg',
+    avatarSrc: 'https://res.cloudinary.com/dyaetoldv/image/upload/v1793442128/Espoir_bash_nloy7p.jpg',
     highlight: 'Delivers strong welds for gates, frames, and structural pieces.',
     availability: 'part',
   },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.12,
-      delayChildren: 0.08,
-    },
-  },
-};
+const VISIBLE = 3;
+const CYCLE_MS = 4200;
 
-const cardVariants = {
-  hidden: {
-    opacity: 0,
-    y: 48,
-    scale: 0.94,
-    filter: 'blur(8px)',
-  },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    filter: 'blur(0px)',
-    transition: {
-      duration: 0.7,
-      ease: [0.16, 1, 0.3, 1] as const,
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: -20,
-    scale: 0.95,
-    filter: 'blur(6px)',
-    transition: {
-      duration: 0.25,
-      ease: 'easeIn' as const,
-    },
-  },
-};
+function TalentCard({
+  talent,
+  availabilityLabel,
+  requestLabel,
+  onAsk,
+}: {
+  talent: TalentProfile;
+  availabilityLabel: string;
+  requestLabel: string;
+  onAsk: () => void;
+}) {
+  return (
+    <article className="group relative flex h-full flex-col justify-between overflow-hidden rounded-[1.4rem] border border-border/80 bg-surface/80 p-4 shadow-sm backdrop-blur-sm min-[340px]:p-5">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/35 to-transparent" />
+      <div className="relative z-10">
+        <div className="flex items-start justify-between gap-2 min-[340px]:gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br text-sm font-bold text-white shadow-sm ring-2 ring-border/50 min-[340px]:h-12 min-[340px]:w-12 ${talent.avatarGradient}`}
+            >
+              {talent.avatarSrc ? (
+                <Image src={talent.avatarSrc} alt={talent.name} fill sizes="48px" className="object-cover object-top" />
+              ) : (
+                talent.initials
+              )}
+              <span className="absolute -bottom-0.5 -right-0.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-surface-elevated bg-surface-elevated">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+              </span>
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h3 className="truncate text-sm font-bold text-foreground min-[340px]:text-base">{talent.name}</h3>
+                <BadgeCheck className="h-4 w-4 shrink-0 fill-brand/20 text-brand" />
+              </div>
+              <p className="line-clamp-1 text-xs font-medium text-muted">{talent.role}</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+            <span>{talent.rating}</span>
+          </div>
+        </div>
+
+        <div className="mt-3.5 rounded-xl border border-border/70 bg-surface/90 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand">
+              <Sparkles className="h-3 w-3" />
+              {talent.experience}
+            </span>
+            <Quote className="h-3.5 w-3.5 text-muted/40" />
+          </div>
+          <p className="mt-1.5 text-xs leading-relaxed text-foreground/85">&ldquo;{talent.highlight}&rdquo;</p>
+        </div>
+
+        <div className="mt-3.5 flex flex-wrap gap-1.5">
+          {talent.skills.map((skill) => (
+            <span key={skill} className="rounded-lg border border-border/80 bg-surface px-2 py-0.5 text-[10px] font-semibold text-foreground/85">
+              {skill}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative z-10 mt-5 flex items-center justify-between border-t border-border/70 pt-3">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+          </span>
+          {availabilityLabel}
+        </span>
+        <button type="button" onClick={onAsk} className="inline-flex items-center gap-1 text-xs font-bold text-brand transition-colors hover:text-brand-strong">
+          <span>{requestLabel}</span>
+          <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </article>
+  );
+}
 
 export function TalentShowcaseGrid() {
   const { open } = useModal();
   const { t } = useLocale();
   const [filter, setFilter] = useState('all');
+  const [cursor, setCursor] = useState(0);
+  const [paused, setPaused] = useState(false);
   const reduce = useReducedMotion();
-  const gridSectionRef = useRef<HTMLDivElement>(null);
-  const inView = useInView(gridSectionRef, { once: true, margin: '-60px 0px' });
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(sectionRef, { margin: '-80px 0px' });
 
   const categories = [
     { id: 'all', label: t('home.talent.allRoles'), short: t('home.talent.all'), icon: Users },
-    {
-      id: 'office',
-      label: t('home.talent.officeLong'),
-      short: t('home.talent.office'),
-      icon: BriefcaseBusiness,
-    },
-    {
-      id: 'trades',
-      label: t('home.talent.tradesLong'),
-      short: t('home.talent.trades'),
-      icon: HardHat,
-    },
+    { id: 'office', label: t('home.talent.officeLong'), short: t('home.talent.office'), icon: BriefcaseBusiness },
+    { id: 'trades', label: t('home.talent.tradesLong'), short: t('home.talent.trades'), icon: HardHat },
   ];
 
   const availabilityLabel = (key: TalentProfile['availability']) => {
@@ -198,14 +231,29 @@ export function TalentShowcaseGrid() {
     return t('home.talent.availableNow');
   };
 
-  const filteredTalent =
-    filter === 'all'
-      ? TALENT_PROFILES
-      : TALENT_PROFILES.filter((talent) => talent.category === filter);
+  const pool = useMemo(
+    () => (filter === 'all' ? TALENT_PROFILES : TALENT_PROFILES.filter((talent) => talent.category === filter)),
+    [filter],
+  );
+
+  useEffect(() => {
+    setCursor(0);
+  }, [filter]);
+
+  useEffect(() => {
+    if (!inView || paused || reduce || pool.length <= VISIBLE) return;
+    const id = window.setInterval(() => setCursor((c) => (c + 1) % pool.length), CYCLE_MS);
+    return () => window.clearInterval(id);
+  }, [inView, paused, reduce, pool.length]);
+
+  const visible = useMemo(() => {
+    if (pool.length === 0) return [];
+    if (reduce || pool.length <= VISIBLE) return pool.slice(0, VISIBLE);
+    return Array.from({ length: Math.min(VISIBLE, pool.length) }, (_, i) => pool[(cursor + i) % pool.length]);
+  }, [pool, cursor, reduce]);
 
   return (
     <section className="relative overflow-hidden border-t border-border/80 bg-surface/40 py-12 min-[340px]:py-20 sm:py-24 lg:py-28">
-      {/* Background ambient lighting */}
       <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,var(--hero-glow),transparent_70%)] opacity-60" />
 
       <div className="container-page relative z-10">
@@ -215,17 +263,13 @@ export function TalentShowcaseGrid() {
               <Flame className="h-3.5 w-3.5 text-amber-500" />
               {t('home.talent.pill')}
             </motion.div>
-
             <h2 className="display-title mt-3 text-[1.55rem] leading-tight text-foreground min-[340px]:mt-4 min-[340px]:text-3xl sm:text-4xl lg:text-5xl">
               {t('home.talent.title')}
             </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-sm text-muted min-[340px]:mt-4 min-[340px]:text-base sm:text-lg">
-              {t('home.talent.body')}
-            </p>
+            <p className="mx-auto mt-3 max-w-2xl text-sm text-muted min-[340px]:mt-4 min-[340px]:text-base sm:text-lg">{t('home.talent.body')}</p>
           </div>
         </Reveal>
 
-        {/* Filter categories tabs */}
         <div className="-mx-1 mt-7 overflow-x-auto px-1 scrollbar-none min-[340px]:mt-10">
           <div className="flex w-max min-w-full items-center justify-start gap-2 min-[480px]:w-auto min-[480px]:flex-wrap min-[480px]:justify-center">
             {categories.map((cat) => {
@@ -239,17 +283,11 @@ export function TalentShowcaseGrid() {
                   whileTap={reduce ? undefined : { scale: 0.96 }}
                   onClick={() => setFilter(cat.id)}
                   className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-colors min-[340px]:gap-2 min-[340px]:px-4 min-[340px]:py-2 min-[340px]:text-xs sm:text-sm ${
-                    isSelected
-                      ? 'text-white dark:text-[#071f14]'
-                      : 'border border-border/80 bg-surface-elevated text-muted hover:border-brand/40 hover:text-foreground'
+                    isSelected ? 'text-white dark:text-[#071f14]' : 'border border-border/80 bg-surface-elevated text-muted hover:border-brand/40 hover:text-foreground'
                   }`}
                 >
                   {isSelected ? (
-                    <motion.span
-                      layoutId="talent-filter-pill"
-                      className="absolute inset-0 rounded-full bg-brand shadow-md shadow-brand/20"
-                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                    />
+                    <motion.span layoutId="talent-filter-pill" className="absolute inset-0 rounded-full bg-brand shadow-md shadow-brand/20" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />
                   ) : null}
                   <span className="relative z-10 inline-flex items-center gap-1.5 min-[340px]:gap-2">
                     <Icon className="h-3.5 w-3.5" />
@@ -262,145 +300,63 @@ export function TalentShowcaseGrid() {
           </div>
         </div>
 
-        {/* Animated Staggered Cards Grid */}
-        <div ref={gridSectionRef} className="mt-8 min-[340px]:mt-12">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={filter}
-              variants={containerVariants}
-              initial={reduce ? 'show' : 'hidden'}
-              animate={reduce ? 'show' : inView ? 'show' : 'hidden'}
-              className="card-grid grid gap-4 min-[340px]:gap-6 sm:grid-cols-2 lg:grid-cols-3"
-            >
-              {filteredTalent.map((talent, index) => (
-                <motion.article
-                  key={talent.id}
-                  variants={cardVariants}
-                  whileHover={
-                    reduce
-                      ? undefined
-                      : {
-                          y: -8,
-                          scale: 1.015,
-                          transition: { type: 'spring', stiffness: 350, damping: 22 },
-                        }
-                  }
-                  className="group relative flex flex-col justify-between overflow-hidden rounded-[1.4rem] border border-border/80 bg-surface/70 p-4 backdrop-blur-sm transition-colors duration-300 hover:border-brand/50 hover:bg-surface-elevated/95 hover:shadow-xl hover:shadow-brand/5 min-[340px]:p-5 sm:min-h-[20rem]"
+        {/* WhatsApp-style chat stream: cards rise in and float out */}
+        <div
+          ref={sectionRef}
+          className="relative mx-auto mt-8 max-w-5xl min-[340px]:mt-12"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onFocusCapture={() => setPaused(true)}
+          onBlurCapture={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setPaused(false);
+          }}
+        >
+          <div className="pointer-events-none absolute inset-x-8 top-0 z-20 h-10 bg-gradient-to-b from-surface/40 to-transparent" />
+          <div className="pointer-events-none absolute inset-x-8 bottom-0 z-20 h-10 bg-gradient-to-t from-surface/40 to-transparent" />
+
+          <div className="grid min-h-[22rem] gap-4 min-[340px]:min-h-[24rem] min-[340px]:gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <AnimatePresence mode="popLayout" initial={false}>
+              {visible.map((talent, slot) => (
+                <motion.div
+                  key={`${filter}-${talent.id}`}
+                  layout
+                  initial={reduce ? false : { opacity: 0, y: 64, scale: 0.94, filter: 'blur(8px)' }}
+                  animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                  exit={reduce ? undefined : { opacity: 0, y: -56, scale: 0.96, filter: 'blur(6px)' }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 28, delay: reduce ? 0 : slot * 0.04 }}
+                  className="h-full"
                 >
-                  {/* Subtle top sheen reflection */}
-                  <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-                  {/* Ambient hover glow */}
-                  <div className="pointer-events-none absolute -right-20 -top-20 h-44 w-44 rounded-full bg-[radial-gradient(circle,var(--hero-glow),transparent_70%)] opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-
-                  <div className="relative z-10">
-                    {/* Header: Avatar, Name, Role, Rating */}
-                    <div className="flex items-start justify-between gap-2 min-[340px]:gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div
-                          className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br text-sm font-bold text-white shadow-sm ring-2 ring-border/50 transition-transform duration-300 group-hover:scale-105 min-[340px]:h-12 min-[340px]:w-12 ${talent.avatarGradient}`}
-                        >
-                          {talent.avatarSrc ? (
-                            <Image
-                              src={talent.avatarSrc}
-                              alt={talent.name}
-                              fill
-                              sizes="48px"
-                              className="object-cover object-top"
-                            />
-                          ) : (
-                            talent.initials
-                          )}
-                          {/* Live pulse indicator */}
-                          <span className="absolute -bottom-0.5 -right-0.5 z-10 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-surface-elevated bg-surface-elevated">
-                            <span className="relative flex h-2 w-2">
-                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                            </span>
-                          </span>
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <h3 className="truncate text-sm font-bold text-foreground min-[340px]:text-base">
-                              {talent.name}
-                            </h3>
-                            <BadgeCheck className="h-4 w-4 shrink-0 fill-brand/20 text-brand" />
-                          </div>
-                          <p className="line-clamp-1 text-xs font-medium text-muted">
-                            {talent.role}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Rating pill */}
-                      <div className="flex shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400">
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        <span>{talent.rating}</span>
-                      </div>
-                    </div>
-
-                    {/* Experience & Highlight Quote Box */}
-                    <div className="mt-3.5 rounded-xl border border-border/70 bg-surface/90 p-3 transition-colors duration-200 group-hover:border-brand/30 group-hover:bg-surface-elevated">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand">
-                          <Sparkles className="h-3 w-3" />
-                          {talent.experience}
-                        </span>
-                        <Quote className="h-3.5 w-3.5 text-muted/40" />
-                      </div>
-                      <p className="mt-1.5 text-xs leading-relaxed text-foreground/85">
-                        &ldquo;{talent.highlight}&rdquo;
-                      </p>
-                    </div>
-
-                    {/* Skill chips */}
-                    <div className="mt-3.5 flex flex-wrap gap-1.5">
-                      {talent.skills.map((skill) => (
-                        <span
-                          key={skill}
-                          className="rounded-lg border border-border/80 bg-surface px-2 py-0.5 text-[10px] font-semibold text-foreground/85 transition-all duration-200 hover:border-brand/40 hover:bg-brand-soft/40 hover:text-brand"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Card Footer: Availability & "Ask for this person" CTA */}
-                  <div className="relative z-10 mt-5 flex items-center justify-between border-t border-border/70 pt-3">
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      <span className="relative flex h-2 w-2">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                      </span>
-                      {availabilityLabel(talent.availability)}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => open('hire')}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-brand transition-colors hover:text-brand-strong"
-                    >
-                      <span>{t('home.talent.request')}</span>
-                      <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
-                    </button>
-                  </div>
-                </motion.article>
+                  <TalentCard
+                    talent={talent}
+                    availabilityLabel={availabilityLabel(talent.availability)}
+                    requestLabel={t('home.talent.request')}
+                    onAsk={() => open('hire')}
+                  />
+                </motion.div>
               ))}
-            </motion.div>
-          </AnimatePresence>
+            </AnimatePresence>
+          </div>
+
+          {!reduce && pool.length > VISIBLE ? (
+            <div className="mt-5 flex items-center justify-center gap-1.5">
+              {pool.map((p, i) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  aria-label={`Show ${p.name}`}
+                  onClick={() => setCursor(i)}
+                  className={`h-1.5 rounded-full transition-all ${i === cursor ? 'w-6 bg-brand' : 'w-1.5 bg-border hover:bg-muted'}`}
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <Reveal delay={0.12}>
           <div className="mt-8 text-center min-[340px]:mt-12">
             <p className="text-xs leading-relaxed text-muted min-[340px]:text-sm">
               {t('home.talent.footer')}{' '}
-              <button
-                type="button"
-                onClick={() => open('hire')}
-                className="font-semibold text-brand underline underline-offset-4 hover:text-brand-strong"
-              >
+              <button type="button" onClick={() => open('hire')} className="font-semibold text-brand underline underline-offset-4 hover:text-brand-strong">
                 {t('home.talent.footerCta')}
               </button>
             </p>

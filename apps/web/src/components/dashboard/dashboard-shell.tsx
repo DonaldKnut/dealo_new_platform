@@ -62,6 +62,8 @@ type NavItem = {
   labelKey: TranslationKey;
   icon: typeof LayoutDashboard;
   help: string;
+  /** Prefer this when present so nav help follows the language switcher. */
+  helpKey?: TranslationKey;
   /** Spotlight target group for the dashboard tour */
   tour?: 'hiring' | 'admin';
 };
@@ -181,27 +183,20 @@ const employerNav: NavItem[] = [
     href: '/dashboard',
     labelKey: 'dash.nav.overview',
     icon: LayoutDashboard,
-    help: 'A simple summary of your hiring pipeline.',
-  },
-  {
-    href: '/dashboard/ats',
-    labelKey: 'dash.nav.ats',
-    icon: Kanban,
-    help: 'Post jobs, get applicants and move them through your hiring steps. Free in early access.',
-    tour: 'hiring',
+    help: 'A simple summary of your open requests and shortlists.',
   },
   {
     href: '/dashboard/requests',
     labelKey: 'dash.nav.myRequests',
     icon: Briefcase,
-    help: 'Hiring requests your organization submitted.',
+    help: 'Talent requests your organisation sent to Dealo.',
     tour: 'hiring',
   },
   {
     href: '/dashboard/talent',
     labelKey: 'dash.nav.shortlists',
     icon: Users,
-    help: 'Vetted candidates shared with you for open roles.',
+    help: 'Checked candidates Dealo shared with you for open roles.',
     tour: 'hiring',
   },
   {
@@ -209,12 +204,6 @@ const employerNav: NavItem[] = [
     labelKey: 'dash.nav.organization',
     icon: Building2,
     help: 'Company profile and team membership.',
-  },
-  {
-    href: '/dashboard/developer',
-    labelKey: 'dash.nav.developer',
-    icon: KeyRound,
-    help: 'Sandbox API keys to connect Dealo to your own tools.',
   },
   {
     href: '/dashboard/support',
@@ -260,6 +249,7 @@ const talentNav: NavItem[] = [
     labelKey: 'dash.nav.jobAgent',
     icon: Radar,
     help: 'Your AI agent finds jobs that fit your CV around the clock and applies for you.',
+    helpKey: 'dash.nav.jobAgentHelp',
   },
   {
     href: '/dashboard/applications',
@@ -483,7 +473,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <span className="relative z-10 min-w-0 flex-1 truncate transition-transform duration-300 ease-out group-hover:translate-x-0.5">
                 {label}
               </span>
-              <InfoTooltip label={label} content={item.help} className="relative z-10 opacity-70" />
+              <InfoTooltip label={label} content={item.helpKey ? t(item.helpKey) : item.help} className="relative z-10 opacity-70" />
             </>
           ) : null}
         </Link>
@@ -690,7 +680,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                       onClick={openHireRequest}
                       className="btn-primary hidden h-10 px-4 text-sm lg:inline-flex"
                     >
-                      <Plus className="h-4 w-4" /> Request a hire
+                      <Plus className="h-4 w-4" /> Request talent
                     </button>
                   ) : null}
                   <NotificationCenter />
@@ -825,7 +815,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                     }}
                     className="btn-primary mb-3 w-full text-sm"
                   >
-                    <Plus className="h-4 w-4" /> Request a hire
+                    <Plus className="h-4 w-4" /> Request talent
                   </button>
                 ) : null}
                 <div className="-mx-1 min-h-0 flex-1 overflow-y-auto overscroll-contain px-1">

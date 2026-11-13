@@ -18,9 +18,12 @@ export const RESUME_FONTS = [
   { id: 'lato', name: 'Lato', premium: false },
   { id: 'inter', name: 'Inter', premium: true },
   { id: 'poppins', name: 'Poppins', premium: true },
+  { id: 'dmsans', name: 'DM Sans', premium: true },
+  { id: 'librefranklin', name: 'Libre Franklin', premium: true },
   { id: 'lora', name: 'Lora', premium: true },
   { id: 'merriweather', name: 'Merriweather', premium: true },
   { id: 'ptserif', name: 'PT Serif', premium: true },
+  { id: 'sourceserif', name: 'Source Serif', premium: true },
 ] as const;
 
 export type ResumeFontId = (typeof RESUME_FONTS)[number]['id'];

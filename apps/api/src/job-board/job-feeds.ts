@@ -35,40 +35,7 @@ export const FEED_INFO: Record<FeedSource, { name: string; url: string; minInter
   careerjet: { name: 'Careerjet', url: 'https://www.careerjet.com.ng', minIntervalMs: 3 * 3_600_000, needs: 'careerjetAffid' },
 };
 
-/** Places that mean "in Nigeria" when someone filters by Nigeria. */
-export const NIGERIA_PLACES = [
-  'Nigeria',
-  'Lagos',
-  'Abuja',
-  'FCT',
-  'Port Harcourt',
-  'Ibadan',
-  'Kano',
-  'Enugu',
-  'Kaduna',
-  'Benin City',
-  'Ikeja',
-  'Lekki',
-  'Victoria Island',
-  'Warri',
-  'Uyo',
-  'Calabar',
-  'Owerri',
-  'Abeokuta',
-  'Ilorin',
-  'Onitsha',
-  'Asaba',
-  'Akure',
-  'Osogbo',
-  'Jos',
-  'Ogun',
-  'Rivers',
-  'Delta',
-  'Anambra',
-  'Oyo',
-];
-
-export const isNigeria = (location: string) => /^(nigeria|ng|naija)$/i.test(location.trim());
+export { NIGERIA_PLACES, isNigeria } from './nigeria-places';
 
 const USER_AGENT = 'DealoJobBoard/1.0 (+https://dealonetwork.com/jobs)';
 

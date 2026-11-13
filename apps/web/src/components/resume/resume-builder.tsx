@@ -534,12 +534,14 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
             <button
               type="button"
               onClick={() => setPremiumSheet({})}
-              className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-300/15 to-brand/10 p-3 text-left"
+              className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-300/15 via-surface-elevated to-brand/10 p-3.5 text-left shadow-sm"
             >
-              <span className="text-xl">✨</span>
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-300 to-amber-500 text-[#3b2400] shadow-md shadow-amber-500/25">
+                <Palette className="h-4 w-4" />
+              </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-foreground">Go Premium</span>
-                <span className="block text-xs text-muted">AI writing, 4 more templates, cover letters and no footer.</span>
+                <span className="block text-sm font-semibold text-foreground">Unlock Dealo Premium</span>
+                <span className="block text-xs text-muted">Editorial fonts, every template, AI writing, Job Agent boosts, clean PDF.</span>
               </span>
               <ArrowRight className="h-4 w-4 shrink-0 text-muted" />
             </button>
@@ -571,7 +573,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
                   </span>
                 ) : (
                   <span className="hidden items-center gap-1 rounded-md bg-amber-400/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 xl:inline-flex">
-                    ✨ Premium Clean PDF
+                    Premium clean PDF
                   </span>
                 )}
                 <button

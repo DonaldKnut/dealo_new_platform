@@ -32,12 +32,12 @@ export function EmployerOverview({
     <div className="dash-atmosphere space-y-8">
       <DashHero
         eyebrow="Employer"
-        title={`Hiring HQ for ${user.firstName}`}
+        title={`Welcome, ${user.firstName}`}
         subtitle={workspace.subcopy}
         actions={
           <>
             <button type="button" onClick={openHireRequest} className="btn-primary">
-              New hire request
+              Request talent
               <ArrowUpRight className="h-4 w-4" />
             </button>
             <Link href="/dashboard/requests" className="btn-secondary">
@@ -49,30 +49,30 @@ export function EmployerOverview({
 
       <div className="grid gap-3 min-[400px]:grid-cols-2 xl:grid-cols-4">
         <DashKpi
-          label="Active requests"
+          label="Open requests"
           value={String(workspace.kpis.activeRequests)}
-          hint="Open and in review with Dealo"
+          hint="Dealo is working on these"
           icon={Clock3}
           delay={0.02}
         />
         <DashKpi
-          label="Roles in flight"
+          label="Roles open"
           value={String(workspace.kpis.rolesInFlight)}
-          hint="Live openings on recent requests"
+          hint="Jobs from your recent requests"
           icon={Briefcase}
           delay={0.05}
         />
         <DashKpi
-          label="People requested"
+          label="People needed"
           value={String(workspace.kpis.peopleRequested)}
-          hint="Headcount across recent roles"
+          hint="Across your recent roles"
           icon={Users}
           delay={0.08}
         />
         <DashKpi
           label="Filled"
           value={String(workspace.kpis.filled)}
-          hint="Converted to hire"
+          hint="Roles we helped you fill"
           icon={CheckCircle2}
           delay={0.11}
         />
@@ -80,7 +80,7 @@ export function EmployerOverview({
 
       <div className="grid gap-5 xl:grid-cols-[1.25fr_1fr]">
         <DashPanel
-          title="Your hiring board"
+          title="Your requests"
           action={
             <Link href="/dashboard/requests" className="text-sm font-semibold text-brand">
               View all
@@ -89,9 +89,10 @@ export function EmployerOverview({
         >
           {workspace.recentRequests.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center">
-              <p className="text-sm text-muted">No hire requests yet.</p>
+              <p className="text-sm font-medium text-foreground">No requests yet</p>
+              <p className="mt-1 text-sm text-muted">Send a request → Dealo sends a shortlist of checked people.</p>
               <button type="button" onClick={openHireRequest} className="btn-primary mt-4 inline-flex">
-                Start a hire request
+                Request talent
               </button>
             </div>
           ) : (
@@ -115,7 +116,7 @@ export function EmployerOverview({
         <div className="space-y-5">
           <DashPanel title="Next best actions">
             {workspace.nextActions.length === 0 ? (
-              <p className="text-sm text-muted">You are caught up — Dealo will nudge you when shortlists land.</p>
+              <p className="text-sm text-muted">You are up to date. We will tell you when a shortlist is ready.</p>
             ) : (
               <div className="grid gap-2">
                 {workspace.nextActions.map((action) => (
@@ -135,7 +136,7 @@ export function EmployerOverview({
           >
             {workspace.shortlists.length === 0 ? (
               <p className="text-sm text-muted">
-                Candidate shortlists appear here once Dealo screens talent for your roles.
+                When Dealo finds people for your roles, their shortlists show up here.
               </p>
             ) : (
               <div className="space-y-3">
@@ -160,7 +161,7 @@ export function EmployerOverview({
       >
         {workspace.organizations.length === 0 ? (
           <p className="text-sm text-muted">
-            No company yet. Create your company account to invite your team and share hire requests.
+            No company yet. Create one to invite teammates and share talent requests.
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">

@@ -34,6 +34,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 
 import { AssistantMarkdown } from '@/components/assistant/markdown';
 import { useLocale } from '@/components/i18n/locale-context';
+import { useModal } from '@/components/modals/modal-context';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { ApiError, apiFetch } from '@/lib/api';
@@ -118,8 +119,11 @@ export function HelpWidget() {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
   const mobile = useIsMobile();
+  const { openModal } = useModal();
   const { user } = useAuthSession();
   const [open, setOpen] = useState(false);
+  /** Form modals (hire, login, contact…) own the screen — especially on phones. */
+  const yieldToModal = Boolean(openModal);
   const [expanded, setExpanded] = useState(false);
   const [view, setView] = useState<View>('chat');
   const [items, setItems] = useState<ChatItem[]>([]);
@@ -137,6 +141,13 @@ export function HelpWidget() {
   const whatsapp = whatsappHref(whatsappMessageFor(pathname, t('wa.prefill')));
   const onDashboard = pathname.startsWith('/dashboard');
   const big = expanded && !mobile;
+
+  useEffect(() => {
+    if (!yieldToModal) return;
+    setOpen(false);
+    setExpanded(false);
+    setNudge(false);
+  }, [yieldToModal]);
 
   // ------------------------------------------------------------------ persistence
 
@@ -341,6 +352,8 @@ export function HelpWidget() {
 
   // ------------------------------------------------------------------ render
 
+  if (yieldToModal) return null;
+
   return (
     <>
       <AnimatePresence>
@@ -413,7 +426,7 @@ export function HelpWidget() {
                   >
                     <div className={cn('mx-auto w-full px-3.5 py-5 sm:px-5', big && 'max-w-3xl')}>
                       {items.length === 0 ? (
-                        <EmptyState welcome={welcome} big={big} onAsk={(q) => void ask(q)} />
+                        <EmptyState welcome={welcome} big={big} whatsapp={whatsapp} onAsk={(q) => void ask(q)} />
                       ) : (
                         <div className="space-y-5">
                           {items.map((m, index) => (
@@ -695,7 +708,17 @@ function Header({
 
 // ----------------------------------------------------------------- empty state
 
-function EmptyState({ welcome, big, onAsk }: { welcome: AssistantWelcome | null; big: boolean; onAsk: (q: string) => void }) {
+function EmptyState({
+  welcome,
+  big,
+  whatsapp,
+  onAsk,
+}: {
+  welcome: AssistantWelcome | null;
+  big: boolean;
+  whatsapp: string | null;
+  onAsk: (q: string) => void;
+}) {
   return (
     <div className="flex flex-col items-center pt-2 text-center">
       <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 18 }} className="relative">
@@ -716,6 +739,27 @@ function EmptyState({ welcome, big, onAsk }: { welcome: AssistantWelcome | null;
       <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="mt-1.5 max-w-sm text-[12.5px] leading-relaxed text-muted">
         {welcome?.intro ?? 'Ask about hiring, jobs, CVs, the Dealo API, or anything you are stuck on.'}
       </motion.p>
+
+      {whatsapp ? (
+        <motion.a
+          href={whatsapp}
+          target="_blank"
+          rel="noopener noreferrer"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.16 }}
+          className="mt-4 flex w-full max-w-sm items-center gap-3 rounded-2xl border border-[#25D366]/35 bg-[#25D366]/10 px-3.5 py-3 text-left no-underline transition hover:border-[#25D366]/55 hover:bg-[#25D366]/15"
+        >
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#25D366] text-[#073b1f] shadow-sm">
+            <WhatsAppIcon className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-semibold text-foreground">Prefer WhatsApp?</span>
+            <span className="block text-[11.5px] text-muted">Chat with a Dealo person on WhatsApp instead.</span>
+          </span>
+          <ArrowUpRight className="h-4 w-4 shrink-0 text-[#128C7E] dark:text-[#25D366]" />
+        </motion.a>
+      ) : null}
 
       <div className={cn('mt-5 grid w-full gap-2.5', big ? 'grid-cols-4' : 'grid-cols-2')}>
         {CAPABILITIES.map((c, i) => (

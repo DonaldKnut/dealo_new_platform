@@ -710,6 +710,8 @@ model Job {
   closedAt         DateTime?
   /// Questions and scoring guide from the interview kit agent.
   interviewKit     Json?
+  /// The partner's own id when the job was pushed through the partner API.
+  externalRef      String?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -718,6 +720,7 @@ model Job {
 
   @@unique([organizationId, slug])
   @@index([organizationId, status])
+  @@index([organizationId, externalRef])
 }
 
 enum ApplicationStatus {
@@ -935,6 +938,84 @@ model JobFeedSync {
   lastOkAt  DateTime?
   lastCount Int       @default(0)
   lastError String?
+}
+
+/// A job seeker's background Job Agent: what it hunts for and how freely it may apply.
+model JobAgentProfile {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String    @unique @db.ObjectId
+  enabled         Boolean   @default(false)
+  mode            String    @default("REVIEW")
+  resumeId        String?   @db.ObjectId
+  targetTitles    String[]
+  locations       String[]
+  remote          String    @default("ANY")
+  employmentTypes String[]
+  mustHave        String[]
+  exclude         String[]
+  minScore        Int       @default(70)
+  dailyLimit      Int       @default(5)
+  coverNotes      Boolean   @default(true)
+  emailApply      Boolean   @default(false)
+  phone           String?
+  /// The PDF the agent attaches. It is made in the browser from the chosen CV, because CV designs render there.
+  cvFileName      String?
+  cvData          Bytes?
+  cvUpdatedAt     DateTime?
+  consentAt       DateTime?
+  lastRunAt       DateTime?
+  nextRunAt       DateTime?
+  /// Only one API instance may run a profile at a time; the lease expires on its own if a run crashes.
+  leaseUntil      DateTime?
+  lastError       String?
+  lastDigestAt    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([enabled, nextRunAt])
+}
+
+/// One job the agent found for one person. `listingId` uses the job board ids ("dealo_…" / "ext_…").
+model JobAgentMatch {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String    @db.ObjectId
+  listingId     String
+  kind          String
+  channel       String
+  title         String
+  company       String
+  location      String
+  url           String
+  applyEmail    String?
+  score         Int
+  reasons       String[]
+  gaps          String[]
+  coverNote     String?
+  status        String    @default("SUGGESTED")
+  error         String?
+  applicationId String?   @db.ObjectId
+  appliedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, listingId])
+  @@index([userId, status, createdAt])
+  @@index([userId, appliedAt])
+}
+
+model JobAgentRun {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String    @db.ObjectId
+  trigger    String
+  scanned    Int       @default(0)
+  matched    Int       @default(0)
+  applied    Int       @default(0)
+  queued     Int       @default(0)
+  error      String?
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([userId, startedAt])
 }
 
 /// `listingId` is "dealo_<jobId>" or "ext_<externalJobId>"; title/company are kept so the entry survives the listing.

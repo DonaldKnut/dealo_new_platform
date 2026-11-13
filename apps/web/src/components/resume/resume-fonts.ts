@@ -7,9 +7,12 @@ export const PDF_FAMILY: Record<ResumeFontId, string> = {
   lato: 'Lato',
   inter: 'Inter',
   poppins: 'Poppins',
+  dmsans: 'DM Sans',
+  librefranklin: 'Libre Franklin',
   lora: 'Lora',
   merriweather: 'Merriweather',
   ptserif: 'PT Serif',
+  sourceserif: 'Source Serif',
 };
 
 /** The same fonts for the on-screen preview. */
@@ -19,9 +22,12 @@ export const CSS_FAMILY: Record<ResumeFontId, string> = {
   lato: 'DealoResumeLato, Arial, sans-serif',
   inter: 'DealoResumeInter, Arial, sans-serif',
   poppins: 'DealoResumePoppins, Arial, sans-serif',
+  dmsans: 'DealoResumeDMSans, Arial, sans-serif',
+  librefranklin: 'DealoResumeLibreFranklin, Arial, sans-serif',
   lora: 'DealoResumeLora, Georgia, serif',
   merriweather: 'DealoResumeMerriweather, Georgia, serif',
   ptserif: 'DealoResumePTSerif, Georgia, serif',
+  sourceserif: 'DealoResumeSourceSerif, Georgia, serif',
 };
 
 /** How each font feels, shown under its name in the picker. */
@@ -31,18 +37,24 @@ export const FONT_NOTE: Record<ResumeFontId, string> = {
   lato: 'Warm and modern',
   inter: 'Crisp, tech-friendly',
   poppins: 'Bold and confident',
+  dmsans: 'Geometric, premium UI',
+  librefranklin: 'Sharp editorial sans',
   lora: 'Elegant serif',
   merriweather: 'Easy to read, editorial',
   ptserif: 'Traditional, professional',
+  sourceserif: 'Refined book serif',
 };
 
 const FILES: Array<{ id: Exclude<ResumeFontId, 'helvetica' | 'times'>; family: string; css: string }> = [
   { id: 'lato', family: 'Lato', css: 'DealoResumeLato' },
   { id: 'inter', family: 'Inter', css: 'DealoResumeInter' },
   { id: 'poppins', family: 'Poppins', css: 'DealoResumePoppins' },
+  { id: 'dmsans', family: 'DM Sans', css: 'DealoResumeDMSans' },
+  { id: 'librefranklin', family: 'Libre Franklin', css: 'DealoResumeLibreFranklin' },
   { id: 'lora', family: 'Lora', css: 'DealoResumeLora' },
   { id: 'merriweather', family: 'Merriweather', css: 'DealoResumeMerriweather' },
   { id: 'ptserif', family: 'PT Serif', css: 'DealoResumePTSerif' },
+  { id: 'sourceserif', family: 'Source Serif', css: 'DealoResumeSourceSerif' },
 ];
 
 export const PREVIEW_FONT_CSS = FILES.flatMap((f) =>

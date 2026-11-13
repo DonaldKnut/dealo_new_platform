@@ -121,16 +121,16 @@ export function DashboardRequestsPanel() {
         <div>
           <p className="eyebrow">Requests</p>
           <h1 className="display-title mt-2 text-[1.65rem] min-[340px]:text-3xl">
-            {isAdmin ? 'Hiring requests' : 'My requests'}
+            {isAdmin ? 'Talent requests' : 'My requests'}
           </h1>
           <p className="mt-2 text-sm text-muted">
             {isAdmin
-              ? 'Review and advance hire inquiries through the pipeline.'
-              : 'Track the status of your open hiring requests.'}
+              ? 'Open each request, update its status, and send a shortlist when ready.'
+              : 'See where each request stands. Dealo updates this as we work.'}
           </p>
         </div>
         <button type="button" onClick={openHireRequest} className="btn-primary w-full min-[400px]:w-auto">
-          <Plus className="h-4 w-4" /> New request
+          <Plus className="h-4 w-4" /> Request talent
         </button>
       </div>
 
@@ -156,7 +156,9 @@ export function DashboardRequestsPanel() {
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-muted">
-                    No requests yet.
+                    {isAdmin
+                      ? 'No talent requests yet.'
+                      : 'No requests yet. Tap Request talent — Dealo will send a shortlist.'}
                   </td>
                 </tr>
               ) : (
@@ -188,7 +190,7 @@ export function DashboardRequestsPanel() {
                           onClick={() => void createJob(row.id)}
                           className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-brand hover:underline disabled:opacity-60"
                         >
-                          <Kanban className="h-3 w-3" /> {jobFor === row.id ? 'Creating job…' : 'Make an ATS job'}
+                          <Kanban className="h-3 w-3" /> {jobFor === row.id ? 'Creating job…' : 'Create Dealo job'}
                         </button>
                       ) : null}
                     </td>

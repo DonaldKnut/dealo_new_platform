@@ -89,6 +89,10 @@ export class DashboardService {
       recentUsers,
       newThisWeek,
       convertedThisWeek,
+      partnerJobsOpen,
+      partnerJobsTotal,
+      partnerApplications,
+      partnerOrgs,
     ] = await Promise.all([
       this.prisma.hireInquiry.count(),
       this.prisma.hireInquiry.count({ where: { status: HireInquiryStatus.NEW } }),
@@ -150,6 +154,18 @@ export class DashboardService {
       this.prisma.hireInquiry.count({
         where: { status: HireInquiryStatus.CONVERTED, updatedAt: { gte: sevenDaysAgo } },
       }),
+      this.prisma.job.count({
+        where: { externalRef: { isSet: true }, status: 'OPEN' },
+      }),
+      this.prisma.job.count({ where: { externalRef: { isSet: true } } }),
+      this.prisma.application.count({
+        where: { job: { externalRef: { isSet: true } } },
+      }),
+      this.prisma.job.findMany({
+        where: { externalRef: { isSet: true } },
+        select: { organizationId: true },
+        distinct: ['organizationId'],
+      }),
     ]);
 
     const conversionRate =
@@ -209,6 +225,12 @@ export class DashboardService {
         publishedPosts,
         draftPosts,
         newsletterSent,
+      },
+      partners: {
+        orgs: partnerOrgs.length,
+        jobsOpen: partnerJobsOpen,
+        jobsTotal: partnerJobsTotal,
+        applications: partnerApplications,
       },
       attention,
       recentRequests: recentRequests.map((item) => this.mapRequest(item)),

@@ -57,6 +57,12 @@ export type AdminWorkspace = {
     draftPosts: number;
     newsletterSent: number;
   };
+  partners: {
+    orgs: number;
+    jobsOpen: number;
+    jobsTotal: number;
+    applications: number;
+  };
   attention: Array<{ label: string; href: string; tone: 'urgent' | 'watch' }>;
   recentRequests: DashboardRequestSummary[];
   recentUsers: Array<{

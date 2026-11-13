@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DEFAULT_JOB_STAGES, type JobInput } from '@dealo/shared';
+import { DEFAULT_JOB_STAGES, type ApiJobSyncInput, type JobInput } from '@dealo/shared';
 import { ApplicationStatus, JobStatus, WorkspaceRole, type Job } from '@prisma/client';
 
 import type { AuthUser } from '../auth/auth.types';
@@ -154,6 +154,68 @@ export class JobsService {
         closedAt: status === JobStatus.CLOSED ? new Date() : null,
       },
     });
+  }
+
+  /**
+   * Partner sync: creates or updates each job by the partner's own id and opens or closes it.
+   * Opening respects the workspace's open-job limit; jobs over the limit are reported, not dropped silently.
+   */
+  async syncFromPartner(orgId: string, items: ApiJobSyncInput['jobs'], user: AuthUser) {
+    const access = await this.access.require(orgId, user, WorkspaceRole.RECRUITER);
+    let open = await this.prisma.job.count({ where: { organizationId: orgId, status: JobStatus.OPEN } });
+    const results: { externalId: string; jobId: string | null; status: string; error?: string }[] = [];
+    for (const item of items) {
+      try {
+        this.checkSalary(item);
+        const existing = await this.prisma.job.findFirst({ where: { organizationId: orgId, externalRef: item.externalId } });
+        const wantsOpen = item.status === 'OPEN';
+        if (wantsOpen && existing?.status !== JobStatus.OPEN && open >= access.organization.maxOpenJobs) {
+          results.push({ externalId: item.externalId, jobId: existing?.id ?? null, status: 'SKIPPED', error: `Open-job limit (${access.organization.maxOpenJobs}) reached` });
+          continue;
+        }
+        const data = {
+          title: item.title,
+          roleFamily: item.roleFamily,
+          location: item.location,
+          workArrangement: item.workArrangement,
+          employmentType: item.employmentType,
+          salaryMinMinor: item.salaryMinMinor ?? null,
+          salaryMaxMinor: item.salaryMaxMinor ?? null,
+          currency: item.currency,
+          description: item.description,
+          mustHaves: item.mustHaves,
+          status: wantsOpen ? JobStatus.OPEN : JobStatus.CLOSED,
+          closedAt: wantsOpen ? null : new Date(),
+        };
+        const job = existing
+          ? await this.prisma.job.update({
+              where: { id: existing.id },
+              data: {
+                ...data,
+                slug: item.title === existing.title ? existing.slug : await this.uniqueSlug(orgId, item.title, existing.id),
+                publishedAt: wantsOpen ? existing.publishedAt ?? new Date() : existing.publishedAt,
+              },
+            })
+          : await this.prisma.job.create({
+              data: {
+                ...data,
+                organizationId: orgId,
+                externalRef: item.externalId,
+                slug: await this.uniqueSlug(orgId, item.title),
+                stages: normalizeStages(item.stages),
+                hiringManagerIds: [],
+                createdById: user.id,
+                publishedAt: wantsOpen ? new Date() : null,
+              },
+            });
+        if (wantsOpen && existing?.status !== JobStatus.OPEN) open += 1;
+        if (!wantsOpen && existing?.status === JobStatus.OPEN) open -= 1;
+        results.push({ externalId: item.externalId, jobId: job.id, status: job.status });
+      } catch (error) {
+        results.push({ externalId: item.externalId, jobId: null, status: 'FAILED', error: error instanceof Error ? error.message : 'Could not save this job' });
+      }
+    }
+    return { results, synced: results.filter((r) => r.status === 'OPEN' || r.status === 'CLOSED').length };
   }
 
   async duplicate(orgId: string, jobId: string, user: AuthUser) {

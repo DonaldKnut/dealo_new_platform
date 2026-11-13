@@ -1,6 +1,7 @@
 export interface EmailAttachment {
   filename: string;
-  content: string;
+  /** Text, or raw bytes for binary files such as PDFs. */
+  content: string | Buffer;
   contentType?: string;
 }
 

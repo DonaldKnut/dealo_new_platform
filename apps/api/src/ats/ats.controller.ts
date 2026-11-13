@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Res,
   UploadedFile,
@@ -46,7 +47,9 @@ import {
   type UpdateWorkspaceInput,
   ApiScope,
   apiApplicationSchema,
+  apiJobSyncSchema,
   apiMoveStageSchema,
+  type ApiJobSyncInput,
   bulkEmailSchema,
   emailTemplateSchema,
   placementFromApplicationSchema,
@@ -515,6 +518,18 @@ export class AtsApiController {
     return this.jobs.list(this.orgId(user), user);
   }
 
+  @Put('jobs/sync')
+  @RequireScopes(ApiScope.JOBS_WRITE)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Partner sync: create, update, open or close up to 100 jobs by your own externalId',
+    description:
+      'Open jobs go live on the Dealo job board with Easy Apply, so job seekers and their Dealo Job Agents can apply. Each application fires the application.created webhook; fetch details with GET /ats-api/applications/{id} and the CV with GET /ats-api/applications/{id}/cv.',
+  })
+  syncJobs(@CurrentUser() user: AuthUser, @Body(new ZodValidationPipe(apiJobSyncSchema)) body: ApiJobSyncInput) {
+    return this.jobs.syncFromPartner(this.orgId(user), body.jobs, user);
+  }
+
   @Get('jobs/:jobId/applications')
   @RequireScopes(ApiScope.APPLICATIONS_READ)
   @ApiOperation({ summary: 'Applicants for one job (status=ACTIVE|HIRED|REJECTED)' })
@@ -526,6 +541,13 @@ export class AtsApiController {
   @RequireScopes(ApiScope.APPLICATIONS_READ)
   getApplication(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.applications.detail(this.orgId(user), id, user);
+  }
+
+  @Get('applications/:id/cv')
+  @RequireScopes(ApiScope.APPLICATIONS_READ)
+  @ApiOperation({ summary: 'Download the CV the applicant (or their Job Agent) sent' })
+  async applicationCv(@CurrentUser() user: AuthUser, @Param('id') id: string, @Res() res: Response) {
+    sendFile(res, await this.applications.readApplicationCv(this.orgId(user), id, user));
   }
 
   @Post('jobs/:jobId/applications')

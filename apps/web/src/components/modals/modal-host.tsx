@@ -22,8 +22,8 @@ export function ModalHost() {
       <FormModalShell
         open={openModal === 'hire'}
         onClose={close}
-        title="Tell us who you need"
-        subtitle="Tell us about the job. Dealo finds people and helps you hire."
+        title="Request talent"
+        subtitle="Share the role briefly. Dealo sources checked people and helps you hire."
         promoFill
         illustration={<HireIllustration />}
       >

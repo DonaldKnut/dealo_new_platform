@@ -11,6 +11,7 @@ import {
   Code2,
   CreditCard,
   FileText,
+  GraduationCap,
   Handshake,
   Kanban,
   KeyRound,
@@ -18,6 +19,7 @@ import {
   Radar,
   Route,
   ShieldCheck,
+  Timer,
   UserRound,
   Users,
   type LucideIcon,
@@ -36,6 +38,7 @@ import { createPortal } from 'react-dom';
 
 import { useLocale } from '@/components/i18n/locale-context';
 import type { TranslationKey } from '@/components/i18n/dictionaries';
+import { isStaffRole, useAuthSession } from '@/hooks/use-auth-session';
 
 type MegaItemDef = {
   href: string;
@@ -44,6 +47,8 @@ type MegaItemDef = {
   icon: LucideIcon;
   external?: boolean;
   badge?: string;
+  /** Staff-only: ATS, hiring agents, API sandbox. */
+  staffOnly?: boolean;
 };
 
 const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1').replace(
@@ -53,13 +58,20 @@ const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/ap
 
 const aiDefs: MegaItemDef[] = [
   { href: '/job-agent', titleKey: 'mega.ai.jobAgent.title', descKey: 'mega.ai.jobAgent.desc', icon: Radar, badge: 'New' },
-  { href: '/hiring-agents', titleKey: 'mega.ai.agents.title', descKey: 'mega.ai.agents.desc', icon: Bot },
-  { href: '/ats', titleKey: 'mega.ai.ats.title', descKey: 'mega.ai.ats.desc', icon: Kanban, badge: 'New' },
-  { href: '/ats#trust', titleKey: 'mega.ai.trust.title', descKey: 'mega.ai.trust.desc', icon: ShieldCheck },
+  { href: '/hiring-agents', titleKey: 'mega.ai.agents.title', descKey: 'mega.ai.agents.desc', icon: Bot, staffOnly: true },
+  { href: '/ats', titleKey: 'mega.ai.ats.title', descKey: 'mega.ai.ats.desc', icon: Kanban, badge: 'New', staffOnly: true },
+  { href: '/ats#trust', titleKey: 'mega.ai.trust.title', descKey: 'mega.ai.trust.desc', icon: ShieldCheck, staffOnly: true },
 ];
 
 const apiDefs: MegaItemDef[] = [
   { href: '/developers', titleKey: 'mega.api.portal.title', descKey: 'mega.api.portal.desc', icon: Code2 },
+  {
+    href: '/developers/job-agent',
+    titleKey: 'mega.api.jobAgent.title',
+    descKey: 'mega.api.jobAgent.desc',
+    icon: Radar,
+    badge: 'New',
+  },
   {
     href: `${API_ORIGIN}/api/docs`,
     titleKey: 'mega.api.docs.title',
@@ -73,6 +85,7 @@ const apiDefs: MegaItemDef[] = [
     descKey: 'mega.api.sandbox.desc',
     icon: KeyRound,
     badge: 'Free',
+    staffOnly: true,
   },
   { href: '/developers#plans', titleKey: 'mega.api.plans.title', descKey: 'mega.api.plans.desc', icon: CreditCard },
 ];
@@ -89,6 +102,18 @@ const offerDefs: MegaItemDef[] = [
     titleKey: 'mega.managed.title',
     descKey: 'mega.managed.desc',
     icon: Handshake,
+  },
+  {
+    href: '/services/contract-cover',
+    titleKey: 'mega.cover.title',
+    descKey: 'mega.cover.desc',
+    icon: Timer,
+  },
+  {
+    href: '/services/talent-training',
+    titleKey: 'mega.train.title',
+    descKey: 'mega.train.desc',
+    icon: GraduationCap,
   },
   {
     href: '/for-employers',
@@ -344,20 +369,27 @@ function MegaMenu({ label, items }: { label: string; items: MegaItem[] }) {
   );
 }
 
-function useTranslatedItems(defs: MegaItemDef[]): MegaItem[] {
+function useTranslatedItems(defs: MegaItemDef[], staffOnlyVisible = false): MegaItem[] {
   const { t } = useLocale();
   return useMemo(
     () =>
-      defs.map((item) => ({
-        href: item.href,
-        icon: item.icon,
-        external: item.external,
-        badge: item.badge,
-        title: t(item.titleKey),
-        description: t(item.descKey),
-      })),
-    [defs, t],
+      defs
+        .filter((item) => staffOnlyVisible || !item.staffOnly)
+        .map((item) => ({
+          href: item.href,
+          icon: item.icon,
+          external: item.external,
+          badge: item.badge,
+          title: t(item.titleKey),
+          description: t(item.descKey),
+        })),
+    [defs, staffOnlyVisible, t],
   );
+}
+
+function useStaffMenu() {
+  const { user } = useAuthSession();
+  return Boolean(user && isStaffRole(user.roles));
 }
 
 export function HeaderMegaMenu({ label }: { label?: string }) {
@@ -374,22 +406,26 @@ export function ResourcesMegaMenu({ label }: { label?: string }) {
 
 export function AiMegaMenu({ label }: { label?: string }) {
   const { t } = useLocale();
-  const items = useTranslatedItems(aiDefs);
+  const staff = useStaffMenu();
+  const items = useTranslatedItems(aiDefs, staff);
   return <MegaMenu label={label ?? t('nav.ai')} items={items} />;
 }
 
 export function ApiMegaMenu({ label }: { label?: string }) {
   const { t } = useLocale();
-  const items = useTranslatedItems(apiDefs);
+  const staff = useStaffMenu();
+  const items = useTranslatedItems(apiDefs, staff);
   return <MegaMenu label={label ?? t('nav.api')} items={items} />;
 }
 
 export function useAiItems() {
-  return useTranslatedItems(aiDefs);
+  const staff = useStaffMenu();
+  return useTranslatedItems(aiDefs, staff);
 }
 
 export function useApiItems() {
-  return useTranslatedItems(apiDefs);
+  const staff = useStaffMenu();
+  return useTranslatedItems(apiDefs, staff);
 }
 
 export function useOfferItems() {

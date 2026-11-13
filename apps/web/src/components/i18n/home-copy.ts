@@ -40,14 +40,15 @@ export const homeEn = {
   'home.scope.trades.4': 'Welding & metal work',
   'home.scope.trades.5': 'Carpentry',
   'home.scope.trades.6': 'Site leads',
-  'home.scope.cta': 'Ask for a hire',
+  'home.scope.cta': 'Request talent',
   'home.scope.link': 'See how hiring works',
   'home.scope.office.desc': 'People for your office and desk work.',
   'home.scope.trades.desc': 'Skilled hands for your site and projects.',
   'home.scope.stat.roles': 'kinds of jobs',
   'home.scope.stat.checked': 'checked before you meet them',
   'home.scope.stat.fast': 'to your shortlist',
-  'home.scope.outside': 'Need a job that is not here? Ask us. If we can’t do it well, we will tell you.',
+  'home.scope.outside':
+    'Need a role that is not here? Ask us. We do not recruit drivers, chefs, or domestic workers — if we can’t do it well, we will tell you.',
   'home.scope.ask': 'Ask about a job',
 
   'home.services.pill': 'What we offer',
@@ -55,7 +56,7 @@ export const homeEn = {
   'home.services.titleAccent': 'Good jobs',
   'home.services.titleAfter': 'for workers.',
   'home.services.body': 'Office jobs and skilled trades. We check people before you see them.',
-  'home.services.cta': 'Ask for a hire',
+  'home.services.cta': 'Request talent',
   'home.services.link': 'See all options',
   'home.services.direct.title': 'Direct hiring',
   'home.services.direct.body':
@@ -172,7 +173,7 @@ export const homeEn = {
   'home.audience.emp.b2': 'Office workers and skilled trades',
   'home.audience.emp.b3': 'Hire them yourself, or let Dealo manage them',
   'home.audience.emp.b4': 'Free 90-day replacement on every hire',
-  'home.audience.emp.cta': 'Ask for workers',
+  'home.audience.emp.cta': 'Request talent',
   'home.audience.emp.link': 'Create a company account',
   'home.audience.pro.pill': 'For job seekers',
   'home.audience.pro.tag': '100% free to join',
@@ -191,7 +192,7 @@ export const homeEn = {
   'home.cta.titleAccent': 'We will do the rest.',
   'home.cta.body':
     'Office jobs or skilled trades. Tell us the job. Get a checked shortlist in 48 hours and start interviews. If we can’t help, we will tell you.',
-  'home.cta.hire': 'Ask for a hire',
+  'home.cta.hire': 'Request talent',
   'home.cta.talk': 'Talk to our hiring team',
   'home.cta.f1': 'Most shortlists:',
   'home.cta.f1b': '36–48 hours',
@@ -319,7 +320,8 @@ export const homeFr: HomeDict = {
   'home.scope.stat.roles': 'types de postes',
   'home.scope.stat.checked': 'vérifiés avant votre rencontre',
   'home.scope.stat.fast': 'pour votre shortlist',
-  'home.scope.outside': 'Le poste n’est pas dans la liste ? Demandez-nous. Si nous ne pouvons pas bien le faire, nous vous le dirons.',
+  'home.scope.outside':
+    'Le poste n’est pas dans la liste ? Demandez-nous. Nous ne recrutons pas chauffeurs, chefs ni personnel domestique — si nous ne pouvons pas bien le faire, nous vous le dirons.',
   'home.scope.ask': 'Poser une question',
 
   'home.services.pill': 'Nos offres',
@@ -582,7 +584,8 @@ export const homeZh: HomeDict = {
   'home.scope.stat.roles': '类岗位',
   'home.scope.stat.checked': '见面前已审核',
   'home.scope.stat.fast': '交付短名单',
-  'home.scope.outside': '需要的岗位不在列表中？问问我们。如果我们做不好，会直接告诉您。',
+  'home.scope.outside':
+    '需要的岗位不在列表中？问问我们。我们不招聘司机、厨师或家政人员——如果做不好，会直接告诉您。',
   'home.scope.ask': '咨询岗位',
 
   'home.services.pill': '我们提供',
@@ -841,7 +844,8 @@ export const homeKo: HomeDict = {
   'home.scope.stat.roles': '가지 직무',
   'home.scope.stat.checked': '만나기 전에 검증',
   'home.scope.stat.fast': '숏리스트 전달',
-  'home.scope.outside': '원하는 직무가 없나요? 문의해 주세요. 잘할 수 없다면 솔직하게 말씀드립니다.',
+  'home.scope.outside':
+    '원하는 직무가 없나요? 문의해 주세요. 운전사·요리사·가사 인력은 채용하지 않습니다 — 잘할 수 없다면 솔직히 말씀드립니다.',
   'home.scope.ask': '직무 문의하기',
 
   'home.services.pill': '제공 서비스',

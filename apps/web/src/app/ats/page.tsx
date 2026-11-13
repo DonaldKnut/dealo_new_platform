@@ -35,6 +35,7 @@ import { CtaBanner } from '@/components/marketing/cta-banner';
 import { FeatureAdGrid } from '@/components/marketing/feature-ad-grid';
 import { PageHero } from '@/components/marketing/page-hero';
 import { useModal } from '@/components/modals/modal-context';
+import { isStaffRole } from '@/hooks/use-auth-session';
 import { fetchAuthMe } from '@/lib/dashboard-api';
 
 const STAGES = [
@@ -363,25 +364,29 @@ function PipelineDemo() {
 export default function AtsPage() {
   const { open } = useModal();
   const router = useRouter();
-  const startFree = async () => {
+  const startAts = async () => {
     try {
-      await fetchAuthMe();
-      router.push('/dashboard/ats');
+      const me = await fetchAuthMe();
+      if (isStaffRole(me.roles ?? [])) {
+        router.push('/dashboard/ats');
+        return;
+      }
+      open('hire');
     } catch {
-      router.push('/auth/register?next=/dashboard/ats');
+      open('hire');
     }
   };
 
   return (
     <div>
       <PageHero
-        eyebrow="Dealo ATS · Free early access"
-        title="Hiring software with AI built in"
-        description="Post a job, see every candidate on one board, and let AI do the first screen. A person on your team always makes the final call. We built it for our own recruiters first."
+        eyebrow="Dealo ATS · Built for our recruiters"
+        title="The hiring board behind every Dealo shortlist"
+        description="Our team uses this ATS to post roles, screen candidates and move people from applied to hired. Employers request talent — Dealo runs the hiring tools."
         actions={
           <>
-            <button type="button" className="btn-primary" onClick={() => void startFree()}>
-              Start free
+            <button type="button" className="btn-primary" onClick={() => void startAts()}>
+              Request talent
             </button>
             <a href="#how" className="btn-secondary">
               See how it works
@@ -417,10 +422,10 @@ export default function AtsPage() {
       </div>
 
       {/* How it works — 5-step interactive flow */}
-      <AtsHowItWorks onStart={() => void startFree()} />
+      <AtsHowItWorks onStart={() => void startAts()} />
 
       {/* Social proof testimonials */}
-      <AtsSocialProof onStart={() => void startFree()} />
+      <AtsSocialProof onStart={() => void startAts()} />
 
       <section id="trust" className="container-page scroll-mt-24 py-10 min-[340px]:py-14">
         <div className="rounded-[1.5rem] border border-border bg-surface-elevated/80 p-4 min-[340px]:p-8">
@@ -459,8 +464,8 @@ export default function AtsPage() {
             })}
           </div>
           <div className="mt-6 flex flex-col gap-2 min-[400px]:flex-row">
-            <button type="button" className="btn-primary" onClick={() => void startFree()}>
-              Start free
+            <button type="button" className="btn-primary" onClick={() => void startAts()}>
+              Request talent
             </button>
             <button type="button" className="btn-secondary" onClick={() => open('contact')}>
               Talk to us
@@ -473,10 +478,10 @@ export default function AtsPage() {
       </section>
 
       {/* Integrations */}
-      <AtsIntegrations onStart={() => void startFree()} />
+      <AtsIntegrations onStart={() => void startAts()} />
 
       {/* Pricing teaser */}
-      <AtsPricingTeaser onStart={() => void startFree()} onContact={() => open('contact')} />
+      <AtsPricingTeaser onStart={() => void startAts()} onContact={() => open('contact')} />
 
       <CtaBanner />
     </div>

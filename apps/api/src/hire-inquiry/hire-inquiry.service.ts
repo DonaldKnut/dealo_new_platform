@@ -1,13 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { HireInquiryInput, HireInquiryStatusUpdate } from '@dealo/shared';
 import { PermissionCode, WebhookEvent } from '@dealo/shared';
-import type { HireInquiryStatus } from '@prisma/client';
+import { UserRole, type HireInquiry, type HireInquiryStatus } from '@prisma/client';
 
 import type { AuthUser } from '../auth/auth.types';
 import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
+import type { AppEnv } from '../config/env.validation';
 import { EmailService } from '../email/email.service';
-import { hireInquiryAckEmail } from '../email/email.templates';
+import { hireInquiryAckEmail, hireInquiryStaffEmail } from '../email/email.templates';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { WebhooksService } from '../webhooks/webhooks.service';
@@ -22,12 +24,15 @@ const STATUS_LABEL: Record<HireInquiryStatus, string> = {
 
 @Injectable()
 export class HireInquiryService {
+  private readonly logger = new Logger(HireInquiryService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
     private readonly emailService: EmailService,
     private readonly webhooks: WebhooksService,
     private readonly notifications: NotificationsService,
+    private readonly config: ConfigService<AppEnv, true>,
   ) {}
 
   async create(input: HireInquiryInput, principal?: AuthUser) {
@@ -93,7 +98,7 @@ export class HireInquiryService {
       const people = `${inquiry.numberOfProfessionals} ${inquiry.numberOfProfessionals === 1 ? 'person' : 'people'}`;
       await this.notifications.notifyStaff({
         type: 'hire_request.created',
-        title: `New hire request: ${inquiry.roleTitle}`,
+        title: `New talent request: ${inquiry.roleTitle}`,
         body: `${inquiry.companyName} needs ${people} in ${inquiry.location}.`,
         link: '/dashboard/requests',
       });
@@ -103,6 +108,7 @@ export class HireInquiryService {
         body: 'Dealo will contact you within 48 hours with next steps.',
         link: '/dashboard/requests',
       });
+      await this.emailStaff(inquiry);
     }
 
     return {
@@ -170,4 +176,56 @@ export class HireInquiryService {
   }
 
   static readonly managePermission = PermissionCode.HIRE_INQUIRY_MANAGE;
+
+  /** Inbox the ops team: full brief by email + dashboard link. */
+  private async emailStaff(inquiry: HireInquiry) {
+    const appUrl = this.config.get('APP_URL', { infer: true }).replace(/\/$/, '');
+    const dashboardUrl = `${appUrl}/dashboard/requests`;
+    const rows = await this.prisma.userRoleAssignment
+      .findMany({
+        where: {
+          role: { code: { in: [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.RECRUITER, UserRole.OPERATIONS] } },
+          user: { isActive: true },
+        },
+        include: { user: { select: { email: true } } },
+        take: 40,
+      })
+      .catch(() => []);
+    const emails = [...new Set(rows.map((r) => r.user.email).filter(Boolean))];
+    const fallback = this.config.get('SUPER_ADMIN_EMAIL', { infer: true });
+    if (fallback) emails.push(fallback);
+    const unique = [...new Set(emails.map(normalizeEmail))];
+    if (!unique.length) {
+      this.logger.warn(`Talent request ${inquiry.id} has no staff email recipients`);
+      return;
+    }
+    await Promise.all(
+      unique.map((to) =>
+        this.emailService
+          .send(
+            hireInquiryStaffEmail({
+              to,
+              dashboardUrl,
+              companyName: inquiry.companyName,
+              contactName: inquiry.contactName,
+              email: inquiry.email,
+              phone: inquiry.phone,
+              roleTitle: inquiry.roleTitle,
+              roleFamily: inquiry.roleFamily,
+              serviceType: inquiry.serviceType,
+              numberOfProfessionals: inquiry.numberOfProfessionals,
+              location: inquiry.location,
+              workArrangement: String(inquiry.workArrangement),
+              expectedStartDate: inquiry.expectedStartDate,
+              requirements: inquiry.requirements,
+              additionalNotes: inquiry.additionalNotes,
+              inquiryId: inquiry.id,
+            }),
+          )
+          .catch((error: unknown) =>
+            this.logger.warn(`Staff talent-request email failed for ${to}: ${error instanceof Error ? error.message : String(error)}`),
+          ),
+      ),
+    );
+  }
 }

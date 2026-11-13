@@ -40,9 +40,29 @@ import { useServerFormStatus } from '@/hooks/use-server-form-status';
 import { ApiError, apiFetch } from '@/lib/api';
 import { logClientAudit } from '@/lib/client-audit';
 
+/** Empty inputs from the form must not block submit. */
+const optionalText = (max: number) =>
+  z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((value) => {
+      const text = (value ?? '').trim();
+      return text.length ? text : undefined;
+    })
+    .pipe(z.string().max(max).optional());
+
+const optionalAmount = z
+  .union([z.string(), z.number(), z.nan(), z.null(), z.undefined()])
+  .transform((value) => {
+    if (value === '' || value === null || value === undefined) return undefined;
+    if (typeof value === 'number' && Number.isNaN(value)) return undefined;
+    const n = typeof value === 'number' ? value : Number(String(value).replace(/,/g, ''));
+    return Number.isFinite(n) ? n : undefined;
+  })
+  .pipe(z.number().nonnegative('Pay cannot be negative').optional());
+
 const hireFormObjectSchema = z.object({
   companyName: z.string().trim().min(2, 'Enter your company name').max(200),
-  contactName: z.string().trim().min(2, 'Enter a contact name').max(150),
+  contactName: z.string().trim().min(2, 'Enter the contact person’s name').max(150),
   email: z.string().email('Enter a real work email').max(255),
   phone: z.string().trim().min(7, 'Enter a real phone number').max(30),
   roleFamily: z.enum([RoleFamily.OFFICE_PROFESSIONAL, RoleFamily.SKILLED_TRADE]),
@@ -53,32 +73,26 @@ const hireFormObjectSchema = z.object({
     .min(2, 'Enter a job title')
     .max(200)
     .refine((value) => !/\d/.test(value), {
-      message: 'Job title should not have numbers',
+      message: 'Use words only in the job title — no numbers',
     }),
-  numberOfProfessionals: z.coerce.number().int().min(1).max(500),
+  numberOfProfessionals: z.coerce.number().int().min(1, 'At least one person').max(500),
   location: z.string().trim().min(2, 'Enter a location').max(200),
   workArrangement: z.enum([
     WorkArrangement.ONSITE,
     WorkArrangement.HYBRID,
     WorkArrangement.REMOTE,
   ]),
-  expectedStartDate: z.string().optional(),
-  compensationMinNgn: z.preprocess(
-    (value) => (value === '' || value === null || Number.isNaN(value) ? undefined : value),
-    z.coerce.number().nonnegative().optional(),
-  ),
-  compensationMaxNgn: z.preprocess(
-    (value) => (value === '' || value === null || Number.isNaN(value) ? undefined : value),
-    z.coerce.number().nonnegative().optional(),
-  ),
+  expectedStartDate: optionalText(40),
+  compensationMinNgn: optionalAmount,
+  compensationMaxNgn: optionalAmount,
   currency: z.string().length(3),
-  durationNotes: z.string().trim().max(1000).optional(),
+  durationNotes: optionalText(1000),
   requirements: z
     .string()
     .trim()
-    .min(8, 'Write one short sentence (8 letters or more)')
+    .min(8, 'Write one short sentence about what you need')
     .max(5000),
-  additionalNotes: z.string().trim().max(2000).optional(),
+  additionalNotes: optionalText(2000),
 });
 
 const hireFormSchema = hireFormObjectSchema.superRefine((data, ctx) => {
@@ -90,7 +104,7 @@ const hireFormSchema = hireFormObjectSchema.superRefine((data, ctx) => {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['compensationMaxNgn'],
-      message: 'Highest pay must be the same as or more than lowest pay',
+      message: 'Highest pay must be at least as much as lowest pay',
     });
   }
 
@@ -105,7 +119,7 @@ const hireFormSchema = hireFormObjectSchema.superRefine((data, ctx) => {
       message:
         data.roleFamily === RoleFamily.SKILLED_TRADE
           ? 'Tell us how long the job will last'
-          : 'Tell us how long you need the workers',
+          : 'Tell us how long you need the team',
     });
   }
 });
@@ -139,34 +153,33 @@ const step3Schema = hireFormObjectSchema.pick({
 });
 
 const STEPS = [
-  { id: 1, label: 'Contact', title: 'How do we reach you?' },
-  { id: 2, label: 'Job', title: 'Who do you need?' },
-  { id: 3, label: 'Details', title: 'Anything else?' },
+  { id: 1, label: 'Contact', title: 'How can we reach you?' },
+  { id: 2, label: 'Role', title: 'What role do you need?' },
+  { id: 3, label: 'Details', title: 'A few more details' },
 ] as const;
 
 const FIELD_HELP = {
-  companyName: 'The name of your company.',
-  contactName: 'Who should we talk to about this hire?',
-  email: 'We send updates and shortlists here.',
-  phone: 'We call this number for quick questions.',
+  companyName: 'Your company or trading name.',
+  contactName: 'The person we should call about this request.',
+  email: 'We send updates and shortlists to this email.',
+  phone: 'A number we can call for quick questions.',
   roleFamily:
-    'Office jobs: admin, money, tech, and more. Skilled trades: bricklaying, electrical, plumbing, welding, carpentry, and site leads. Trade jobs are often short contracts.',
+    'Office roles cover admin, finance, tech and similar desk work. Skilled trades cover bricklaying, electrical, plumbing, welding, carpentry and site leads.',
   serviceType:
-    'Direct hiring: they join your company as your staff. Managed staffing: Dealo finds and manages the workers for you. This works well for trade teams and projects.',
-  roleTitle: 'The job name in words only, like Executive Assistant or Bricklayer. No numbers.',
-  numberOfProfessionals: 'How many people do you need?',
-  location: 'Where will they work? For example, Lagos, Nigeria. Trades often work on site.',
+    'Hire yourself: Dealo sends checked people; you interview and employ them. Dealo manages: we find and manage the team for you — useful for trades and projects.',
+  roleTitle: 'Job title in words only, for example Executive Assistant or Bricklayer.',
+  numberOfProfessionals: 'How many people do you need for this role?',
+  location: 'Where will they work? Example: Lagos, Nigeria.',
   workArrangement:
-    'Office jobs can be in the office, mixed, or from home. Skilled trades often work on site, or on site and in a workshop.',
-  expectedStartDate: 'Optional. A rough date helps us plan. Leave it blank if you are not sure.',
-  durationNotes:
-    'How long is the job? For example: 3 months on site, until the project ends, or no end date.',
+    'Office roles can be in the office, hybrid, or remote. Trades are usually on site, or site plus workshop.',
+  expectedStartDate: 'Optional. A rough start date helps us plan. Leave blank if you are unsure.',
+  durationNotes: 'How long do you need them? Example: 3 months on site, until the project ends, or ongoing.',
   compensationMinNgn:
-    'Optional. The lowest pay you can give (NGN). Monthly for office jobs. Daily, weekly, or per project for trades.',
-  compensationMaxNgn: 'Optional. The highest pay, counted the same way as the lowest.',
+    'Optional. Lowest pay in Naira. Use monthly for office roles; daily, weekly or per project for trades.',
+  compensationMaxNgn: 'Optional. Highest pay, using the same period as the lowest.',
   requirements:
-    'A short note is fine for now. Skills, years of work, or site needs. We will talk more with you later.',
-  additionalNotes: 'Optional. Work hours, safety gear, a place to stay, tools, or who they report to.',
+    'One short sentence is enough for now — skills, experience or site needs. We will follow up.',
+  additionalNotes: 'Optional. Hours, safety gear, lodging, tools, or who they report to.',
 } as const;
 
 const ROLE_FAMILY_OPTIONS: IllustrativeOption[] = [
@@ -188,13 +201,13 @@ const SERVICE_TYPE_OPTIONS: IllustrativeOption[] = [
   {
     value: ServiceType.DIRECT_RECRUITMENT,
     label: 'I will hire them',
-    description: 'We send checked people. You interview and hire them.',
+    description: 'Dealo sends checked people. You interview and employ them.',
     icon: Building2,
   },
   {
     value: ServiceType.MANAGED_STAFFING,
     label: 'Dealo manages them',
-    description: 'We find and manage the workers for you.',
+    description: 'We find and manage the team for you.',
     icon: Handshake,
   },
 ];
@@ -296,37 +309,31 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
       if (needsDuration && !values.durationNotes?.trim()) return false;
       return true;
     }
-    return step3Schema.safeParse(values).success && hireFormSchema.safeParse(values).success;
+    // Last step: only the brief is required. Start date, pay and extra notes stay optional.
+    return (values.requirements ?? '').trim().length >= 8;
   }, [needsDuration, step, values]);
 
   const goNext = async () => {
-    const fields =
-      step === 1
-        ? (['companyName', 'contactName', 'email', 'phone'] as const)
-        : step === 2
-          ? ([
-              'roleFamily',
-              'serviceType',
-              'roleTitle',
-              'numberOfProfessionals',
-              'location',
-              'workArrangement',
-              'durationNotes',
-            ] as const)
-          : null;
-
-    if (fields) {
-      const ok = await trigger([...fields]);
+    if (step === 1) {
+      const ok = await trigger(['companyName', 'contactName', 'email', 'phone']);
       if (!ok) return;
-      if (step === 2) {
-        const current = getValues();
-        const durationRequired =
-          current.serviceType === ServiceType.MANAGED_STAFFING ||
-          current.roleFamily === RoleFamily.SKILLED_TRADE;
-        if (durationRequired) {
-          const notesOk = await trigger('durationNotes');
-          if (!notesOk || !getValues('durationNotes')?.trim()) return;
-        }
+    } else if (step === 2) {
+      const ok = await trigger([
+        'roleFamily',
+        'serviceType',
+        'roleTitle',
+        'numberOfProfessionals',
+        'location',
+        'workArrangement',
+      ]);
+      if (!ok) return;
+      const current = getValues();
+      const durationRequired =
+        current.serviceType === ServiceType.MANAGED_STAFFING ||
+        current.roleFamily === RoleFamily.SKILLED_TRADE;
+      if (durationRequired) {
+        const notesOk = await trigger('durationNotes');
+        if (!notesOk || !getValues('durationNotes')?.trim()) return;
       }
     }
     setStep((current) => Math.min(3, current + 1));
@@ -349,17 +356,17 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
         workArrangement: formValues.workArrangement,
         expectedStartDate: formValues.expectedStartDate || undefined,
         compensationMinMinor:
-          formValues.compensationMinNgn !== undefined
-            ? Math.round(formValues.compensationMinNgn * 100)
+          formValues.compensationMinNgn != null && !Number.isNaN(Number(formValues.compensationMinNgn))
+            ? Math.round(Number(formValues.compensationMinNgn) * 100)
             : undefined,
         compensationMaxMinor:
-          formValues.compensationMaxNgn !== undefined
-            ? Math.round(formValues.compensationMaxNgn * 100)
+          formValues.compensationMaxNgn != null && !Number.isNaN(Number(formValues.compensationMaxNgn))
+            ? Math.round(Number(formValues.compensationMaxNgn) * 100)
             : undefined,
         currency: formValues.currency,
-        durationNotes: formValues.durationNotes,
+        durationNotes: formValues.durationNotes || undefined,
         requirements: formValues.requirements,
-        additionalNotes: formValues.additionalNotes,
+        additionalNotes: formValues.additionalNotes || undefined,
       });
 
       const result = await apiFetch<{ message: string }>('/hire-inquiries', {
@@ -390,7 +397,7 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
         requirements: '',
         additionalNotes: '',
         durationNotes: '',
-        expectedStartDate: '',
+        expectedStartDate: undefined,
         compensationMinNgn: undefined,
         compensationMaxNgn: undefined,
       });
@@ -404,11 +411,13 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
         toast.error('Request failed', 'We could not send your request.');
       }
     }
+  }, () => {
+    toast.error('Almost there', 'Please fill the required fields. Optional ones can stay blank.');
   });
 
   const roleTip = isTrade
-    ? 'For trade jobs, tell us how long the job is and where the site is.'
-    : 'Office jobs can be in the office, mixed, or from home. You can hire them or let us manage them.';
+    ? 'For trade roles, tell us how long the job lasts and where the site is.'
+    : 'Office roles can be in the office, hybrid or remote. You can hire people yourself, or let Dealo manage them.';
 
   const arrangementOptions = isTrade ? WORK_ARRANGEMENT_TRADE : WORK_ARRANGEMENT_OFFICE;
 
@@ -615,15 +624,15 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
           {step === 3 ? (
             <div className="space-y-4">
               <p className="rounded-xl border border-border/70 bg-surface/70 px-3 py-2.5 text-[11px] leading-relaxed text-muted min-[340px]:text-xs">
-                Only the short note below is needed. Start date, pay, and extra notes help. But you
-                can skip them, and we&apos;ll ask you later.
+                Only the brief below is required. Start date, pay and extra notes are optional — you
+                can leave them blank and we will ask later if needed.
               </p>
 
               <FormField
                 label="What do you need?"
                 help={FIELD_HELP.requirements}
                 error={errors.requirements?.message}
-                hint="One sentence is enough. Example: “Need 2 electricians for houses in Lekki.”"
+                hint='One sentence is enough. Example: "Need 2 electricians for houses in Lekki."'
               >
                 <textarea
                   rows={3}
@@ -645,21 +654,20 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
                   error={errors.expectedStartDate?.message}
                 >
                   <DatePickerField
-                    value={values.expectedStartDate}
+                    value={values.expectedStartDate ?? ''}
                     onChange={(next) =>
-                      setValue('expectedStartDate', next, { shouldValidate: true, shouldDirty: true })
+                      setValue('expectedStartDate', next || undefined, {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      })
                     }
-                    placeholder="Pick a date"
+                    placeholder="Optional"
                     minDate={new Date()}
                   />
                 </FormField>
                 <div className="hidden min-[480px]:block" aria-hidden />
                 <FormField
-                  label={
-                    isTrade
-                      ? 'Lowest pay (NGN per day, week, or project)'
-                      : 'Lowest pay (NGN per month)'
-                  }
+                  label={isTrade ? 'Lowest pay (₦ / day, week or project)' : 'Lowest pay (₦ / month)'}
                   optional
                   help={FIELD_HELP.compensationMinNgn}
                   error={errors.compensationMinNgn?.message}
@@ -667,13 +675,17 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
                   <input
                     type="number"
                     min={0}
+                    inputMode="numeric"
                     className="input-field"
-                    placeholder={isTrade ? 'e.g. 25000' : 'e.g. 250000'}
-                    {...register('compensationMinNgn')}
+                    placeholder={isTrade ? 'Optional · e.g. 25000' : 'Optional · e.g. 250000'}
+                    {...register('compensationMinNgn', {
+                      setValueAs: (value) =>
+                        value === '' || value === null || value === undefined ? undefined : value,
+                    })}
                   />
                 </FormField>
                 <FormField
-                  label={isTrade ? 'Highest pay (NGN, same as above)' : 'Highest pay (NGN per month)'}
+                  label={isTrade ? 'Highest pay (₦, same period)' : 'Highest pay (₦ / month)'}
                   optional
                   help={FIELD_HELP.compensationMaxNgn}
                   error={errors.compensationMaxNgn?.message}
@@ -681,15 +693,19 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
                   <input
                     type="number"
                     min={0}
+                    inputMode="numeric"
                     className="input-field"
-                    placeholder={isTrade ? 'e.g. 40000' : 'e.g. 400000'}
-                    {...register('compensationMaxNgn')}
+                    placeholder={isTrade ? 'Optional · e.g. 40000' : 'Optional · e.g. 400000'}
+                    {...register('compensationMaxNgn', {
+                      setValueAs: (value) =>
+                        value === '' || value === null || value === undefined ? undefined : value,
+                    })}
                   />
                 </FormField>
               </div>
 
               <FormField
-                label="Other notes"
+                label="Anything else?"
                 optional
                 help={FIELD_HELP.additionalNotes}
                 error={errors.additionalNotes?.message}
@@ -697,7 +713,7 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
                 <textarea
                   rows={3}
                   className="input-field min-h-[4.75rem] resize-y"
-                  placeholder="Work hours, safety gear, a place to stay, tools, or anything else."
+                  placeholder="Optional · hours, safety gear, lodging, tools, or anything else"
                   {...register('additionalNotes')}
                 />
               </FormField>
@@ -728,7 +744,11 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
             <ArrowRight className="h-4 w-4" />
           </button>
         ) : (
-          <button type="submit" className="btn-primary" disabled={!stepValid || isSubmitting}>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={isSubmitting || (values.requirements ?? '').trim().length < 8}
+          >
             {isSubmitting ? 'Sending…' : 'Send request'}
           </button>
         )}

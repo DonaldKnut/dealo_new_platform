@@ -704,17 +704,31 @@ function UpgradeCard({ onUpgrade, busy }: { onUpgrade: () => void; busy: boolean
   const { t } = useLocale();
   const pro = JOB_AGENT_PLANS.PREMIUM;
   const free = JOB_AGENT_PLANS.FREE;
+  const perks = [
+    { icon: Send, label: fill(t('ja.up.f1'), { a: pro.dailyApplications, b: free.dailyApplications }) },
+    { icon: Sparkles, label: t('ja.up.f2') },
+    { icon: Mail, label: t('ja.up.f3') },
+    { icon: Radar, label: fill(t('ja.up.f4'), { c: pro.runEveryHours }) },
+  ] as const;
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-400/10 via-surface-elevated to-surface-elevated p-4 sm:p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
         <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 to-amber-500 text-[#3b2400] shadow-lg shadow-amber-500/30">
           <Crown className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-foreground">{t('ja.up.title')}</p>
           <p className="mt-0.5 text-xs text-muted">{fill(t('ja.up.body'), { a: pro.dailyApplications, b: free.dailyApplications, c: pro.runEveryHours, d: free.runEveryHours })}</p>
+          <ul className="mt-3 grid gap-1.5 min-[360px]:grid-cols-2">
+            {perks.map((p) => (
+              <li key={p.label} className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-background/40 px-2.5 py-1.5 text-[11px] text-foreground">
+                <p.icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-300" />
+                <span className="min-w-0 leading-snug">{p.label}</span>
+              </li>
+            ))}
+          </ul>
         </div>
-        <button type="button" onClick={onUpgrade} disabled={busy} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-60">
+        <button type="button" onClick={onUpgrade} disabled={busy} className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-foreground px-4 py-2.5 text-sm font-semibold text-background disabled:opacity-60">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {t('ja.up.cta')}
         </button>
       </div>

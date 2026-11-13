@@ -37,22 +37,27 @@ export function FontPicker({ value, premium, onChange }: { value: ResumeFontId; 
             onClick={() => onChange(f.id)}
             aria-pressed={active}
             className={cn(
-              'group flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition',
-              active ? 'border-brand bg-brand-soft ring-1 ring-brand/30' : 'border-border hover:border-brand/50',
+              'group relative flex items-center gap-3 overflow-hidden rounded-2xl border px-3 py-3 text-left transition',
+              active
+                ? 'border-brand bg-gradient-to-br from-brand-soft via-surface-elevated to-surface-elevated shadow-sm ring-1 ring-brand/25'
+                : 'border-border bg-surface-elevated/60 hover:border-brand/45 hover:bg-surface-elevated',
             )}
           >
             <span
               aria-hidden
-              className={cn('inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg', active ? 'bg-brand text-white dark:text-[#071f14]' : 'bg-surface text-foreground')}
+              className={cn(
+                'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-[1.15rem] tracking-tight shadow-inner',
+                active ? 'bg-brand text-white dark:text-[#071f14]' : 'bg-surface text-foreground ring-1 ring-border/70',
+              )}
               style={{ fontFamily: CSS_FAMILY[f.id] }}
             >
               Aa
             </span>
             <span className="min-w-0 flex-1">
-              <span className={cn('block truncate text-sm', active ? 'text-brand' : 'text-foreground')} style={{ fontFamily: CSS_FAMILY[f.id] }}>
+              <span className={cn('block truncate text-[15px] font-medium', active ? 'text-brand' : 'text-foreground')} style={{ fontFamily: CSS_FAMILY[f.id] }}>
                 {f.name}
               </span>
-              <span className="block truncate text-[11px] text-muted">{FONT_NOTE[f.id]}</span>
+              <span className="mt-0.5 block truncate text-[11px] text-muted">{FONT_NOTE[f.id]}</span>
             </span>
             {f.premium && !premium ? <PremiumBadge /> : active ? <Check className="h-4 w-4 shrink-0 text-brand" /> : null}
           </button>
@@ -123,7 +128,7 @@ export function DesignPanel({
       {showTemplates ? (
         <section>
           <h3 className="mb-1 text-sm font-semibold text-foreground">Template</h3>
-          <p className="mb-3 text-xs text-muted">Tap to switch. Your words stay the same.</p>
+          <p className="mb-3 text-xs text-muted">Tap to switch layouts. Your words stay the same — only the look changes.</p>
           <div className="grid grid-cols-1 gap-3 min-[300px]:grid-cols-2 lg:grid-cols-3">
             {RESUME_TEMPLATES.map((t) => {
               const active = style.template === t.id;
@@ -133,8 +138,8 @@ export function DesignPanel({
                   type="button"
                   onClick={() => onStyle({ ...style, template: t.id })}
                   className={cn(
-                    'group relative overflow-hidden rounded-2xl border-2 bg-white text-left transition',
-                    active ? 'border-brand shadow-lg shadow-brand/15' : 'border-border hover:border-brand/50',
+                    'group relative overflow-hidden rounded-2xl border-2 bg-white text-left shadow-sm transition',
+                    active ? 'border-brand shadow-lg shadow-brand/20 ring-1 ring-brand/20' : 'border-border hover:border-brand/50 hover:shadow-md',
                   )}
                 >
                   <div className="pointer-events-none max-h-52 overflow-hidden">
@@ -184,8 +189,10 @@ export function DesignPanel({
       </section>
 
       <section>
-        <h3 className="mb-1 text-sm font-semibold text-foreground">Font</h3>
-        <p className="mb-3 text-xs text-muted">Each name is shown in its own font. The preview updates straight away.</p>
+        <h3 className="mb-1 text-sm font-semibold text-foreground">Typography</h3>
+        <p className="mb-3 text-xs text-muted">
+          Each name is set in its own face. Premium unlocks editorial serifs and clean modern sans for a sharper PDF.
+        </p>
         <FontPicker value={style.font} premium={premium} onChange={(font) => onStyle({ ...style, font })} />
       </section>
 

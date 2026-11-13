@@ -36,7 +36,15 @@ export function TemplateGallery() {
             <div className="relative max-h-[26rem] overflow-hidden bg-slate-100/80 p-3.5 dark:bg-[#071f14]">
               <div className="pointer-events-none overflow-hidden rounded-lg bg-white shadow-xl ring-1 ring-slate-900/10 transition duration-500 group-hover:scale-[1.02]">
                 <ResumePreview
-                  doc={{ kind: 'RESUME', data: SAMPLE_RESUME, style: { template: t.id, accentColor: COLORS[t.id], font: t.id === 'minimal' ? 'times' : 'helvetica' } }}
+                  doc={{
+                    kind: 'RESUME',
+                    data: SAMPLE_RESUME,
+                    style: {
+                      template: t.id,
+                      accentColor: COLORS[t.id],
+                      font: t.id === 'minimal' ? 'sourceserif' : t.id === 'executive' ? 'librefranklin' : t.id === 'artisan' ? 'lora' : t.id === 'compact' ? 'dmsans' : t.id === 'modern' ? 'inter' : 'helvetica',
+                    },
+                  }}
                   branding={false}
                 />
               </div>

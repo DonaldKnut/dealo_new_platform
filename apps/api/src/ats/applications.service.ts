@@ -190,6 +190,24 @@ export class ApplicationsService {
     );
   }
 
+  /**
+   * A job seeker's Job Agent applies for them. Same checks and screening as the careers page,
+   * marked with its own source so employers can see and filter agent applications.
+   */
+  async applyFromAgent(jobId: string, input: ApplyInput, file: Pick<Express.Multer.File, 'buffer' | 'size' | 'originalname'>) {
+    const job = await this.prisma.job.findFirst({
+      where: { id: jobId, status: JobStatus.OPEN, organization: { is: { isActive: true, careersEnabled: true } } },
+      include: { organization: { select: { id: true, name: true } } },
+    });
+    if (!job) throw new NotFoundException('This job is closed or does not exist');
+    const today = await this.prisma.application.count({ where: { jobId: job.id, createdAt: { gte: new Date(Date.now() - DAY_MS) } } });
+    if (today >= MAX_DAILY_APPLICATIONS_PER_JOB) {
+      throw new HttpException('This job has had a lot of applications today.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+    const { organization, ...jobRow } = job;
+    return this.createApplication(organization, jobRow, input, file as Express.Multer.File, 'job_agent', job.createdById);
+  }
+
   /** Recruiter adds someone by hand (e.g. a referral or a walk-in). */
   async addManual(orgId: string, jobId: string, input: ApplyInput, user: AuthUser, file?: Express.Multer.File, source = 'manual') {
     const access = await this.access.require(orgId, user, WorkspaceRole.RECRUITER);
@@ -467,6 +485,14 @@ export class ApplicationsService {
     });
     await this.event(application, 'AI_REVIEWED', access, { body: decision === 'ACCEPTED' ? 'AI suggestion accepted' : 'AI suggestion dismissed' });
     return { ok: true };
+  }
+
+  /** The CV an applicant sent, for partner integrations that pull applications into their own system. */
+  async readApplicationCv(orgId: string, applicationId: string, user: AuthUser) {
+    if (!isObjectId(applicationId)) throw new NotFoundException('Application not found');
+    const application = await this.prisma.application.findFirst({ where: { id: applicationId, organizationId: orgId }, select: { cvFileId: true } });
+    if (!application?.cvFileId) throw new NotFoundException('This application has no CV');
+    return this.readFile(orgId, application.cvFileId, user);
   }
 
   async readFile(orgId: string, fileId: string, user: AuthUser) {

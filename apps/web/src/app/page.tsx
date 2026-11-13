@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { AiAgentsShowcase } from '@/components/marketing/ai-agents-showcase';
+// import { AiAgentsShowcase } from '@/components/marketing/ai-agents-showcase'; // parked: Ops/sched console marketing for now
 import { pageMetadata } from '@/lib/seo';
 import { AudienceSplit } from '@/components/marketing/audience-split';
 import { CoverageScope } from '@/components/marketing/coverage-scope';
@@ -9,6 +9,7 @@ import { HeroSection } from '@/components/marketing/hero-section';
 import { HomeFeatureAds } from '@/components/marketing/home-feature-ads';
 import { HomeStats } from '@/components/marketing/home-stats';
 import { JobAgentPromo } from '@/components/marketing/job-agent-promo';
+import { JobBoardPromo } from '@/components/marketing/job-board-promo';
 import { MarqueeStrip } from '@/components/marketing/marquee-strip';
 import { PricingPackages } from '@/components/marketing/pricing-packages';
 import { ProcessRail } from '@/components/marketing/process-rail';
@@ -33,8 +34,9 @@ export default function HomePage() {
       <HeroSection />
       <MarqueeStrip />
       <HomeStats />
-      <AiAgentsShowcase />
+      {/* <AiAgentsShowcase /> — sched/ops console showcase parked for now */}
       <JobAgentPromo />
+      <JobBoardPromo />
       <ResumeBuilderPromo />
       <CoverageScope />
       <ServiceSpotlight />

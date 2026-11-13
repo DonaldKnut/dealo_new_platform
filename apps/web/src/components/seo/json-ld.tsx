@@ -76,6 +76,26 @@ export function OrganizationJsonLd() {
           'Managed staffing for office roles and skilled trades with clear pricing and terms.',
         url: `${APP_URL}/services/managed-staffing`,
       },
+      {
+        '@type': 'Service',
+        name: 'Temp and contract cover',
+        serviceType: 'Temporary staffing',
+        provider: { '@id': `${APP_URL}/#organization` },
+        areaServed: ['Nigeria', 'Africa'],
+        description:
+          'Day-rate cover for skilled trades and short office roles with clear mark-up.',
+        url: `${APP_URL}/services/contract-cover`,
+      },
+      {
+        '@type': 'Service',
+        name: 'Talent training after hire',
+        serviceType: 'Training',
+        provider: { '@id': `${APP_URL}/#organization` },
+        areaServed: ['Nigeria', 'Africa'],
+        description:
+          'Employer-paid onboarding and upskilling modules for placed talent.',
+        url: `${APP_URL}/services/talent-training`,
+      },
     ],
   };
 

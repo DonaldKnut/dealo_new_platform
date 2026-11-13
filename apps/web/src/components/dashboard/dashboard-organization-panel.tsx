@@ -17,7 +17,7 @@ const STEPS = [
   {
     icon: Plus,
     title: 'Create your company',
-    text: 'One account for your business, with its own careers page.',
+    text: 'One account for your business on Dealo.',
   },
   {
     icon: MailCheck,
@@ -26,8 +26,8 @@ const STEPS = [
   },
   {
     icon: Briefcase,
-    title: 'Hire together',
-    text: 'Everyone sees your hire requests, jobs and applicants.',
+    title: 'Request talent together',
+    text: 'Everyone on the account can send requests and see shared shortlists.',
   },
 ];
 
@@ -58,7 +58,7 @@ function OrganizationContent() {
         <DashHero
           eyebrow="Organization"
           title="Set up your company account"
-          subtitle="Bring your team onto Dealo. Teammates join through an email invite and see the same requests, jobs and applicants."
+          subtitle="Bring your team onto Dealo. Teammates join through an email invite and see the same talent requests and shortlists."
         />
         <div className="grid gap-3 sm:grid-cols-3">
           {STEPS.map((step, i) => (
@@ -92,10 +92,10 @@ function OrganizationContent() {
         actions={
           <>
             <button type="button" onClick={openHireRequest} className="btn-primary">
-              <Briefcase className="h-4 w-4" /> Request a hire
+              <Briefcase className="h-4 w-4" /> Request talent
             </button>
-            <Link href="/dashboard/ats/settings" className="btn-secondary">
-              <Settings2 className="h-4 w-4" /> Company profile
+            <Link href="/dashboard/settings" className="btn-secondary">
+              <Settings2 className="h-4 w-4" /> Account settings
             </Link>
           </>
         }

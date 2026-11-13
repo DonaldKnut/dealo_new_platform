@@ -1,7 +1,7 @@
 'use client';
 
 import { ApiScope, SANDBOX_KEY_POLICY } from '@dealo/shared';
-import { Code2, ExternalLink, KeyRound, LifeBuoy, PlugZap, ShieldCheck, Webhook } from 'lucide-react';
+import { ExternalLink, KeyRound, LifeBuoy, PlugZap, Radar, ShieldCheck, Webhook } from 'lucide-react';
 import Link from 'next/link';
 
 import { useLocale } from '@/components/i18n/locale-context';
@@ -82,11 +82,35 @@ export default function DevelopersPage() {
         </div>
       </section>
 
+      <section className="container-page pb-4">
+        <div className="flex flex-col gap-4 rounded-[1.5rem] border border-brand/25 bg-brand-soft/40 p-5 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between min-[360px]:p-6 sm:rounded-[2rem]">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-brand">
+              <Radar className="h-3.5 w-3.5" /> Job boards &amp; HR tools
+            </p>
+            <h2 className="mt-2 font-display text-xl text-foreground min-[360px]:text-2xl">
+              Partner guide: send jobs, get applicants
+            </h2>
+            <p className="mt-1 max-w-xl text-sm text-muted">
+              Written for a first-time API user. Sync jobs → Job Agents apply → you download the CV.
+            </p>
+          </div>
+          <Link href="/developers/job-agent" className="btn-primary shrink-0 justify-center">
+            Open partner guide
+          </Link>
+        </div>
+      </section>
+
       <FeatureAdGrid
         eyebrow="What you can build"
         title="Plug Dealo hiring into your own app"
-        description="For HR tools, staffing platforms and product teams. Send hiring requests in, get updates back."
+        description="For HR tools, staffing platforms and product teams. Send hiring requests in, get updates back — or sync jobs for Job Agents."
         items={[
+          {
+            icon: Radar,
+            title: 'Job Agent partner sync',
+            body: 'Push open jobs to Dealo. Agents apply. You get CVs by webhook.',
+          },
           {
             icon: PlugZap,
             title: 'Send hiring requests',
@@ -95,7 +119,7 @@ export default function DevelopersPage() {
           {
             icon: Webhook,
             title: 'Get live updates',
-            body: 'We call your URL when a request is created or its status changes. Signed and retried.',
+            body: 'We call your URL when a request or application changes. Signed and retried.',
           },
           {
             icon: ShieldCheck,
@@ -108,14 +132,9 @@ export default function DevelopersPage() {
             body: 'Send Authorization: Bearer dk_test_… with each call. We never store keys in plain text.',
           },
           {
-            icon: Code2,
-            title: 'Works with your tools',
-            body: 'Connect Dealo to your ATS, payroll or operations tools.',
-          },
-          {
             icon: LifeBuoy,
             title: 'Real people to help',
-            body: 'We help you test in the sandbox and go live safely.',
+            body: 'We help you test with a free key and go live safely.',
           },
         ]}
       />
@@ -137,6 +156,8 @@ export default function DevelopersPage() {
             {[
               ['hire_inquiry.created', 'A new hiring request came in'],
               ['hire_inquiry.status_updated', 'A request moved to a new status'],
+              ['application.created', 'Someone (or a Job Agent) applied to a synced job'],
+              ['application.stage_changed', 'An applicant moved to a new hiring stage'],
               ['ping', 'A test you sent from the dashboard'],
             ].map(([event, meaning]) => (
               <li key={event} className="rounded-xl border border-border bg-surface px-3 py-2.5">

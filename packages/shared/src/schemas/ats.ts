@@ -210,6 +210,19 @@ export type ApiApplicationInput = z.infer<typeof apiApplicationSchema>;
 
 export const apiMoveStageSchema = z.object({ stage: z.string().trim().min(1).max(40) });
 
+/**
+ * Partner job sync: a job board or ATS pushes its open jobs, keyed by its own id. Synced jobs go live on
+ * Dealo with Easy Apply, so job seekers' Job Agents can apply; applications come back by webhook.
+ */
+export const apiJobSyncItemSchema = jobInputSchema.extend({
+  externalId: z.string().trim().min(1).max(120),
+  roleFamily: z.enum([RoleFamily.OFFICE_PROFESSIONAL, RoleFamily.SKILLED_TRADE]).default(RoleFamily.OFFICE_PROFESSIONAL),
+  workArrangement: z.enum([WorkArrangement.ONSITE, WorkArrangement.HYBRID, WorkArrangement.REMOTE]).default(WorkArrangement.ONSITE),
+  status: z.enum(['OPEN', 'CLOSED']).default('OPEN'),
+});
+export const apiJobSyncSchema = z.object({ jobs: z.array(apiJobSyncItemSchema).min(1).max(100) });
+export type ApiJobSyncInput = z.infer<typeof apiJobSyncSchema>;
+
 export const offerResponseSchema = z.object({
   decision: z.enum(['ACCEPTED', 'DECLINED']),
   note: z.string().trim().max(1000).optional(),

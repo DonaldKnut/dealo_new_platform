@@ -67,10 +67,10 @@ export function JobAgentLanding() {
               ))}
             </ul>
             <div className="mt-6 flex flex-col gap-2 min-[360px]:flex-row min-[360px]:flex-wrap">
-              <Link href="/dashboard/ats/settings" className="btn-primary justify-center">
+              <Link href="/developers/job-agent" className="btn-primary justify-center">
                 <KeyRound className="h-4 w-4" /> {t('ja.partner.cta')} <ArrowRight className="h-4 w-4" />
               </Link>
-              <a href={`${API_ORIGIN}/api/docs#/ats-api`} target="_blank" rel="noopener noreferrer" className="btn-secondary justify-center">
+              <a href={`${API_ORIGIN}/api/docs`} target="_blank" rel="noopener noreferrer" className="btn-secondary justify-center">
                 <BookOpen className="h-4 w-4" /> {t('ja.partner.docs')}
               </a>
             </div>
