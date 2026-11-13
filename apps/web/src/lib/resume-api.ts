@@ -34,7 +34,8 @@ export type SaveBody = { kind: ResumeKind; title: string; style: ResumeStyle; da
 
 export const resumeApi = {
   plan: () => apiFetch<ResumePlan>('/resumes/plan'),
-  checkoutPremium: () => apiFetch<{ reference: string; authorizationUrl: string }>('/resumes/premium/checkout', { method: 'POST' }),
+  checkoutPremium: (returnTo: 'resumes' | 'job-agent' = 'resumes') =>
+    apiFetch<{ reference: string; authorizationUrl: string }>('/resumes/premium/checkout', { method: 'POST', json: { returnTo } }),
   verifyPremium: (reference: string) => apiFetch<PremiumVerify>('/resumes/premium/verify', { method: 'POST', json: { reference } }),
   list: () => apiFetch<SavedResume[]>('/resumes'),
   get: (id: string) => apiFetch<SavedResume>(`/resumes/${id}`),

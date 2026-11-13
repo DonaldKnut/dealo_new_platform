@@ -4,11 +4,13 @@ import { Throttle } from '@nestjs/throttler';
 import {
   grantPremiumSchema,
   paymentReferenceSchema,
+  premiumCheckoutSchema,
   resumeAiBulletsSchema,
   resumeAiCoverLetterSchema,
   resumeAiSummarySchema,
   resumeAiTailorSchema,
   saveResumeSchema,
+  type PremiumCheckoutInput,
   type ResumeData,
   type SaveResumeInput,
 } from '@dealo/shared';
@@ -93,9 +95,12 @@ export class ResumesController {
   @Post('premium/checkout')
   @HttpCode(200)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
-  @ApiOperation({ summary: 'Start a Paystack checkout for CV builder Premium' })
-  checkoutPremium(@CurrentUser() user: AuthUser) {
-    return this.resumes.checkoutPremium(user);
+  @ApiOperation({ summary: 'Start a Paystack checkout for Dealo Premium (CV + Job Agent)' })
+  checkoutPremium(
+    @CurrentUser() user: AuthUser,
+    @Body(new ZodValidationPipe(premiumCheckoutSchema)) body: PremiumCheckoutInput,
+  ) {
+    return this.resumes.checkoutPremium(user, body.returnTo ?? 'resumes');
   }
 
   @Post('premium/verify')

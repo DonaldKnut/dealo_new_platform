@@ -124,7 +124,7 @@ const TALENT_PROFILES: TalentProfile[] = [
 ];
 
 const VISIBLE = 3;
-const CYCLE_MS = 4200;
+const CYCLE_MS = 2800;
 
 function TalentCard({
   talent,
@@ -147,7 +147,7 @@ function TalentCard({
               className={`relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br text-sm font-bold text-white shadow-sm ring-2 ring-border/50 min-[340px]:h-12 min-[340px]:w-12 ${talent.avatarGradient}`}
             >
               {talent.avatarSrc ? (
-                <Image src={talent.avatarSrc} alt={talent.name} fill sizes="48px" className="object-cover object-top" />
+                <Image src={talent.avatarSrc} alt="" fill sizes="48px" className="object-cover object-top" aria-hidden />
               ) : (
                 talent.initials
               )}

@@ -320,6 +320,23 @@ export function JobAgentPanel() {
     };
   }, []);
 
+  // Back from Paystack: confirm Premium (unlocks Job Agent limits + CV fonts).
+  useEffect(() => {
+    const reference = new URLSearchParams(window.location.search).get('premium');
+    if (!reference) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    void resumeApi
+      .verifyPremium(reference)
+      .then((result) => {
+        if (result.status === 'PAID') toast.success(t('ja.toast.paid'), t('ja.toast.paidBody'));
+        else if (result.status === 'FAILED') toast.error(t('ja.toast.payFail'), result.failureReason ?? t('ja.toast.payFailBody'));
+        else toast.success(t('ja.toast.payPending'), t('ja.toast.payPendingBody'));
+        return load();
+      })
+      .catch((err) => toast.error(t('ja.toast.payFail'), err instanceof ApiError ? err.message : ''));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const premium = overview?.plan === 'PREMIUM';
   const configured = Boolean(overview?.settings);
 
@@ -384,7 +401,7 @@ export function JobAgentPanel() {
   const upgrade = async () => {
     setBusy('upgrade');
     try {
-      const { authorizationUrl } = await resumeApi.checkoutPremium();
+      const { authorizationUrl } = await resumeApi.checkoutPremium('job-agent');
       window.location.assign(authorizationUrl);
     } catch (err) {
       toast.error(t('ja.toast.payFail'), err instanceof ApiError ? err.message : t('ja.toast.payFailBody'));

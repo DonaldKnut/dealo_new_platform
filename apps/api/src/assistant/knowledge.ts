@@ -17,14 +17,40 @@ export const TOPICS: Topic[] = [
   {
     id: 'about',
     title: 'What Dealo is',
-    keywords: ['what is dealo', 'about dealo', 'who are you', 'what do you do', 'dealo', 'company'],
+    keywords: ['what is dealo', 'about dealo', 'what do you do', 'tell me about dealo', 'explain dealo', 'dealo platform'],
     answer:
-      'Dealo is a hiring platform based in Nigeria. Companies hire checked office staff and skilled trades (direct hiring or managed staffing), or run their own hiring with the Dealo ATS and AI Hiring Agents. We do not recruit drivers, chefs/cooks, or domestic workers. Job seekers build a free CV, search Nigerian and remote jobs, apply and track applications. Job seekers never pay to get a job.',
+      'Dealo is a Nigerian hiring company for **office staff** and **skilled trades**. Companies use us to get a checked shortlist (often in about 48 hours), hire onto their payroll, or let Dealo manage the workers. Job seekers build a free CV, browse jobs, and can turn on Job Agent. We do **not** recruit drivers, chefs/cooks, or domestic workers. Job seekers never pay to get a job.',
     links: [
       { label: 'About Dealo', href: '/about' },
       { label: 'How it works', href: '/how-it-works' },
     ],
-    suggestions: ['How does hiring with Dealo work?', 'How do I build a CV?', 'What are Hiring Agents?'],
+    suggestions: ['How does hiring work?', 'Who owns Dealo?', 'How do I build a CV?'],
+  },
+  {
+    id: 'ownership',
+    title: 'Who owns Dealo',
+    keywords: [
+      'who owns dealo',
+      'owner of dealo',
+      'who owns',
+      'ownership',
+      'founder',
+      'founders',
+      'ceo',
+      'who founded',
+      'who started dealo',
+      'company registration',
+      'legal entity',
+      'who is behind dealo',
+    ],
+    answer:
+      'Dealo Talent Network is a privately held Nigerian hiring company. Day to day, the Dealo team runs recruiting, placements and support. For legal ownership, registration papers or investor details, message us on WhatsApp or Contact — a person on the team will answer. I will not invent names or titles.',
+    links: [
+      { label: 'Contact', href: '/contact' },
+      { label: 'About Dealo', href: '/about' },
+    ],
+    suggestions: ['What is Dealo?', 'Talk to a person', 'How does hiring work?'],
+    handoff: true,
   },
   {
     id: 'how-it-works',
@@ -59,7 +85,7 @@ export const TOPICS: Topic[] = [
       'onboarding modules',
     ],
     answer:
-      'Direct hiring: Dealo finds and checks people, you interview and they join your payroll; priced per job, you pay when someone joins, with a free 90-day replacement. Managed staffing: Dealo supplies the workers and manages contracts, pay paperwork and replacements for a monthly fee, with agreed dates and headcount. Temp and contract cover: day rates plus a clear Dealo mark-up for skilled trades and short office cover (absences, peaks, high-repeat bookings). Training after hire: employers pay for short onboarding modules (site safety, tools, office onboarding, customer service) once talent is placed. Core hiring covers office roles and skilled trades.',
+      'Direct hiring: Dealo finds and checks people, you interview and they join your payroll; priced per job, you pay when someone joins, with a free 90-day replacement. Managed staffing: Dealo supplies the workers and manages contracts, pay paperwork and replacements for a monthly fee, with agreed dates and headcount. Temp and contract cover: quoted as day rate plus Dealo mark-up for skilled trades and short office cover (absences, peaks, high-repeat bookings) — no public list price. Training after hire: employers get a quote for short onboarding modules (site safety, tools, office onboarding, customer service) once talent is placed. Core hiring covers office roles and skilled trades.',
     links: [
       { label: 'Direct hiring', href: '/services/direct-recruitment' },
       { label: 'Managed staffing', href: '/services/managed-staffing' },
@@ -74,7 +100,7 @@ export const TOPICS: Topic[] = [
     title: 'Prices for hiring services',
     keywords: ['price', 'prices', 'pricing', 'cost', 'how much', 'fee', 'fees', 'quote', 'charge', 'expensive', 'cheap'],
     answer:
-      'Direct hiring is priced per job and you pay when someone joins your team. Managed staffing is a monthly fee. Temp/contract cover is day rate plus mark-up. Training modules are priced per pack and billed to the employer after placement. Dealo gives an exact price once we understand the role, before you agree to anything. Fixed-price products: Hiring Agents ({{agentPlans}}) and Dealo Premium for CV + Job Agent ({{cvPremium}}). Job seekers never pay to get a job.',
+      'Direct hiring is priced per job and you pay when someone joins your team. Managed staffing is a monthly fee. Temp/contract cover and post-hire training are quote-based (day rate + mark-up; modules after placement) — we do not publish list prices. Dealo gives an exact quote once we understand the brief, before you agree. Fixed-price products: Hiring Agents ({{agentPlans}}) and Dealo Premium for CV + Job Agent ({{cvPremium}}). Job seekers never pay to get a job.',
     links: [
       { label: 'Get a price', href: '/hire' },
       { label: 'Compare services', href: '/services' },
@@ -139,14 +165,60 @@ export const TOPICS: Topic[] = [
   {
     id: 'cv-builder',
     title: 'CV builder',
-    keywords: ['~cv', '~resume', '~résumé', 'builder', 'make a cv', 'create cv', 'build cv', 'build a cv', 'template', 'templates', 'write my cv'],
+    keywords: ['~cv', '~resume', '~résumé', 'builder', 'make a cv', 'create cv', 'build cv', 'build a cv', 'template', 'templates'],
     answer:
-      'Build a CV for free in the Dealo CV builder: fill in details step by step and watch the A4 preview update live. Classic and Modern templates, three fonts and the first colour are free; icons beside headings are free too. You need an account to download the PDF; saved CVs live under Dashboard, My CVs.',
+      'Open the free Dealo CV builder: fill sections step by step and watch the A4 preview update. Classic and Modern templates, three fonts and the first colour are free. Sign in to download the PDF; saved CVs sit under Dashboard → My CVs. Premium unlocks more templates, fonts, AI writing and Job Agent boosts.',
     links: [
       { label: 'Open the CV builder', href: '/resume-builder/new' },
       { label: 'My CVs', href: '/dashboard/resumes' },
     ],
-    suggestions: ['What do I get with Premium?', 'Tips for a strong CV', 'Find jobs for my CV'],
+    suggestions: ['Tips for a strong CV', 'Help me rewrite my summary', 'Tailor my CV to a job'],
+  },
+  {
+    id: 'cv-tips',
+    title: 'Strong CV tips',
+    keywords: [
+      'tips for a strong cv',
+      'cv tips',
+      'resume tips',
+      'improve my cv',
+      'better cv',
+      'write my cv',
+      'rewrite my cv',
+      'rewrite my summary',
+      'bullet points',
+      'cv advice',
+      'how to write a cv',
+      'nigeria cv',
+      'ats cv',
+    ],
+    answer:
+      'Advanced CV moves that actually get interviews in Nigeria:\n1. **Lead with proof, not duties** — “Cut month-end close from 12 days to 6 for a 40-person team” beats “Responsible for accounts”.\n2. **Match the advert’s nouns** — copy exact tools, licences and role titles (e.g. “3-phase”, “QuickBooks”, “NABTEB”) so human and ATS filters keep you.\n3. **One page if under ~8 years**; two only if every line earns its keep.\n4. **Trades:** put licences, sites and crew size near the top; office roles: stack, stack outcomes, then soft skills last.\n5. **Kill fluff** (“hardworking”, “team player”) and photo unless the employer asks.\n6. Use Dealo’s builder → **Fit to a job** to paste an advert and see gaps, or paste your draft here and I will rewrite it.',
+    links: [
+      { label: 'Open the CV builder', href: '/resume-builder/new' },
+      { label: 'Fit CV to a job', href: '/resume-builder/new' },
+    ],
+    suggestions: ['Rewrite my summary', 'Tailor my CV to a job', 'What is CV Premium?'],
+  },
+  {
+    id: 'cv-tailor',
+    title: 'Tailor a CV to a job',
+    keywords: [
+      'tailor',
+      'tailor my cv',
+      'tailor cv',
+      'match my cv',
+      'fit to a job',
+      'job description',
+      'job advert',
+      'customise cv',
+      'customize cv',
+      'rewrite for this job',
+    ],
+    answer:
+      'Paste the job advert (and your current summary or bullets if you have them). I will: pull the must-have keywords, rewrite your profile and 4–6 bullets to match without lying, flag gaps honestly, and suggest what to move higher. In the app: CV builder → **Fit to a job**. Premium unlocks the full AI tailor pass; you can still get strong coaching here for free.',
+    links: [{ label: 'Fit CV to a job', href: '/resume-builder/new' }],
+    suggestions: ['Tips for a strong CV', 'Help me rewrite my summary', 'What is CV Premium?'],
   },
   {
     id: 'cv-premium',
@@ -436,12 +508,12 @@ export function isAllowedHref(href: string) {
   return ALLOWED_HREFS.has(href) || ALLOWED_PREFIXES.some((prefix) => href.startsWith(prefix));
 }
 
-export const GREETING_SUGGESTIONS = ['How do I build a CV?', 'Find jobs in Nigeria', 'What are Hiring Agents?', 'Talk to a person'];
+export const GREETING_SUGGESTIONS = ['How do I build a CV?', 'Tips for a strong CV', 'Find jobs in Nigeria', 'Talk to a person'];
 
 const FALLBACK: Pick<Topic, 'answer' | 'links' | 'suggestions'> = {
   answer:
-    "I'm not certain about that one. I can help with CVs, jobs, hiring with Dealo, the ATS, Hiring Agents, the API and your account, or pass you to a person on our team.",
-  links: [],
+    'I focus on Dealo hiring, CVs, jobs and your account. Ask me that — or say if you want WhatsApp / a person. If it is outside office roles and skilled trades (for example drivers, chefs or domestic work), we do not recruit for that.',
+  links: [{ label: 'Contact', href: '/contact' }],
   suggestions: GREETING_SUGGESTIONS,
 };
 
@@ -491,10 +563,16 @@ export function retrieve(question: string, k = 5): Topic[] {
 export function matchTopic(question: string): { topic: Topic | null; answer: string; links: AssistantLink[]; suggestions: string[]; handoff: boolean } {
   const trimmed = question.trim();
   if (GREETING.test(trimmed) && trimmed.split(/\s+/).length <= 4) {
-    return { topic: null, answer: 'Hi! I am the Dealo AI Assistant. Ask me anything about CVs, jobs, hiring or your account.', links: [], suggestions: GREETING_SUGGESTIONS, handoff: false };
+    return {
+      topic: null,
+      answer: 'Hi — ask me about hiring, jobs, or your CV. I can rewrite bullets, tailor to a job advert, or hand you to WhatsApp / a person.',
+      links: [],
+      suggestions: GREETING_SUGGESTIONS,
+      handoff: false,
+    };
   }
   if (THANKS.test(trimmed) && trimmed.split(/\s+/).length <= 4) {
-    return { topic: null, answer: 'Happy to help. Anything else?', links: [], suggestions: GREETING_SUGGESTIONS, handoff: false };
+    return { topic: null, answer: 'Glad it helped. Want CV tips, a job search, or WhatsApp with the team?', links: [], suggestions: GREETING_SUGGESTIONS, handoff: false };
   }
   const best = retrieve(question, 1)[0];
   if (!best) return { topic: null, ...FALLBACK, handoff: false };

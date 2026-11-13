@@ -1,6 +1,6 @@
 'use client';
 
-import { ASSISTANT_NAME, type AssistantLink, type AssistantMessage, type AssistantReply, type AssistantWelcome } from '@dealo/shared';
+import { type AssistantLink, type AssistantMessage, type AssistantReply, type AssistantWelcome } from '@dealo/shared';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -16,6 +16,7 @@ import {
   Headphones,
   Loader2,
   Maximize2,
+  MessageCircle,
   Minimize2,
   RefreshCw,
   Send,
@@ -88,34 +89,35 @@ function useIsMobile() {
   return mobile;
 }
 
-/** The animated gradient orb that is Dealo AI's face. Spins faster while it is answering. */
+/** Friendly Dealo chat mark — invites a conversation, not a spinning AI orb. */
 function AssistantOrb({ size = 40, active = false, className }: { size?: number; active?: boolean; className?: string }) {
   const reduce = useReducedMotion();
   return (
-    <span className={cn('relative inline-flex shrink-0 items-center justify-center rounded-full', className)} style={{ width: size, height: size }}>
-      <motion.span
-        aria-hidden
-        className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#7cff4d,#14b8a6,#38bdf8,#a78bfa,#7cff4d)]"
-        animate={reduce ? undefined : { rotate: 360 }}
-        transition={{ duration: active ? 1.6 : 6, repeat: Infinity, ease: 'linear' }}
-      />
-      <span aria-hidden className="absolute inset-[2px] rounded-full bg-[radial-gradient(circle_at_30%_25%,#1f6b4a,#062417_70%)]" />
-      <span aria-hidden className="absolute inset-[2px] rounded-full bg-[radial-gradient(circle_at_32%_22%,rgba(255,255,255,0.45),transparent_45%)]" />
+    <span className={cn('relative inline-flex shrink-0 items-center justify-center', className)} style={{ width: size, height: size }}>
       {active && !reduce ? (
         <motion.span
           aria-hidden
-          className="absolute -inset-1 rounded-full border border-[#7cff4d]/50"
-          animate={{ scale: [1, 1.18, 1], opacity: [0.7, 0, 0.7] }}
-          transition={{ duration: 1.6, repeat: Infinity }}
+          className="absolute -inset-1 rounded-full bg-[#7cff4d]/30"
+          animate={{ scale: [1, 1.12, 1], opacity: [0.5, 0.15, 0.5] }}
+          transition={{ duration: 1.45, repeat: Infinity }}
         />
       ) : null}
-      <Sparkles className="relative text-[#c9ffb0]" style={{ width: size * 0.42, height: size * 0.42 }} />
+      <span
+        aria-hidden
+        className="absolute inset-0 rounded-full bg-[linear-gradient(145deg,#124f3a,#062417_60%,#03140d)] shadow-[0_10px_24px_-10px_rgba(6,36,23,0.75)] ring-2 ring-[#7cff4d]/40"
+      />
+      <span className="relative inline-flex items-center justify-center gap-0.5 text-[#d8ffc2]">
+        <span className="font-display font-bold" style={{ fontSize: size * 0.28, lineHeight: 1 }}>
+          D
+        </span>
+        <MessageCircle style={{ width: size * 0.34, height: size * 0.34 }} strokeWidth={2.25} />
+      </span>
     </span>
   );
 }
 
 export function HelpWidget() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
   const mobile = useIsMobile();
@@ -261,7 +263,7 @@ export function HelpWidget() {
 
       try {
         await streamAssistant(
-          { messages: transcript(next), page: pathname },
+          { messages: transcript(next), page: pathname, locale },
           (event) => {
             if (event.type === 'start') patch((m) => ({ ...m, source: event.source }));
             else if (event.type === 'delta') patch((m) => ({ ...m, text: m.text + event.text }));
@@ -293,7 +295,7 @@ export function HelpWidget() {
         abortRef.current = null;
       }
     },
-    [items, streaming, pathname],
+    [items, streaming, pathname, locale],
   );
 
   // Opening from anywhere: openAssistant('question') in lib/assistant-client.
@@ -382,7 +384,7 @@ export function HelpWidget() {
               key="panel"
               layout={!reduceMotion}
               role="dialog"
-              aria-label={ASSISTANT_NAME}
+              aria-label={t('chat.title')}
               initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.94, filter: 'blur(6px)' }}
               animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
               exit={reduceMotion ? undefined : { opacity: 0, y: 18, scale: 0.95, filter: 'blur(4px)' }}
@@ -457,7 +459,7 @@ export function HelpWidget() {
                                   )}
                                 >
                                   {s === PERSON ? <Headphones className="h-3 w-3" /> : <Sparkles className="h-3 w-3 text-brand" />}
-                                  {s}
+                                  {s === PERSON ? t('chat.person') : s}
                                 </button>
                               ))}
                             </motion.div>
@@ -508,16 +510,16 @@ export function HelpWidget() {
                   >
                     <CheckCircle2 className="h-8 w-8" />
                   </motion.span>
-                  <p className="font-display text-xl text-foreground">Message sent</p>
+                  <p className="font-display text-xl text-foreground">{t('chat.sent')}</p>
                   <p className="max-w-xs text-sm text-muted">{sentNote}</p>
                   <div className="mt-2 flex flex-wrap justify-center gap-2">
                     {user ? (
                       <Link href="/dashboard/support" onClick={close} className="btn-secondary px-3 text-xs">
-                        See my tickets
+                        {t('chat.tickets')}
                       </Link>
                     ) : null}
                     <button type="button" onClick={() => setView('chat')} className="btn-primary px-3 text-xs">
-                      Back to chat
+                      {t('chat.back')}
                     </button>
                   </div>
                 </div>
@@ -543,8 +545,8 @@ export function HelpWidget() {
                   dismissNudge();
                 }}
               >
-                <p className="text-[12.5px] font-semibold text-foreground">Need a hand?</p>
-                <p className="text-[11px] text-muted">Ask Dealo AI anything, answers in seconds.</p>
+                <p className="text-[12.5px] font-semibold text-foreground">{t('chat.nudge.title')}</p>
+                <p className="text-[11px] text-muted">{t('chat.nudge.body')}</p>
               </button>
               <button type="button" aria-label="Dismiss" onClick={dismissNudge} className="absolute right-2 top-2 rounded-full p-1 text-muted hover:bg-surface hover:text-foreground">
                 <X className="h-3 w-3" />
@@ -557,9 +559,9 @@ export function HelpWidget() {
           <motion.button
             type="button"
             data-tour="support-help"
-            aria-label={open ? `Close ${ASSISTANT_NAME}` : `Open ${ASSISTANT_NAME}`}
+            aria-label={open ? t('chat.close') : t('chat.open')}
             aria-expanded={open}
-            title={`${ASSISTANT_NAME} (Ctrl + /)`}
+            title={`${t('chat.open')} (Ctrl + /)`}
             onClick={() => {
               setOpen((v) => !v);
               dismissNudge();
@@ -627,6 +629,7 @@ function Header({
   onToggleExpand: () => void;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const reduce = useReducedMotion();
   const iconBtn = 'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/90 ring-1 ring-white/10 transition hover:bg-white/20 hover:text-white';
   return (
@@ -663,12 +666,7 @@ function Header({
         )}
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 truncate font-display text-[17px] leading-tight tracking-tight">
-            {view === 'chat' ? ASSISTANT_NAME : 'Talk to a person'}
-            {view === 'chat' ? (
-              <span className="rounded-full border border-[#7cff4d]/40 bg-[#7cff4d]/10 px-1.5 py-px text-[9px] font-bold uppercase tracking-widest text-[#b8ff9a]">
-                {aiOn ? 'AI' : 'Guide'}
-              </span>
-            ) : null}
+            {view === 'chat' ? t('chat.title') : t('chat.person')}
           </p>
           <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-white/70">
             {view === 'chat' ? (
@@ -719,6 +717,7 @@ function EmptyState({
   whatsapp: string | null;
   onAsk: (q: string) => void;
 }) {
+  const { t } = useLocale();
   return (
     <div className="flex flex-col items-center pt-2 text-center">
       <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 18 }} className="relative">
@@ -730,14 +729,14 @@ function EmptyState({
           <>
             {welcome.greeting}.
             <br />
-            <span className="bg-gradient-to-r from-brand via-emerald-500 to-sky-500 bg-clip-text text-transparent">How can I help?</span>
+            <span className="bg-gradient-to-r from-brand via-emerald-500 to-sky-500 bg-clip-text text-transparent">{t('chat.help')}</span>
           </>
         ) : (
-          'How can I help?'
+          t('chat.help')
         )}
       </motion.h3>
       <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }} className="mt-1.5 max-w-sm text-[12.5px] leading-relaxed text-muted">
-        {welcome?.intro ?? 'Ask about hiring, jobs, CVs, the Dealo API, or anything you are stuck on.'}
+        {welcome?.intro ?? t('chat.nudge.body')}
       </motion.p>
 
       {whatsapp ? (
@@ -754,8 +753,8 @@ function EmptyState({
             <WhatsAppIcon className="h-5 w-5" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-semibold text-foreground">Prefer WhatsApp?</span>
-            <span className="block text-[11.5px] text-muted">Chat with a Dealo person on WhatsApp instead.</span>
+            <span className="block text-[13px] font-semibold text-foreground">{t('chat.whatsappPrefer')}</span>
+            <span className="block text-[11.5px] text-muted">{t('chat.whatsappPreferBody')}</span>
           </span>
           <ArrowUpRight className="h-4 w-4 shrink-0 text-[#128C7E] dark:text-[#25D366]" />
         </motion.a>
@@ -796,7 +795,7 @@ function EmptyState({
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/70 px-3 py-1.5 text-[11.5px] font-medium text-foreground transition hover:border-brand/60 hover:text-brand"
             >
               {s === PERSON ? <Headphones className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3 text-brand" />}
-              {s}
+              {s === PERSON ? t('chat.person') : s}
             </motion.button>
           ))}
         </div>
@@ -902,7 +901,7 @@ function Message({
             ) : null}
             {item.rating ? <span className="ml-1 text-[10.5px] text-brand">Thanks for the feedback</span> : null}
             {item.source ? (
-              <span className="ml-auto text-[10px] uppercase tracking-wider text-muted/70">{item.source === 'ai' ? 'Dealo AI' : 'Dealo guide'}</span>
+              <span className="ml-auto text-[10px] uppercase tracking-wider text-muted/70">{item.source === 'ai' ? 'Dealo' : 'Guide'}</span>
             ) : null}
           </div>
         ) : null}
@@ -954,6 +953,8 @@ function Composer({
   onPerson: () => void;
   whatsapp: string | null;
 }) {
+  const { t } = useLocale();
+  const placeholder = t('chat.placeholder');
   const near = input.length > MAX_INPUT * 0.8;
   return (
     <form
@@ -977,8 +978,8 @@ function Composer({
                 }
               }}
               rows={1}
-              placeholder="Ask Dealo AI anything…"
-              aria-label="Your question"
+              placeholder={placeholder}
+              aria-label={placeholder}
               className="max-h-[168px] min-h-[2.4rem] flex-1 resize-none bg-transparent px-1.5 py-2 text-[13.5px] leading-relaxed text-foreground outline-none placeholder:text-muted"
             />
             {streaming ? (
@@ -1007,11 +1008,10 @@ function Composer({
 
         <div className="mt-2 flex items-center justify-between gap-2 px-1 text-[11px] text-muted">
           <button type="button" onClick={onPerson} className="inline-flex items-center gap-1 font-semibold text-foreground transition hover:text-brand">
-            <UserRound className="h-3.5 w-3.5" /> Talk to a person
+            <UserRound className="h-3.5 w-3.5" /> {t('chat.person')}
           </button>
           <div className="flex items-center gap-3">
             {near ? <span className={cn('tabular-nums', input.length >= MAX_INPUT && 'text-red-500')}>{input.length}/{MAX_INPUT}</span> : null}
-            {!mobile && !near ? <span className="hidden min-[420px]:inline">Enter to send · Shift+Enter new line</span> : null}
             {whatsapp ? (
               <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-[#128C7E] hover:underline dark:text-[#25D366]">
                 <WhatsAppIcon className="h-3.5 w-3.5" /> WhatsApp
@@ -1019,7 +1019,7 @@ function Composer({
             ) : null}
           </div>
         </div>
-        <p className="mt-1 text-center text-[10px] text-muted/70">Dealo AI can make mistakes. Check important details.</p>
+        <p className="mt-1 text-center text-[10px] text-muted/70">{t('chat.disclaimer')}</p>
       </div>
     </form>
   );

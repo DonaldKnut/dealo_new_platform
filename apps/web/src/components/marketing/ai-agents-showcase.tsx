@@ -2,29 +2,24 @@
 
 import { AnimatePresence, motion, useInView, useReducedMotion } from 'framer-motion';
 import {
-  AlertTriangle,
   ArrowRight,
   Award,
   BadgeCheck,
   Bot,
-  CalendarClock,
   CheckCheck,
   CheckCircle2,
   Clock,
   Database,
   FileSearch,
   FileText,
-  Fingerprint,
   MapPin,
   Pause,
   PhoneCall,
   Play,
   Radar,
-  Radio,
   ScanSearch,
   Search,
   Send,
-  ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
@@ -69,53 +64,49 @@ interface ActivityCardConfig {
 const AGENT_ACTIVITIES: Record<AgentId, ActivityCardConfig[]> = {
   manage: [
     {
-      icon: CalendarClock,
-      iconBg: 'bg-sky-500/10 dark:bg-sky-500/20',
-      iconColor: 'text-sky-600 dark:text-sky-400',
-      borderHover: 'hover:border-sky-500/40',
-      badge: 'Post-Shift Sync',
-      badgeColor: 'border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400',
-      time: '17:30 WAT',
-      subtitle:
-        'Interviews scheduled outside core construction hours via SMS & WhatsApp to prevent active site halts.',
-      chips: ['17:30 WAT Window', 'SMS + WhatsApp Synced', 'Zero Site Downtime'],
-    },
-    {
-      icon: Fingerprint,
+      icon: CheckCircle2,
       iconBg: 'bg-emerald-500/10 dark:bg-emerald-500/20',
       iconColor: 'text-emerald-600 dark:text-emerald-400',
       borderHover: 'hover:border-emerald-500/40',
-      badge: 'Geofence Verified',
+      badge: 'Placement Confirmed',
       badgeColor: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-      time: '07:42 WAT',
-      subtitle:
-        'Lekki Site Gate 3 GPS perimeter confirmed 2 of 2 workers on site 18 min before morning muster.',
-      chips: ['Lekki Gate 3', '07:42 Check-in', '100% On-Time'],
+      time: 'Day 1',
+      subtitle: 'Electrician Chinedu O. started on the Lekki site. Employer signed off after the first morning brief.',
+      chips: ['Started today', 'Employer OK', 'Trade: Electrical'],
       showStreak: true,
-    },
-    {
-      icon: AlertTriangle,
-      iconBg: 'bg-amber-500/10 dark:bg-amber-500/20',
-      iconColor: 'text-amber-600 dark:text-amber-400',
-      borderHover: 'hover:border-amber-500/40',
-      badge: 'Proactive Alert',
-      badgeColor: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-      time: '06:14 WAT',
-      subtitle:
-        'Lekki-Epe expressway bottleneck flagged. Recruiter Amaka dispatched site shuttle stipend automatically.',
-      chips: ['Transit Bottleneck', 'Recruiter Handled', 'Resolved in 14 min'],
     },
     {
       icon: UserCheck,
       iconBg: 'bg-teal-500/10 dark:bg-teal-500/20',
       iconColor: 'text-brand',
       borderHover: 'hover:border-brand/40',
-      badge: '48h Guarantee',
+      badge: '90-day Cover',
       badgeColor: 'border-brand/30 bg-brand-soft/70 text-brand',
       time: 'Standing SLA',
-      subtitle:
-        'Pre-vetted standby electrician Emmanuel O. (NABTEB certified) on 45-min notice if replacement is required.',
-      chips: ['Standby: Emmanuel O.', '45m Notice', 'Zero Replacement Fee'],
+      subtitle: 'If a direct hire leaves within 90 days, Dealo finds a free replacement — standby talent already shortlisted.',
+      chips: ['90-day replacement', 'Standby ready', 'No extra fee'],
+    },
+    {
+      icon: PhoneCall,
+      iconBg: 'bg-sky-500/10 dark:bg-sky-500/20',
+      iconColor: 'text-sky-600 dark:text-sky-400',
+      borderHover: 'hover:border-sky-500/40',
+      badge: 'Check-in',
+      badgeColor: 'border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400',
+      time: 'Week 1',
+      subtitle: 'Recruiter Amaka confirmed role fit with the site supervisor and the worker — both green.',
+      chips: ['Supervisor call', 'Worker OK', 'Fit confirmed'],
+    },
+    {
+      icon: Award,
+      iconBg: 'bg-amber-500/10 dark:bg-amber-500/20',
+      iconColor: 'text-amber-600 dark:text-amber-400',
+      borderHover: 'hover:border-amber-500/40',
+      badge: 'Training Offer',
+      badgeColor: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+      time: 'Post-hire',
+      subtitle: 'Optional site-safety module quoted for the employer after placement — talent completes before week two.',
+      chips: ['Quote after hire', 'Employer pays', 'Optional'],
     },
   ],
   sourcing: [
@@ -303,100 +294,6 @@ const AGENT_ACTIVITIES: Record<AgentId, ActivityCardConfig[]> = {
     },
   ],
 };
-
-function PlacementTelemetryIllustration() {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-surface/60 p-3.5 backdrop-blur-sm sm:p-4">
-      {/* Visual radar & telemetry diagram */}
-      <div className="relative flex flex-col items-center justify-between gap-3 sm:flex-row">
-        {/* Radar Graphic */}
-        <div className="relative flex h-32 w-32 shrink-0 items-center justify-center sm:h-36 sm:w-36">
-          {/* Subtle radar rings */}
-          <div className="absolute inset-0 rounded-full border border-brand/20 bg-brand-soft/20 dark:bg-brand-soft/10" />
-          <div className="absolute inset-3 rounded-full border border-brand/25" />
-          <div className="absolute inset-7 rounded-full border border-dashed border-brand/35" />
-          <div className="absolute inset-11 rounded-full border border-brand/40 bg-brand/5" />
-
-          {/* Radar Sweep Beam */}
-          <div className="pointer-events-none absolute inset-0 animate-[spin_6s_linear_infinite] rounded-full bg-[conic-gradient(from_0deg,transparent_0_300deg,rgba(15,118,110,0.35)_360deg)] dark:bg-[conic-gradient(from_0deg,transparent_0_300deg,rgba(124,255,77,0.35)_360deg)]" />
-
-          {/* Central Site Marker */}
-          <div className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full border border-brand bg-brand text-white shadow-lg shadow-brand/30 dark:text-[#071f14]">
-            <Radio className="h-4 w-4 animate-pulse" />
-          </div>
-
-          {/* Worker Node 1: Oluwaseun */}
-          <div className="absolute left-6 top-5 z-10 flex items-center gap-1">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            <span className="rounded bg-surface-elevated/90 px-1 py-0.5 text-[9px] font-bold text-foreground shadow-sm">
-              OA
-            </span>
-          </div>
-
-          {/* Worker Node 2: Chinedu */}
-          <div className="absolute bottom-5 right-6 z-10 flex items-center gap-1">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            <span className="rounded bg-surface-elevated/90 px-1 py-0.5 text-[9px] font-bold text-foreground shadow-sm">
-              CO
-            </span>
-          </div>
-
-          {/* Standby Worker Node: Emmanuel (Outer ring) */}
-          <div className="absolute right-2 top-7 z-10 flex items-center gap-1">
-            <span className="relative flex h-2 w-2">
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
-            </span>
-            <span className="rounded border border-amber-500/30 bg-surface-elevated/90 px-1 py-0.5 text-[8px] font-semibold text-amber-600 dark:text-amber-400 shadow-sm">
-              Standby
-            </span>
-          </div>
-        </div>
-
-        {/* Telemetry live status info */}
-        <div className="min-w-0 flex-1 space-y-2 text-left">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 rounded-md border border-brand/30 bg-brand-soft/70 px-2 py-0.5 text-[10px] font-semibold text-brand">
-              <MapPin className="h-2.5 w-2.5" />
-              Lekki Scheme 1 · Gate 3
-            </span>
-            <span className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-              Geofence Locked (200m)
-            </span>
-          </div>
-
-          <p className="text-[11px] leading-relaxed text-muted">
-            Live telemetry synchronizing on-site attendance, morning muster confirmation, and instant standby backup cover.
-          </p>
-
-          <div className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-4">
-            <div className="rounded-lg border border-border/80 bg-surface-elevated/70 px-2 py-1.5">
-              <p className="text-[9px] font-medium uppercase tracking-wider text-muted">Attendance</p>
-              <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">99.4%</p>
-            </div>
-            <div className="rounded-lg border border-border/80 bg-surface-elevated/70 px-2 py-1.5">
-              <p className="text-[9px] font-medium uppercase tracking-wider text-muted">Avg Arrival</p>
-              <p className="text-xs font-bold text-foreground">07:42 WAT</p>
-            </div>
-            <div className="rounded-lg border border-border/80 bg-surface-elevated/70 px-2 py-1.5">
-              <p className="text-[9px] font-medium uppercase tracking-wider text-muted">Standby</p>
-              <p className="text-xs font-bold text-brand">1 Active</p>
-            </div>
-            <div className="rounded-lg border border-border/80 bg-surface-elevated/70 px-2 py-1.5">
-              <p className="text-[9px] font-medium uppercase tracking-wider text-muted">SLA Guard</p>
-              <p className="text-xs font-bold text-foreground">48h Cover</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function SourcingTelemetryIllustration() {
   return (
@@ -735,7 +632,7 @@ export function AiAgentsShowcase() {
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.25 }}
                 >
-                  {active.id === 'manage' && <PlacementTelemetryIllustration />}
+                  {active.id === 'manage' && <MatchTelemetryIllustration />}
                   {active.id === 'sourcing' && <SourcingTelemetryIllustration />}
                   {active.id === 'screening' && <ScreeningTelemetryIllustration />}
                   {active.id === 'verify' && <VerifyTelemetryIllustration />}

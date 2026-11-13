@@ -21,6 +21,15 @@ export const paymentReferenceSchema = z.object({
   reference: z.string().trim().regex(/^dealo_[a-z]+_[a-f0-9]{20}$/, 'Unknown payment reference'),
 });
 
+/** Where Paystack should send the browser after CV / Job Agent Premium checkout. */
+export const premiumCheckoutSchema = z
+  .object({
+    returnTo: z.enum(['resumes', 'job-agent']).optional(),
+  })
+  .default({});
+
+export type PremiumCheckoutInput = z.infer<typeof premiumCheckoutSchema>;
+
 /** "₦25,000" from 2500000 kobo; other currencies use their code. */
 export function formatMinor(amountMinor: number, currency = 'NGN') {
   const major = amountMinor / 100;

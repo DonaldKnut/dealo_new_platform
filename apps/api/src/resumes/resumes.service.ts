@@ -85,10 +85,14 @@ export class ResumesService implements OnModuleInit {
     return { priceMinor: this.premiumPrice, currency: 'NGN', periodDays: this.premiumDays, paymentsEnabled: this.paystack.isConfigured };
   }
 
-  async checkoutPremium(user: AuthUser) {
+  async checkoutPremium(user: AuthUser, returnTo: 'resumes' | 'job-agent' = 'resumes') {
+    if (!this.paystack.isConfigured) {
+      throw new BadRequestException('Online payments are not switched on yet. Add Paystack keys and try again.');
+    }
     const account = await this.prisma.user.findUnique({ where: { id: user.id }, select: { email: true } });
     if (!account) throw new ForbiddenException('Account not found');
     const reference = newReference(PAYMENT_PREFIX.cvPremium);
+    const path = returnTo === 'job-agent' ? '/dashboard/job-agent' : '/dashboard/resumes';
     const invoice = await this.prisma.resumeInvoice.create({
       data: { reference, userId: user.id, amountMinor: this.premiumPrice, currency: 'NGN', periodDays: this.premiumDays },
     });
@@ -98,8 +102,14 @@ export class ResumesService implements OnModuleInit {
         amountMinor: this.premiumPrice,
         currency: 'NGN',
         reference,
-        callbackUrl: `${this.appUrl}/dashboard/resumes?premium=${reference}`,
-        metadata: { product: 'dealo_cv_premium', userId: user.id, invoiceId: invoice.id },
+        callbackUrl: `${this.appUrl}${path}?premium=${reference}`,
+        metadata: {
+          product: 'dealo_premium',
+          unlocks: ['cv', 'job_agent'],
+          returnTo,
+          userId: user.id,
+          invoiceId: invoice.id,
+        },
       });
       await this.prisma.resumeInvoice.update({ where: { id: invoice.id }, data: { authorizationUrl: session.authorization_url } });
       return { reference, authorizationUrl: session.authorization_url };
@@ -120,8 +130,9 @@ export class ResumesService implements OnModuleInit {
     return { status: fresh?.status ?? 'PENDING', failureReason: fresh?.failureReason ?? null, premium: plan.premium, premiumUntil: plan.premiumUntil };
   }
 
-  /** Called by the webhook and by the return page; only the first successful call adds days. */
+  /** Called by the webhook and by the return page; only the first successful call adds days. Never trusts client amounts. */
   private async applyPremiumPayment(txn: PaystackTransaction) {
+    if (!txn.reference.startsWith(PAYMENT_PREFIX.cvPremium)) return;
     const invoice = await this.prisma.resumeInvoice.findUnique({ where: { reference: txn.reference } });
     if (!invoice || invoice.status !== 'PENDING') return;
     if (txn.status !== 'success') {
@@ -137,13 +148,28 @@ export class ResumesService implements OnModuleInit {
       });
       return;
     }
+    const account = await this.prisma.user.findUnique({ where: { id: invoice.userId }, select: { email: true, premiumUntil: true } });
+    if (!account) {
+      await this.prisma.resumeInvoice.updateMany({
+        where: { id: invoice.id, status: 'PENDING' },
+        data: { status: 'FAILED', failureReason: 'Account missing for invoice' },
+      });
+      return;
+    }
+    const paidEmail = txn.customer?.email?.trim().toLowerCase();
+    if (paidEmail && paidEmail !== account.email.trim().toLowerCase()) {
+      await this.prisma.resumeInvoice.updateMany({
+        where: { id: invoice.id, status: 'PENDING' },
+        data: { status: 'FAILED', failureReason: 'Payer email does not match the account' },
+      });
+      return;
+    }
     const claimed = await this.prisma.resumeInvoice.updateMany({
       where: { id: invoice.id, status: 'PENDING' },
       data: { status: 'PAID', paidAt: txn.paid_at ? new Date(txn.paid_at) : new Date(), providerTxnId: String(txn.id) },
     });
     if (!claimed.count) return;
-    const account = await this.prisma.user.findUnique({ where: { id: invoice.userId }, select: { premiumUntil: true } });
-    const base = account?.premiumUntil && account.premiumUntil > new Date() ? account.premiumUntil : new Date();
+    const base = account.premiumUntil && account.premiumUntil > new Date() ? account.premiumUntil : new Date();
     const premiumUntil = new Date(base.getTime() + invoice.periodDays * DAY_MS);
     await this.prisma.user.update({ where: { id: invoice.userId }, data: { premiumUntil } });
     await this.audit.record({
@@ -151,7 +177,7 @@ export class ResumesService implements OnModuleInit {
       entityType: 'User',
       entityId: invoice.userId,
       actorId: invoice.userId,
-      metadata: { reference: invoice.reference, amountMinor: invoice.amountMinor, premiumUntil: premiumUntil.toISOString() },
+      metadata: { reference: invoice.reference, amountMinor: invoice.amountMinor, premiumUntil: premiumUntil.toISOString(), unlocks: ['cv', 'job_agent'] },
     });
   }
 

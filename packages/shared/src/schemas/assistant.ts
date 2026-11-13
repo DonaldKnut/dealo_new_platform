@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ASSISTANT_NAME = 'Dealo AI Assistant';
+export const ASSISTANT_NAME = 'Dealo AI';
 
 export const assistantMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -15,6 +15,8 @@ export const assistantChatSchema = z
     messages: z.array(assistantMessageSchema).min(1).max(24),
     /** The page the chat was opened on, so answers can point to the right place. */
     page: z.string().trim().max(200).optional(),
+    /** UI language from the site header (en, fr, zh, ko). Reply in this language when set. */
+    locale: z.enum(['en', 'fr', 'zh', 'ko']).optional(),
   })
   .refine((v) => v.messages[v.messages.length - 1]?.role === 'user', { message: 'The last message must be a question' })
   .refine((v) => (v.messages[v.messages.length - 1]?.text.length ?? 0) <= 2000, { message: 'Keep your question under 2,000 characters' });

@@ -110,5 +110,21 @@ export function validateEnv(config: Record<string, unknown>): AppEnv {
       .join('; ');
     throw new Error(`Invalid environment configuration: ${details}`);
   }
-  return parsed.data;
+  const data = parsed.data;
+  const sk = data.PAYSTACK_SECRET_KEY;
+  const pk = data.PAYSTACK_PUBLIC_KEY;
+  if (sk && !/^sk_(test|live)_/.test(sk)) {
+    throw new Error('Invalid environment configuration: PAYSTACK_SECRET_KEY must start with sk_test_ or sk_live_');
+  }
+  if (pk && !/^pk_(test|live)_/.test(pk)) {
+    throw new Error('Invalid environment configuration: PAYSTACK_PUBLIC_KEY must start with pk_test_ or pk_live_');
+  }
+  if (sk && pk) {
+    const skLive = sk.startsWith('sk_live_');
+    const pkLive = pk.startsWith('pk_live_');
+    if (skLive !== pkLive) {
+      throw new Error('Invalid environment configuration: PAYSTACK_PUBLIC_KEY and PAYSTACK_SECRET_KEY must both be test or both live');
+    }
+  }
+  return data;
 }
