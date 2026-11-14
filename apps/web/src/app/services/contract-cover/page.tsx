@@ -1,5 +1,6 @@
 'use client';
 
+import { ServiceType } from '@dealo/shared';
 import { CalendarDays, Repeat2, Wrench } from 'lucide-react';
 
 import { useLocale } from '@/components/i18n/locale-context';
@@ -18,8 +19,21 @@ export default function ContractCoverPage() {
         eyebrow={t('cover.eyebrow')}
         title={t('cover.title')}
         description={t('cover.body')}
+        typeTitle
         actions={
-          <button type="button" className="btn-primary" onClick={() => open('hire')}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() =>
+              open('hire', {
+                hirePrefill: {
+                  serviceType: ServiceType.CONTRACT_COVER,
+                  roleTitle: 'Temp cover',
+                  requirements: 'Need temp/contract cover — please quote day rate + mark-up for our brief.',
+                },
+              })
+            }
+          >
             {t('cover.cta')}
           </button>
         }

@@ -85,7 +85,7 @@ export const TOPICS: Topic[] = [
       'onboarding modules',
     ],
     answer:
-      'Direct hiring: Dealo finds and checks people, you interview and they join your payroll; priced per job, you pay when someone joins, with a free 90-day replacement. Managed staffing: Dealo supplies the workers and manages contracts, pay paperwork and replacements for a monthly fee, with agreed dates and headcount. Temp and contract cover: quoted as day rate plus Dealo mark-up for skilled trades and short office cover (absences, peaks, high-repeat bookings) — no public list price. Training after hire: employers get a quote for short onboarding modules (site safety, tools, office onboarding, customer service) once talent is placed. Core hiring covers office roles and skilled trades.',
+      'Direct hiring: Dealo finds and checks people, you interview and they join your payroll; priced per job, you pay when someone joins, with a free 90-day replacement. Managed staffing: Dealo supplies the workers and manages contracts, pay paperwork and replacements for a monthly fee, with agreed dates and headcount. Temp and contract cover: request a quote in the hire form (service type Temp / contract cover) — day rate plus Dealo mark-up, no public list price. Training after hire: request a quote (service type Training after hire) for short onboarding modules once talent is placed. Core hiring covers office roles and skilled trades.',
     links: [
       { label: 'Direct hiring', href: '/services/direct-recruitment' },
       { label: 'Managed staffing', href: '/services/managed-staffing' },

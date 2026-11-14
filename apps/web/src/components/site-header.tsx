@@ -232,13 +232,13 @@ export function SiteHeader() {
         {mobileOpen ? (
           <motion.div
             key="mobile-nav"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden border-t border-border bg-surface-elevated/95 backdrop-blur-md lg:hidden"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="border-t border-border bg-surface-elevated/95 backdrop-blur-md lg:hidden"
           >
-            <div className="flex max-h-[calc(100svh-3.5rem)] flex-col gap-1 overflow-y-auto px-3 py-3 min-[340px]:px-4 min-[340px]:py-4">
+            <div className="flex max-h-[calc(100svh-3.5rem)] flex-col gap-1 overflow-y-auto overscroll-contain px-3 py-3 min-[340px]:px-4 min-[340px]:py-4">
               <LanguageSwitcher variant="row" />
               {mobileSections.map((section) => (
                 <MobileSection
@@ -336,7 +336,7 @@ function MobileSection({
   onNavigate: () => void;
 }) {
   return (
-    <>
+    <div className="min-w-0">
       <button
         type="button"
         className="flex w-full items-center justify-between rounded-xl px-2.5 py-2.5 text-left text-sm font-medium text-foreground min-[340px]:px-3 min-[340px]:py-3"
@@ -347,48 +347,46 @@ function MobileSection({
           {label}
         </span>
         <ChevronDown
-          className={`h-4 w-4 text-muted transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`h-4 w-4 shrink-0 text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
       </button>
-      <AnimatePresence initial={false}>
-        {open ? (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="space-y-1 pb-2">
-              {items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href + item.title}
-                    href={item.href}
-                    target={item.external ? '_blank' : undefined}
-                    rel={item.external ? 'noopener noreferrer' : undefined}
-                    className="group flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-sm text-muted transition-colors hover:bg-surface hover:text-foreground min-[340px]:gap-3 min-[340px]:px-3 min-[340px]:py-3"
-                    onClick={onNavigate}
-                  >
-                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110">
-                      <Icon className="h-4 w-4" />
+      {/* CSS grid accordion — nested Framer height:0 + overflow-hidden often stays closed on mobile Safari */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        }`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="space-y-1 pb-2" aria-hidden={!open}>
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href + item.title}
+                  href={item.href}
+                  target={item.external ? '_blank' : undefined}
+                  rel={item.external ? 'noopener noreferrer' : undefined}
+                  tabIndex={open ? undefined : -1}
+                  className="group flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-sm text-muted transition-colors hover:bg-surface hover:text-foreground min-[340px]:gap-3 min-[340px]:px-3 min-[340px]:py-3"
+                  onClick={onNavigate}
+                >
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand transition-transform duration-300 ease-out group-hover:-rotate-6 group-hover:scale-110">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 break-words transition-transform duration-300 ease-out group-hover:translate-x-1">
+                    {item.title}
+                  </span>
+                  {item.badge ? (
+                    <span className="ml-auto shrink-0 rounded-full bg-brand px-1.5 py-px text-[9px] font-bold uppercase text-white dark:text-[#071f14]">
+                      {item.badge}
                     </span>
-                    <span className="min-w-0 break-words transition-transform duration-300 ease-out group-hover:translate-x-1">
-                      {item.title}
-                    </span>
-                    {item.badge ? (
-                      <span className="ml-auto shrink-0 rounded-full bg-brand px-1.5 py-px text-[9px] font-bold uppercase text-white dark:text-[#071f14]">
-                        {item.badge}
-                      </span>
-                    ) : null}
-                  </Link>
-                );
-              })}
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </>
+                  ) : null}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

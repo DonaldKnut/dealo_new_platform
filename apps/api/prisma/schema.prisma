@@ -28,6 +28,8 @@ enum HireInquiryStatus {
 enum ServiceType {
   DIRECT_RECRUITMENT
   MANAGED_STAFFING
+  CONTRACT_COVER
+  TALENT_TRAINING
 }
 
 enum WorkArrangement {

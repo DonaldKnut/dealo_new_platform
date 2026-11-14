@@ -118,7 +118,7 @@ function useIsMobile() {
   return mobile;
 }
 
-/** Dealo AI launcher mark — chat icon only on a glass orb. */
+/** Dealo AI launcher mark — chat icon on a theme-aware brand orb. */
 function AssistantOrb({
   size = 40,
   active = false,
@@ -131,36 +131,28 @@ function AssistantOrb({
   const reduce = useReducedMotion();
   return (
     <span
-      className={cn('relative inline-flex shrink-0 items-center justify-center', className)}
+      className={cn(
+        'relative inline-flex shrink-0 items-center justify-center rounded-full bg-brand text-on-brand shadow-[0_10px_28px_-10px_color-mix(in_srgb,var(--brand)_70%,transparent)] ring-2 ring-brand/25 dark:ring-brand/40',
+        className,
+      )}
       style={{ width: size, height: size }}
     >
       {active && !reduce ? (
         <motion.span
           aria-hidden
-          className="absolute -inset-1.5 rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(124,255,77,0.35) 0%, transparent 70%)' }}
-          animate={{ scale: [1, 1.18, 1], opacity: [0.6, 0.15, 0.6] }}
+          className="absolute -inset-1.5 rounded-full bg-brand/35"
+          animate={{ scale: [1, 1.18, 1], opacity: [0.55, 0.12, 0.55] }}
           transition={{ duration: 1.4, repeat: Infinity }}
         />
       ) : null}
 
       <span
         aria-hidden
-        className="absolute inset-0 rounded-full"
-        style={{
-          background: 'linear-gradient(145deg, #17533a 0%, #062417 55%, #031209 100%)',
-          boxShadow: `0 ${size * 0.22}px ${size * 0.6}px -${size * 0.1}px rgba(6,36,23,0.8), inset 0 1px 0 rgba(124,255,77,0.18)`,
-        }}
+        className="absolute inset-0 rounded-full bg-gradient-to-b from-white/25 to-transparent dark:from-black/10"
       />
-      <span
-        aria-hidden
-        className="absolute inset-0 rounded-full"
-        style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.08) 0%, transparent 50%)' }}
-      />
-      <span aria-hidden className="absolute inset-0 rounded-full ring-2 ring-[#7cff4d]/30" />
 
       <MessageCircle
-        className="relative text-[#c8ffe0]"
+        className="relative text-on-brand"
         style={{ width: size * 0.42, height: size * 0.42 }}
         strokeWidth={2.25}
         aria-hidden
@@ -423,7 +415,6 @@ export function HelpWidget() {
 
   const lastQuestion = [...items].reverse().find((m) => m.role === 'user')?.text ?? '';
   const last = items[items.length - 1];
-  const aiOn = welcome?.aiEnabled ?? true;
   const close = () => {
     setOpen(false);
     setExpanded(false);
@@ -441,7 +432,7 @@ export function HelpWidget() {
           <motion.button
             type="button"
             aria-label="Collapse assistant"
-            className="fixed inset-0 z-[95] bg-slate-950/60 backdrop-blur-md"
+            className="fixed inset-0 z-[95] bg-foreground/40 backdrop-blur-md dark:bg-black/55"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -472,8 +463,7 @@ export function HelpWidget() {
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               className={cn(
                 'pointer-events-auto flex origin-bottom-right flex-col overflow-hidden',
-                // Premium glass shell
-                'border border-white/[0.07] bg-[#0a0f0d]/96 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.75),0_0_0_1px_rgba(124,255,77,0.07),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-2xl',
+                'border border-border bg-surface-elevated/98 text-foreground shadow-[0_28px_70px_-18px_color-mix(in_srgb,var(--brand)_28%,transparent)] backdrop-blur-xl',
                 mobile
                   ? 'fixed inset-0 h-dvh w-full rounded-none pb-[var(--safe-bottom)] pt-[var(--safe-top)]'
                   : big
@@ -489,7 +479,6 @@ export function HelpWidget() {
               <Header
                 view={view}
                 streaming={streaming}
-                aiOn={aiOn}
                 signedIn={Boolean(user)}
                 canExpand={!mobile}
                 expanded={big}
@@ -544,14 +533,14 @@ export function HelpWidget() {
                                   className={cn(
                                     'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11.5px] font-medium transition hover:-translate-y-px',
                                     s === PERSON
-                                      ? 'border-transparent bg-white text-slate-900 shadow-sm hover:opacity-90'
-                                      : 'border-white/10 bg-white/5 text-slate-200 hover:border-[#7cff4d]/40 hover:bg-[#7cff4d]/10 hover:text-[#7cff4d]',
+                                      ? 'border-transparent bg-foreground text-background shadow-sm hover:opacity-90'
+                                      : 'border-border bg-surface text-muted hover:border-brand/40 hover:bg-brand-soft hover:text-brand',
                                   )}
                                 >
                                   {s === PERSON ? (
                                     <Headphones className="h-3 w-3" />
                                   ) : (
-                                    <Sparkles className="h-3 w-3 text-[#7cff4d]" />
+                                    <Sparkles className="h-3 w-3 text-brand" />
                                   )}
                                   {s === PERSON ? t('chat.person') : s}
                                 </button>
@@ -597,13 +586,13 @@ export function HelpWidget() {
                     initial={{ scale: 0.5, opacity: 0, rotate: -20 }}
                     animate={{ scale: 1, opacity: 1, rotate: 0 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 16 }}
-                    className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#7cff4d] to-emerald-500 text-[#031209] shadow-lg shadow-[#7cff4d]/30"
+                    className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-brand text-on-brand shadow-lg shadow-[0_12px_28px_-12px_color-mix(in_srgb,var(--brand)_70%,transparent)]"
                   >
                     <CheckCircle2 className="h-8 w-8" />
                   </motion.span>
                   <div>
-                    <p className="font-display text-xl font-bold text-white">{t('chat.sent')}</p>
-                    <p className="mt-1 max-w-xs text-sm text-slate-400">{sentNote}</p>
+                    <p className="font-display text-xl font-bold text-foreground">{t('chat.sent')}</p>
+                    <p className="mt-1 max-w-xs text-sm text-muted">{sentNote}</p>
                   </div>
                   <div className="flex flex-wrap justify-center gap-2">
                     {user ? (
@@ -632,12 +621,11 @@ export function HelpWidget() {
               initial={{ opacity: 0, y: 10, scale: 0.94 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.95 }}
-              className="pointer-events-auto relative mr-1 flex max-w-[17rem] items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-[#0d1a11]/95 py-3 pl-3.5 pr-9 text-left shadow-2xl backdrop-blur-xl"
+              className="pointer-events-auto relative mr-1 flex max-w-[17rem] items-center gap-3 overflow-hidden rounded-2xl border border-border bg-surface-elevated/95 py-3 pl-3.5 pr-9 text-left shadow-xl backdrop-blur-xl"
             >
-              {/* Green glow */}
               <span
                 aria-hidden
-                className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-[#7cff4d]/20 blur-2xl"
+                className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-brand/20 blur-2xl"
               />
               <AssistantOrb size={32} />
               <button
@@ -648,14 +636,14 @@ export function HelpWidget() {
                   dismissNudge();
                 }}
               >
-                <p className="text-[12.5px] font-semibold text-white">{t('chat.nudge.title')}</p>
-                <p className="mt-0.5 text-[11px] text-slate-400">{t('chat.nudge.body')}</p>
+                <p className="text-[12.5px] font-semibold text-foreground">{t('chat.nudge.title')}</p>
+                <p className="mt-0.5 text-[11px] text-muted">{t('chat.nudge.body')}</p>
               </button>
               <button
                 type="button"
                 aria-label="Dismiss"
                 onClick={dismissNudge}
-                className="absolute right-2 top-2 rounded-full p-1 text-slate-500 hover:bg-white/10 hover:text-slate-200 transition"
+                className="absolute right-2 top-2 rounded-full p-1 text-muted transition hover:bg-surface hover:text-foreground"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -679,16 +667,11 @@ export function HelpWidget() {
             whileTap={{ scale: 0.9 }}
             className="pointer-events-auto relative inline-flex h-14 w-14 items-center justify-center rounded-full min-[340px]:h-[3.75rem] min-[340px]:w-[3.75rem]"
           >
-            {/* Outer ambient glow ring */}
             {!open && !reduceMotion ? (
               <motion.span
                 aria-hidden
-                className="absolute -inset-1.5 rounded-full"
-                style={{
-                  background:
-                    'radial-gradient(circle, rgba(124,255,77,0.4) 0%, rgba(20,184,166,0.15) 50%, transparent 70%)',
-                }}
-                animate={{ opacity: [0.4, 0.9, 0.4], scale: [0.9, 1.1, 0.9] }}
+                className="absolute -inset-1.5 rounded-full bg-brand/30"
+                animate={{ opacity: [0.35, 0.75, 0.35], scale: [0.92, 1.08, 0.92] }}
                 transition={{ duration: 3.5, repeat: Infinity }}
               />
             ) : null}
@@ -701,11 +684,7 @@ export function HelpWidget() {
                   animate={{ rotate: 0, opacity: 1, scale: 1 }}
                   exit={{ rotate: 70, opacity: 0, scale: 0.7 }}
                   transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-                  className="relative inline-flex h-full w-full items-center justify-center rounded-full text-[#c8ffe0] ring-2 ring-[#7cff4d]/30"
-                  style={{
-                    background: 'linear-gradient(145deg, #17533a 0%, #062417 55%, #031209 100%)',
-                    boxShadow: '0 12px 32px -8px rgba(6,36,23,0.85), inset 0 1px 0 rgba(124,255,77,0.2)',
-                  }}
+                  className="relative inline-flex h-full w-full items-center justify-center rounded-full bg-brand text-on-brand shadow-[0_12px_32px_-10px_color-mix(in_srgb,var(--brand)_70%,transparent)] ring-2 ring-brand/30"
                 >
                   <X className="h-5 w-5" />
                 </motion.span>
@@ -733,7 +712,6 @@ export function HelpWidget() {
 function Header({
   view,
   streaming,
-  aiOn,
   signedIn,
   canExpand,
   expanded,
@@ -745,7 +723,6 @@ function Header({
 }: {
   view: View;
   streaming: boolean;
-  aiOn: boolean;
   signedIn: boolean;
   canExpand: boolean;
   expanded: boolean;
@@ -756,92 +733,40 @@ function Header({
   onClose: () => void;
 }) {
   const { t } = useLocale();
-  const reduce = useReducedMotion();
 
   const iconBtn =
-    'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-slate-400 ring-1 ring-white/8 transition hover:bg-white/10 hover:text-white bg-white/5';
+    'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-surface text-muted ring-1 ring-border transition hover:bg-brand-soft hover:text-brand';
 
   return (
-    <header className="relative shrink-0 overflow-hidden px-4 pb-4 pt-4">
-      {/* Deep forest gradient base */}
-      <span
-        aria-hidden
-        className="absolute inset-0"
-        style={{
-          background:
-            'linear-gradient(160deg, #0d2318 0%, #071710 40%, #040e09 100%)',
-        }}
-      />
-
-      {/* Animated aurora orbs */}
-      <motion.span
-        aria-hidden
-        className="pointer-events-none absolute -left-16 -top-20 h-52 w-52 rounded-full bg-[#14b8a6]/40 blur-3xl"
-        animate={reduce ? undefined : { x: [0, 36, -12, 0], y: [0, 18, 8, 0] }}
-        transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.span
-        aria-hidden
-        className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-[#7cff4d]/25 blur-3xl"
-        animate={reduce ? undefined : { x: [0, -28, 10, 0], y: [0, 22, -6, 0] }}
-        transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.span
-        aria-hidden
-        className="pointer-events-none absolute -bottom-24 left-1/3 h-36 w-36 rounded-full bg-violet-500/18 blur-3xl"
-        animate={reduce ? undefined : { x: [0, 28, -18, 0] }}
-        transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }}
-      />
-
-      {/* Gradient veil and hairline border */}
-      <span aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent to-[#040e09]/60" />
-      <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#7cff4d]/40 to-transparent" />
-
-      {/* Content row */}
+    <header className="relative shrink-0 border-b border-border bg-surface/80 px-4 py-3.5">
       <div className="relative flex items-center gap-3">
         {view !== 'chat' ? (
           <button type="button" onClick={onBack} aria-label="Back to chat" className={iconBtn}>
             <ArrowLeft className="h-4 w-4" />
           </button>
         ) : (
-          <AssistantOrb size={42} active={streaming} />
+          <AssistantOrb size={36} active={streaming} />
         )}
 
         <div className="min-w-0 flex-1">
-          {/* Title with subtle gradient text */}
-          <p className="flex items-center gap-2 truncate font-display text-[16px] font-bold leading-tight tracking-tight text-white">
+          <p className="truncate text-[15px] font-semibold leading-tight text-foreground">
             {view === 'chat' ? t('chat.title') : t('chat.person')}
           </p>
-
-          {/* Status line */}
-          <p className="mt-0.5 flex items-center gap-1.5 truncate text-[10.5px] text-slate-400">
+          <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-muted">
             {view === 'chat' ? (
               <>
-                {/* Pulsing status dot */}
-                <span className="relative flex h-1.5 w-1.5 shrink-0">
-                  <span
-                    className={cn(
-                      'absolute inline-flex h-full w-full rounded-full',
-                      streaming ? 'animate-ping bg-amber-400 opacity-70' : 'animate-ping bg-[#7cff4d] opacity-60',
-                    )}
-                  />
-                  <span
-                    className={cn(
-                      'relative inline-flex h-1.5 w-1.5 rounded-full',
-                      streaming ? 'bg-amber-400' : 'bg-[#7cff4d]',
-                    )}
-                  />
-                </span>
-                {streaming
-                  ? 'Writing an answer…'
-                  : aiOn
-                    ? 'Online · knows Dealo inside out'
-                    : 'Online · instant answers'}
+                <span
+                  className={cn(
+                    'h-1.5 w-1.5 shrink-0 rounded-full',
+                    streaming ? 'bg-amber-500' : 'bg-brand',
+                  )}
+                />
+                {streaming ? 'Writing…' : 'Online'}
               </>
             ) : signedIn ? (
-              'We open a support ticket with this chat'
+              'Opens a support ticket'
             ) : (
-              'We reply by email, usually within a few hours'
+              'We reply by email'
             )}
           </p>
         </div>
@@ -894,11 +819,7 @@ function EmptyState({
         transition={{ type: 'spring', stiffness: 200, damping: 18 }}
         className="relative"
       >
-        <span
-          aria-hidden
-          className="absolute inset-0 -z-10 scale-[1.8] rounded-full blur-3xl"
-          style={{ background: 'radial-gradient(circle, rgba(124,255,77,0.18) 0%, transparent 70%)' }}
-        />
+        <span aria-hidden className="absolute inset-0 -z-10 scale-[1.8] rounded-full bg-brand/20 blur-3xl" />
         <AssistantOrb size={big ? 72 : 64} />
       </motion.div>
 
@@ -906,20 +827,11 @@ function EmptyState({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="mt-5 font-display text-[1.3rem] font-bold leading-tight text-white sm:text-2xl"
+        className="mt-5 font-display text-[1.3rem] font-bold leading-tight text-foreground sm:text-2xl"
       >
         {welcome ? (
           <>
-            {welcome.greeting}.{' '}
-            <span
-              style={{
-                background: 'linear-gradient(90deg, #7cff4d, #14b8a6, #38bdf8)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              {t('chat.help')}
-            </span>
+            {welcome.greeting}. <span className="text-brand">{t('chat.help')}</span>
           </>
         ) : (
           t('chat.help')
@@ -930,7 +842,7 @@ function EmptyState({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.16 }}
-        className="mt-2 max-w-xs text-[12.5px] leading-relaxed text-slate-400"
+        className="mt-2 max-w-xs text-[12.5px] leading-relaxed text-muted"
       >
         {welcome?.intro ?? t('chat.nudge.body')}
       </motion.p>
@@ -945,12 +857,8 @@ function EmptyState({
             transition={{ delay: 0.2 + i * 0.07 }}
             whileHover={{ y: -3 }}
             onClick={() => onAsk(c.prompt)}
-            className={cn(
-              'group relative overflow-hidden rounded-2xl border border-white/8 bg-white/[0.04] p-3 text-left transition hover:border-white/14 hover:bg-white/[0.07]',
-              `ring-1 ${c.ring} ring-inset`,
-            )}
+            className="group relative overflow-hidden rounded-2xl border border-border bg-surface p-3 text-left transition hover:border-brand/35 hover:bg-brand-soft/60"
           >
-            {/* Capability icon with gradient bubble */}
             <span
               className={cn(
                 'inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md',
@@ -959,22 +867,12 @@ function EmptyState({
             >
               <c.icon className="h-4 w-4" />
             </span>
-            <p className="mt-2.5 text-[12.5px] font-semibold text-white">{c.title}</p>
-            <p className="text-[11px] text-slate-500">{c.body}</p>
-
-            {/* Hover shine */}
-            <span
-              aria-hidden
-              className={cn(
-                'pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br opacity-0 transition-opacity duration-300 group-hover:opacity-[0.06]',
-                c.gradient,
-              )}
-            />
+            <p className="mt-2.5 text-[12.5px] font-semibold text-foreground">{c.title}</p>
+            <p className="text-[11px] text-muted">{c.body}</p>
           </motion.button>
         ))}
       </div>
 
-      {/* Page-context suggestion chips */}
       {welcome?.suggestions.length ? (
         <div className="mt-4 flex flex-wrap justify-center gap-1.5">
           {welcome.suggestions.map((s, i) => (
@@ -985,9 +883,9 @@ function EmptyState({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.42 + i * 0.05 }}
               onClick={() => onAsk(s)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11.5px] font-medium text-slate-300 transition hover:border-[#7cff4d]/40 hover:text-[#7cff4d]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[11.5px] font-medium text-muted transition hover:border-brand/40 hover:text-brand"
             >
-              {s === PERSON ? <Headphones className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3 text-[#7cff4d]" />}
+              {s === PERSON ? <Headphones className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3 text-brand" />}
               {s === PERSON ? t('chat.person') : s}
             </motion.button>
           ))}
@@ -1024,13 +922,7 @@ function Message({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         className="flex justify-end"
       >
-        <p
-          className="max-w-[85%] whitespace-pre-wrap rounded-[1.25rem] rounded-br-md px-3.5 py-2.5 text-[13.5px] leading-relaxed text-white shadow-lg"
-          style={{
-            background: 'linear-gradient(135deg, #17533a 0%, #0a3528 50%, #041f14 100%)',
-            boxShadow: '0 4px 20px -6px rgba(20,184,166,0.35)',
-          }}
-        >
+        <p className="max-w-[85%] whitespace-pre-wrap rounded-[1.25rem] rounded-br-md bg-brand px-3.5 py-2.5 text-[13.5px] leading-relaxed text-on-brand shadow-[0_8px_22px_-12px_color-mix(in_srgb,var(--brand)_55%,transparent)]">
           {item.text}
         </p>
       </motion.div>
@@ -1055,14 +947,14 @@ function Message({
               {[0, 1, 2].map((i) => (
                 <motion.span
                   key={i}
-                  className="h-1.5 w-1.5 rounded-full bg-[#7cff4d]/60"
+                  className="h-1.5 w-1.5 rounded-full bg-brand/70"
                   animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
                   transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.2 }}
                 />
               ))}
             </div>
             <motion.span
-              className="text-[12.5px] font-medium text-slate-400"
+              className="text-[12.5px] font-medium text-muted"
               animate={reduce ? undefined : { opacity: [0.6, 1, 0.6] }}
               transition={{ duration: 1.6, repeat: Infinity }}
             >
@@ -1074,15 +966,19 @@ function Message({
             className={cn(
               'rounded-[1.25rem] rounded-tl-md border px-3.5 py-3',
               item.status === 'error'
-                ? 'border-red-500/20 bg-red-500/5 text-red-300'
-                : 'border-white/8 bg-white/[0.04] text-slate-100',
+                ? 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-200'
+                : 'border-border bg-surface text-foreground',
             )}
           >
-            <AssistantMarkdown text={item.text} streaming={item.status === 'streaming'} onNavigate={onNavigate} />
+            <AssistantMarkdown
+              text={item.text}
+              streaming={item.status === 'streaming'}
+              onNavigate={onNavigate}
+              className="text-[14px] leading-relaxed text-foreground [&_a]:text-brand [&_blockquote]:text-muted [&_p]:text-foreground"
+            />
           </div>
         )}
 
-        {/* Quick-access links */}
         {item.links?.length && item.status === 'done' ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {item.links.map((l) => (
@@ -1090,7 +986,7 @@ function Message({
                 key={l.href}
                 href={l.href}
                 onClick={onNavigate}
-                className="inline-flex items-center gap-1 rounded-full border border-[#7cff4d]/25 bg-[#7cff4d]/8 px-2.5 py-1 text-[11px] font-semibold text-[#7cff4d] transition hover:-translate-y-px hover:border-[#7cff4d]/50"
+                className="inline-flex items-center gap-1 rounded-full border border-brand/25 bg-brand-soft px-2.5 py-1 text-[11px] font-semibold text-brand transition hover:-translate-y-px hover:border-brand/50"
               >
                 {l.label} <ArrowUpRight className="h-3 w-3" />
               </Link>
@@ -1115,7 +1011,7 @@ function Message({
                 });
               }}
             >
-              {copied ? <Check className="h-3.5 w-3.5 text-[#7cff4d]" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? <Check className="h-3.5 w-3.5 text-brand" /> : <Copy className="h-3.5 w-3.5" />}
             </ActionButton>
             <ActionButton
               label="Helpful"
@@ -1139,10 +1035,10 @@ function Message({
               </ActionButton>
             ) : null}
             {item.rating ? (
-              <span className="ml-1 text-[10.5px] text-[#7cff4d]">Thanks for the feedback</span>
+              <span className="ml-1 text-[10.5px] text-brand">Thanks for the feedback</span>
             ) : null}
             {item.source ? (
-              <span className="ml-auto text-[10px] uppercase tracking-wider text-slate-600">
+              <span className="ml-auto text-[10px] uppercase tracking-wider text-muted">
                 {item.source === 'ai' ? 'Dealo AI' : 'Guide'}
               </span>
             ) : null}
@@ -1174,8 +1070,8 @@ function ActionButton({
       onClick={onClick}
       disabled={disabled && !active}
       className={cn(
-        'inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/8 hover:text-slate-200 disabled:cursor-default disabled:opacity-40',
-        active && 'bg-[#7cff4d]/10 text-[#7cff4d] opacity-100',
+        'inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-surface hover:text-foreground disabled:cursor-default disabled:opacity-40',
+        active && 'bg-brand-soft text-brand opacity-100',
       )}
     >
       {children}
@@ -1210,16 +1106,15 @@ function Composer({
 
   return (
     <form
-      className="relative shrink-0 border-t border-white/[0.06] bg-gradient-to-b from-transparent to-[#040e09]/70 px-3 pb-3 pt-2.5"
+      className="relative shrink-0 border-t border-border bg-surface/60 px-3 pb-3 pt-2.5"
       onSubmit={(e) => {
         e.preventDefault();
         if (!streaming) onSend();
       }}
     >
       <div className={cn('mx-auto w-full', big && 'max-w-3xl')}>
-        {/* Input field with animated gradient border on focus */}
-        <div className="group relative rounded-[1.4rem] p-px transition-all duration-200 focus-within:[background:linear-gradient(120deg,#14b8a6,#7cff4d_50%,#38bdf8)] [background:rgba(255,255,255,0.08)]">
-          <div className="flex items-end gap-2 rounded-[calc(1.4rem-1px)] bg-[#0d1a11]/90 px-2.5 py-2 backdrop-blur-sm">
+        <div className="rounded-[1.4rem] border border-border bg-surface-elevated p-px shadow-sm transition focus-within:border-brand/45 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand)_18%,transparent)]">
+          <div className="flex items-end gap-2 rounded-[calc(1.4rem-1px)] px-2.5 py-2">
             <textarea
               ref={inputRef}
               value={input}
@@ -1233,17 +1128,16 @@ function Composer({
               rows={1}
               placeholder={placeholder}
               aria-label={placeholder}
-              className="max-h-[168px] min-h-[2.4rem] flex-1 resize-none bg-transparent px-1.5 py-2 text-[13.5px] leading-relaxed text-white outline-none placeholder:text-slate-600"
+              className="max-h-[168px] min-h-[2.4rem] flex-1 resize-none bg-transparent px-1.5 py-2 text-[13.5px] leading-relaxed text-foreground outline-none placeholder:text-muted"
             />
 
-            {/* Stop / Send button */}
             {streaming ? (
               <motion.button
                 type="button"
                 onClick={onStop}
                 aria-label="Stop answering"
                 whileTap={{ scale: 0.88 }}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-slate-900 shadow-lg shadow-white/20"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background shadow-md"
               >
                 <Square className="h-3.5 w-3.5 fill-current" />
               </motion.button>
@@ -1253,13 +1147,12 @@ function Composer({
                 disabled={!input.trim()}
                 aria-label="Send"
                 whileTap={{ scale: 0.88 }}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#031209] shadow-lg shadow-[#7cff4d]/30 transition disabled:opacity-30 disabled:shadow-none"
-                style={{
-                  background: input.trim()
-                    ? 'linear-gradient(145deg, #7cff4d 0%, #3dbe1a 60%, #1f7a08 100%)'
-                    : 'rgba(255,255,255,0.08)',
-                  color: input.trim() ? '#031209' : 'rgba(255,255,255,0.3)',
-                }}
+                className={cn(
+                  'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-35',
+                  input.trim()
+                    ? 'bg-brand text-on-brand shadow-[0_8px_20px_-10px_color-mix(in_srgb,var(--brand)_70%,transparent)]'
+                    : 'bg-surface text-muted ring-1 ring-border',
+                )}
               >
                 <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
               </motion.button>
@@ -1267,11 +1160,11 @@ function Composer({
           </div>
         </div>
 
-        <div className="mt-2 flex items-center justify-between gap-2 px-1 text-[11px] text-slate-600">
+        <div className="mt-2 flex items-center justify-between gap-2 px-1 text-[11px] text-muted">
           <button
             type="button"
             onClick={onPerson}
-            className="inline-flex items-center gap-1 font-semibold text-slate-400 transition hover:text-white"
+            className="inline-flex items-center gap-1 font-semibold text-muted transition hover:text-brand"
           >
             <UserRound className="h-3.5 w-3.5" /> {t('chat.person')}
           </button>
@@ -1280,7 +1173,7 @@ function Composer({
               {input.length}/{MAX_INPUT}
             </span>
           ) : (
-            <span className="text-[10px] text-slate-700">{t('chat.disclaimer')}</span>
+            <span className="text-[10px] text-muted/80">{t('chat.disclaimer')}</span>
           )}
         </div>
       </div>
@@ -1365,22 +1258,20 @@ function PersonForm({
   return (
     <form onSubmit={(e) => void submit(e)} className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
-        {/* Info callout */}
-        <div className="flex items-start gap-3 rounded-2xl border border-[#7cff4d]/15 bg-[#7cff4d]/5 p-3">
-          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#7cff4d] to-emerald-500 text-[#031209] shadow-sm shadow-[#7cff4d]/30">
+        <div className="flex items-start gap-3 rounded-2xl border border-brand/25 bg-brand-soft p-3">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-on-brand shadow-sm">
             <Headphones className="h-4 w-4" />
           </span>
-          <p className="text-xs leading-relaxed text-slate-300">
+          <p className="text-xs leading-relaxed text-foreground">
             {signedIn
               ? 'Your message and this chat go straight to our support team as a ticket.'
               : 'Leave your name and email. Our team gets this chat too, so you will not need to repeat yourself.'}
           </p>
         </div>
 
-        {/* Guest fields */}
         {!signedIn ? (
           <>
-            <label className="block text-xs font-semibold text-slate-300">
+            <label className="block text-xs font-semibold text-foreground">
               Your name
               <input
                 value={name}
@@ -1388,11 +1279,11 @@ function PersonForm({
                 required
                 minLength={2}
                 maxLength={120}
-                className="input-field mt-1 bg-white/5 text-white placeholder:text-slate-600 border-white/10 focus:border-[#7cff4d]/40"
+                className="input-field mt-1"
                 autoComplete="name"
               />
             </label>
-            <label className="block text-xs font-semibold text-slate-300">
+            <label className="block text-xs font-semibold text-foreground">
               Email
               <input
                 type="email"
@@ -1400,20 +1291,16 @@ function PersonForm({
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 maxLength={255}
-                className="input-field mt-1 bg-white/5 text-white placeholder:text-slate-600 border-white/10 focus:border-[#7cff4d]/40"
+                className="input-field mt-1"
                 autoComplete="email"
                 placeholder="you@email.com"
               />
             </label>
           </>
         ) : (
-          <label className="block text-xs font-semibold text-slate-300">
+          <label className="block text-xs font-semibold text-foreground">
             What is it about?
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="input-field mt-1 bg-white/5 text-white border-white/10 focus:border-[#7cff4d]/40"
-            >
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="input-field mt-1">
               {CATEGORIES.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.label}
@@ -1423,22 +1310,22 @@ function PersonForm({
           </label>
         )}
 
-        <label className="block text-xs font-semibold text-slate-300">
+        <label className="block text-xs font-semibold text-foreground">
           How can we help?
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value.slice(0, 2000))}
             rows={4}
             required
-            className="input-field mt-1 min-h-[6rem] bg-white/5 text-white placeholder:text-slate-600 border-white/10 focus:border-[#7cff4d]/40"
+            className="input-field mt-1 min-h-[6rem]"
             placeholder="What happened, and what you expected…"
           />
         </label>
 
-        {error ? <p className="text-xs text-red-400">{error}</p> : null}
+        {error ? <p className="text-xs text-red-600 dark:text-red-400">{error}</p> : null}
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-white/[0.06] px-4 py-3">
+      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-4 py-3">
         <button
           type="submit"
           disabled={sending}

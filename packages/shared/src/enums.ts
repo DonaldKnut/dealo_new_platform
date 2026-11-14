@@ -44,9 +44,24 @@ export type PermissionCode = (typeof PermissionCode)[keyof typeof PermissionCode
 export const ServiceType = {
   DIRECT_RECRUITMENT: 'DIRECT_RECRUITMENT',
   MANAGED_STAFFING: 'MANAGED_STAFFING',
+  /** Day-rate temp / contract cover — quote after brief, no public list price. */
+  CONTRACT_COVER: 'CONTRACT_COVER',
+  /** Post-hire training modules — quote after placement, employer pays. */
+  TALENT_TRAINING: 'TALENT_TRAINING',
 } as const;
 
 export type ServiceType = (typeof ServiceType)[keyof typeof ServiceType];
+
+export const SERVICE_TYPE_LABEL: Record<ServiceType, string> = {
+  DIRECT_RECRUITMENT: 'Direct hiring',
+  MANAGED_STAFFING: 'Managed staffing',
+  CONTRACT_COVER: 'Temp & contract cover (quote)',
+  TALENT_TRAINING: 'Training after hire (quote)',
+};
+
+export function isQuoteServiceType(type: ServiceType) {
+  return type === ServiceType.CONTRACT_COVER || type === ServiceType.TALENT_TRAINING;
+}
 
 /** Focused hiring families Dealo supports (not domestic staff or drivers). */
 export const RoleFamily = {

@@ -23,7 +23,7 @@ export function ModalHost() {
         open={openModal === 'hire'}
         onClose={close}
         title="Request talent"
-        subtitle="Share the role briefly. Dealo sources checked people and helps you hire."
+        subtitle="Share the brief. We hire, cover shifts, or quote post-hire training — no public list prices for cover and training."
         promoFill
         illustration={<HireIllustration />}
       >

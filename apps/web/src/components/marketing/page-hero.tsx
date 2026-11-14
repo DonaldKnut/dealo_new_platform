@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { CtaRow } from './cta-row';
 import { HeroOrbs } from './hero-orbs';
 import { ImageSlider, type SliderImage } from './image-slider';
+import { TypewriterHeadline } from './typewriter-headline';
 
 export function PageHero({
   eyebrow,
@@ -13,14 +14,19 @@ export function PageHero({
   description,
   actions,
   sliderImages,
+  typeTitle = false,
 }: {
   eyebrow: string;
   title: string;
   description: string;
   actions?: ReactNode;
   sliderImages?: SliderImage[];
+  /** Type the title in instead of a fade-up. */
+  typeTitle?: boolean;
 }) {
   const hasSlider = Boolean(sliderImages && sliderImages.length > 0);
+  const titleClass =
+    'display-title mt-2 max-w-3xl text-[1.55rem] leading-tight text-foreground min-[340px]:mt-3 min-[340px]:text-4xl sm:text-5xl';
 
   return (
     <section className="relative overflow-hidden pt-[4.25rem] min-[340px]:pt-[4.75rem] sm:pt-20">
@@ -39,14 +45,18 @@ export function PageHero({
           >
             {eyebrow}
           </motion.p>
-          <motion.h1
-            className="display-title mt-2 max-w-3xl text-[1.55rem] leading-tight text-foreground min-[340px]:mt-3 min-[340px]:text-4xl sm:text-5xl"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.05 }}
-          >
-            {title}
-          </motion.h1>
+          {typeTitle ? (
+            <TypewriterHeadline text={title} className={titleClass} speedMs={26} />
+          ) : (
+            <motion.h1
+              className={titleClass}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.05 }}
+            >
+              {title}
+            </motion.h1>
+          )}
           <motion.p
             className="mt-3 max-w-2xl text-xs leading-relaxed text-muted min-[340px]:mt-5 min-[340px]:text-base sm:text-lg"
             initial={{ opacity: 0, y: 14 }}

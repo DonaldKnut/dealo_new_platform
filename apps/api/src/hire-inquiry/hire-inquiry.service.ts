@@ -96,16 +96,34 @@ export class HireInquiryService {
         }),
       );
       const people = `${inquiry.numberOfProfessionals} ${inquiry.numberOfProfessionals === 1 ? 'person' : 'people'}`;
+      const quote =
+        inquiry.serviceType === 'CONTRACT_COVER' || inquiry.serviceType === 'TALENT_TRAINING';
+      const serviceLabel =
+        inquiry.serviceType === 'CONTRACT_COVER'
+          ? 'Temp & contract cover'
+          : inquiry.serviceType === 'TALENT_TRAINING'
+            ? 'Training after hire'
+            : inquiry.serviceType === 'MANAGED_STAFFING'
+              ? 'Managed staffing'
+              : 'Direct hiring';
       await this.notifications.notifyStaff({
         type: 'hire_request.created',
-        title: `New talent request: ${inquiry.roleTitle}`,
-        body: `${inquiry.companyName} needs ${people} in ${inquiry.location}.`,
+        title: quote
+          ? `Quote request · ${serviceLabel}: ${inquiry.roleTitle}`
+          : `New talent request: ${inquiry.roleTitle}`,
+        body: quote
+          ? `${inquiry.companyName} asked for a ${serviceLabel.toLowerCase()} quote · ${people} · ${inquiry.location}.`
+          : `${inquiry.companyName} needs ${people} in ${inquiry.location}.`,
         link: '/dashboard/requests',
       });
       await this.notifications.notifyEmails([inquiry.email], {
         type: 'hire_request.received',
-        title: `We got your request for ${inquiry.roleTitle}`,
-        body: 'Dealo will contact you within 48 hours with next steps.',
+        title: quote
+          ? `We got your quote request for ${inquiry.roleTitle}`
+          : `We got your request for ${inquiry.roleTitle}`,
+        body: quote
+          ? 'Dealo will send a clear quote within 48 hours — no public list prices for cover or training.'
+          : 'Dealo will contact you within 48 hours with next steps.',
         link: '/dashboard/requests',
       });
       await this.emailStaff(inquiry);

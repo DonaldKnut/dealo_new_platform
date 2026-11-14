@@ -15,10 +15,12 @@ import {
   BriefcaseBusiness,
   Building2,
   Check,
+  GraduationCap,
   HardHat,
   Handshake,
   Home,
   MapPin,
+  Timer,
   Wifi,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -66,7 +68,12 @@ const hireFormObjectSchema = z.object({
   email: z.string().email('Enter a real work email').max(255),
   phone: z.string().trim().min(7, 'Enter a real phone number').max(30),
   roleFamily: z.enum([RoleFamily.OFFICE_PROFESSIONAL, RoleFamily.SKILLED_TRADE]),
-  serviceType: z.enum([ServiceType.DIRECT_RECRUITMENT, ServiceType.MANAGED_STAFFING]),
+  serviceType: z.enum([
+    ServiceType.DIRECT_RECRUITMENT,
+    ServiceType.MANAGED_STAFFING,
+    ServiceType.CONTRACT_COVER,
+    ServiceType.TALENT_TRAINING,
+  ]),
   roleTitle: z
     .string()
     .trim()
@@ -110,6 +117,7 @@ const hireFormSchema = hireFormObjectSchema.superRefine((data, ctx) => {
 
   const needsDuration =
     data.serviceType === ServiceType.MANAGED_STAFFING ||
+    data.serviceType === ServiceType.CONTRACT_COVER ||
     data.roleFamily === RoleFamily.SKILLED_TRADE;
 
   if (needsDuration && !data.durationNotes?.trim()) {
@@ -117,9 +125,11 @@ const hireFormSchema = hireFormObjectSchema.superRefine((data, ctx) => {
       code: z.ZodIssueCode.custom,
       path: ['durationNotes'],
       message:
-        data.roleFamily === RoleFamily.SKILLED_TRADE
-          ? 'Tell us how long the job will last'
-          : 'Tell us how long you need the team',
+        data.serviceType === ServiceType.CONTRACT_COVER
+          ? 'Tell us how many days of cover you need'
+          : data.roleFamily === RoleFamily.SKILLED_TRADE
+            ? 'Tell us how long the job will last'
+            : 'Tell us how long you need the team',
     });
   }
 });
@@ -166,19 +176,20 @@ const FIELD_HELP = {
   roleFamily:
     'Office roles cover admin, finance, tech and similar desk work. Skilled trades cover bricklaying, electrical, plumbing, welding, carpentry and site leads.',
   serviceType:
-    'Hire yourself: Dealo sends checked people; you interview and employ them. Dealo manages: we find and manage the team for you — useful for trades and projects.',
+    'Direct hire or managed team for permanent needs. Temp cover and post-hire training are quote-only — we price after your brief, no public list prices.',
   roleTitle: 'Job title in words only, for example Executive Assistant or Bricklayer.',
   numberOfProfessionals: 'How many people do you need for this role?',
   location: 'Where will they work? Example: Lagos, Nigeria.',
   workArrangement:
     'Office roles can be in the office, hybrid, or remote. Trades are usually on site, or site plus workshop.',
   expectedStartDate: 'Optional. A rough start date helps us plan. Leave blank if you are unsure.',
-  durationNotes: 'How long do you need them? Example: 3 months on site, until the project ends, or ongoing.',
+  durationNotes:
+    'How long do you need them? For temp cover: number of days. Example: 10 days, 3 months on site, or ongoing.',
   compensationMinNgn:
-    'Optional. Lowest pay in Naira. Use monthly for office roles; daily, weekly or per project for trades.',
+    'Optional. Lowest pay in Naira. Use monthly for office roles; daily rate for cover and trades.',
   compensationMaxNgn: 'Optional. Highest pay, using the same period as the lowest.',
   requirements:
-    'One short sentence is enough for now — skills, experience or site needs. We will follow up.',
+    'One short sentence is enough — skills, site needs, or which training modules you want quoted.',
   additionalNotes: 'Optional. Hours, safety gear, lodging, tools, or who they report to.',
 } as const;
 
@@ -209,6 +220,18 @@ const SERVICE_TYPE_OPTIONS: IllustrativeOption[] = [
     label: 'Dealo manages them',
     description: 'We find and manage the team for you.',
     icon: Handshake,
+  },
+  {
+    value: ServiceType.CONTRACT_COVER,
+    label: 'Temp / contract cover',
+    description: 'Day rate + mark-up — we quote after your brief.',
+    icon: Timer,
+  },
+  {
+    value: ServiceType.TALENT_TRAINING,
+    label: 'Training after hire',
+    description: 'Onboarding modules quoted for the employer after placement.',
+    icon: GraduationCap,
   },
 ];
 
@@ -281,9 +304,15 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
 
   useEffect(() => {
     if (!prefill) return;
-    for (const key of ['companyName', 'contactName', 'email', 'phone'] as const) {
+    for (const key of ['companyName', 'contactName', 'email', 'phone', 'roleTitle', 'requirements'] as const) {
       const value = prefill[key]?.trim();
       if (value && !getValues(key)) setValue(key, value, { shouldValidate: true });
+    }
+    if (prefill.serviceType) {
+      setValue('serviceType', prefill.serviceType, { shouldValidate: true });
+    }
+    if (prefill.roleFamily) {
+      setValue('roleFamily', prefill.roleFamily, { shouldValidate: true });
     }
   }, [prefill, getValues, setValue]);
 
@@ -292,7 +321,11 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
   const roleFamily = values.roleFamily;
   const isTrade = roleFamily === RoleFamily.SKILLED_TRADE;
   const needsDuration =
-    serviceType === ServiceType.MANAGED_STAFFING || roleFamily === RoleFamily.SKILLED_TRADE;
+    serviceType === ServiceType.MANAGED_STAFFING ||
+    serviceType === ServiceType.CONTRACT_COVER ||
+    roleFamily === RoleFamily.SKILLED_TRADE;
+  const isQuote =
+    serviceType === ServiceType.CONTRACT_COVER || serviceType === ServiceType.TALENT_TRAINING;
 
   useEffect(() => {
     if (!isTrade) return;
@@ -330,6 +363,7 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
       const current = getValues();
       const durationRequired =
         current.serviceType === ServiceType.MANAGED_STAFFING ||
+        current.serviceType === ServiceType.CONTRACT_COVER ||
         current.roleFamily === RoleFamily.SKILLED_TRADE;
       if (durationRequired) {
         const notesOk = await trigger('durationNotes');
@@ -515,9 +549,10 @@ export function HireInquiryForm({ onSuccess, prefill }: { onSuccess?: () => void
                 />
               </FormField>
               <FormField
-                label="How do you want to hire?"
+                label={isQuote ? 'What do you need quoted?' : 'How do you want to hire?'}
                 help={FIELD_HELP.serviceType}
                 error={errors.serviceType?.message}
+                className="min-[480px]:col-span-2"
               >
                 <IllustrativeOptionPicker
                   value={serviceType}

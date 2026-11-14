@@ -9,7 +9,12 @@ export const hireInquirySchema = z
     email: z.string().email().max(255),
     phone: z.string().trim().min(7).max(30),
     roleFamily: z.enum([RoleFamily.OFFICE_PROFESSIONAL, RoleFamily.SKILLED_TRADE]),
-    serviceType: z.enum([ServiceType.DIRECT_RECRUITMENT, ServiceType.MANAGED_STAFFING]),
+    serviceType: z.enum([
+      ServiceType.DIRECT_RECRUITMENT,
+      ServiceType.MANAGED_STAFFING,
+      ServiceType.CONTRACT_COVER,
+      ServiceType.TALENT_TRAINING,
+    ]),
     roleTitle: z
       .string()
       .trim()
@@ -49,6 +54,7 @@ export const hireInquirySchema = z
 
     const needsDuration =
       data.serviceType === ServiceType.MANAGED_STAFFING ||
+      data.serviceType === ServiceType.CONTRACT_COVER ||
       data.roleFamily === RoleFamily.SKILLED_TRADE;
 
     if (needsDuration && !data.durationNotes?.trim()) {
@@ -56,9 +62,11 @@ export const hireInquirySchema = z
         code: z.ZodIssueCode.custom,
         path: ['durationNotes'],
         message:
-          data.roleFamily === RoleFamily.SKILLED_TRADE
-            ? 'Contract length or site duration is required for skilled trades'
-            : 'Expected duration or engagement notes are required for managed staffing',
+          data.serviceType === ServiceType.CONTRACT_COVER
+            ? 'How many days of cover do you need?'
+            : data.roleFamily === RoleFamily.SKILLED_TRADE
+              ? 'Contract length or site duration is required for skilled trades'
+              : 'Expected duration or engagement notes are required for managed staffing',
       });
     }
   });

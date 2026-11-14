@@ -1,5 +1,6 @@
 'use client';
 
+import { ServiceType } from '@dealo/shared';
 import { BadgeCheck, BriefcaseBusiness, WalletCards } from 'lucide-react';
 
 import { useLocale } from '@/components/i18n/locale-context';
@@ -18,8 +19,22 @@ export default function TalentTrainingPage() {
         eyebrow={t('train.eyebrow')}
         title={t('train.title')}
         description={t('train.body')}
+        typeTitle
         actions={
-          <button type="button" className="btn-primary" onClick={() => open('hire')}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() =>
+              open('hire', {
+                hirePrefill: {
+                  serviceType: ServiceType.TALENT_TRAINING,
+                  roleTitle: 'Post-hire training',
+                  requirements:
+                    'Need a quote for onboarding modules after placement (site safety, tools, office onboarding, or customer service).',
+                },
+              })
+            }
+          >
             {t('train.cta')}
           </button>
         }

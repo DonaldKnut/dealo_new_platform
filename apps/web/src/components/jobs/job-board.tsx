@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { TypewriterHeadline } from '@/components/marketing/typewriter-headline';
 import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { useAuthSession } from '@/hooks/use-auth-session';
@@ -336,9 +337,12 @@ export function JobBoard() {
           <p className="eyebrow inline-flex items-center gap-1.5">
             <Sparkles className="h-3.5 w-3.5" /> Dealo job board
           </p>
-          <h1 className="display-title mt-3 max-w-3xl text-[1.9rem] leading-[1.05] text-foreground min-[340px]:text-4xl sm:text-5xl lg:text-6xl">
-            Find work that fits. <span className="text-brand">Apply in one tap.</span>
-          </h1>
+          <TypewriterHeadline
+            text="Find work that fits. Apply in one tap."
+            highlight="Apply in one tap."
+            className="display-title mt-3 max-w-3xl text-[1.9rem] leading-[1.05] text-foreground min-[340px]:text-4xl sm:text-5xl lg:text-6xl"
+            speedMs={24}
+          />
           <p className="mt-4 max-w-2xl text-sm text-muted min-[340px]:text-base sm:text-lg">
             Fresh jobs from Dealo employers and trusted job sites, updated through the day. Send the CV you built on Dealo, and track every application in one place.
           </p>

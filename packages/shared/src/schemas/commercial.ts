@@ -97,15 +97,14 @@ export const COMMERCIAL_ROADMAP = {
     ],
   },
   contractCover: {
-    status: 'architecture' as const,
+    status: 'intake' as const,
     next: [
-      'Hire inquiry type COVER with day count + trade/office',
-      'Quote engine: worker day rate × days × (1 + markup) — ops only, never hardcoded on marketing',
+      'Ops quote: worker day rate × days × (1 + markup) — never publish list prices',
       'Repeat-book shortcuts for known employers',
     ],
   },
   talentTraining: {
-    status: 'architecture' as const,
+    status: 'intake' as const,
     next: [
       'TrainingOrder linked to placement / hire inquiry',
       'Employer checkout per quoted module bundle',

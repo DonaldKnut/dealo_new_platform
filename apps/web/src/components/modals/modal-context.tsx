@@ -1,5 +1,6 @@
 'use client';
 
+import type { RoleFamily, ServiceType } from '@dealo/shared';
 import {
   createContext,
   useCallback,
@@ -17,6 +18,10 @@ export type HirePrefill = {
   contactName?: string;
   email?: string;
   phone?: string;
+  serviceType?: ServiceType;
+  roleFamily?: RoleFamily;
+  roleTitle?: string;
+  requirements?: string;
 };
 
 type OpenOptions = { hirePrefill?: HirePrefill };

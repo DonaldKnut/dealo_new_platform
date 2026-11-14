@@ -1,5 +1,6 @@
 'use client';
 
+import { ServiceType } from '@dealo/shared';
 import {
   BadgeCheck,
   Building2,
@@ -32,9 +33,14 @@ export default function DirectRecruitmentPage() {
         eyebrow={t('direct.eyebrow')}
         title={t('direct.title')}
         description={t('direct.body')}
+        typeTitle
         actions={
           <>
-            <button type="button" className="btn-primary" onClick={() => open('hire')}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => open('hire', { hirePrefill: { serviceType: ServiceType.DIRECT_RECRUITMENT } })}
+            >
               {t('direct.cta')}
             </button>
             <Link href="/auth/register" className="btn-secondary">
