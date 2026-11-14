@@ -9,7 +9,6 @@ import {
   Building2,
   ChevronDown,
   Code2,
-  CreditCard,
   FileText,
   GraduationCap,
   Handshake,
@@ -18,7 +17,6 @@ import {
   Newspaper,
   Radar,
   Route,
-  ShieldCheck,
   Timer,
   UserRound,
   Users,
@@ -56,13 +54,14 @@ const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/ap
   '',
 );
 
+/** AI products — talent Job Agent is public; hiring agents + ATS stay staff-gated. */
 const aiDefs: MegaItemDef[] = [
   { href: '/job-agent', titleKey: 'mega.ai.jobAgent.title', descKey: 'mega.ai.jobAgent.desc', icon: Radar, badge: 'New' },
   { href: '/hiring-agents', titleKey: 'mega.ai.agents.title', descKey: 'mega.ai.agents.desc', icon: Bot, staffOnly: true },
   { href: '/ats', titleKey: 'mega.ai.ats.title', descKey: 'mega.ai.ats.desc', icon: Kanban, badge: 'New', staffOnly: true },
-  { href: '/ats#trust', titleKey: 'mega.ai.trust.title', descKey: 'mega.ai.trust.desc', icon: ShieldCheck, staffOnly: true },
 ];
 
+/** Partner / developer API — no #anchors that duplicate the portal page. */
 const apiDefs: MegaItemDef[] = [
   { href: '/developers', titleKey: 'mega.api.portal.title', descKey: 'mega.api.portal.desc', icon: Code2 },
   {
@@ -87,9 +86,9 @@ const apiDefs: MegaItemDef[] = [
     badge: 'Free',
     staffOnly: true,
   },
-  { href: '/developers#plans', titleKey: 'mega.api.plans.title', descKey: 'mega.api.plans.desc', icon: CreditCard },
 ];
 
+/** Hiring services only — audience landings live under Resources. */
 const offerDefs: MegaItemDef[] = [
   {
     href: '/services/direct-recruitment',
@@ -115,20 +114,9 @@ const offerDefs: MegaItemDef[] = [
     descKey: 'mega.train.desc',
     icon: GraduationCap,
   },
-  {
-    href: '/for-employers',
-    titleKey: 'mega.employers.title',
-    descKey: 'mega.employers.desc',
-    icon: Users,
-  },
-  {
-    href: '/for-professionals',
-    titleKey: 'mega.professionals.title',
-    descKey: 'mega.professionals.desc',
-    icon: UserRound,
-  },
 ];
 
+/** Tools, guides, and who-it's-for pages. */
 const resourceDefs: MegaItemDef[] = [
   {
     href: '/jobs',
@@ -142,6 +130,18 @@ const resourceDefs: MegaItemDef[] = [
     titleKey: 'mega.cv.title',
     descKey: 'mega.cv.desc',
     icon: FileText,
+  },
+  {
+    href: '/for-employers',
+    titleKey: 'mega.employers.title',
+    descKey: 'mega.employers.desc',
+    icon: Users,
+  },
+  {
+    href: '/for-professionals',
+    titleKey: 'mega.professionals.title',
+    descKey: 'mega.professionals.desc',
+    icon: UserRound,
   },
   {
     href: '/how-it-works',
