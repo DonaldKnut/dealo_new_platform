@@ -68,6 +68,7 @@ export function ModalHost() {
         onClose={close}
         title="Talk to Dealo"
         subtitle="Have a question about hiring or working with us? Send a short message."
+        promoFill
         illustration={<ContactIllustration />}
       >
         <ContactForm />
