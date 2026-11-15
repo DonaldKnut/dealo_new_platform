@@ -1,4 +1,4 @@
-import { PermissionCode, UserRole } from '@dealo/shared';
+import { PermissionCode, UserRole, type UserRole as UserRoleCode } from '@dealo/shared';
 import { PrismaClient, UserRole as PrismaUserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { existsSync, readFileSync } from 'fs';
@@ -46,7 +46,7 @@ console.log('Seeding Dealo database...');
 const prisma = new PrismaClient();
 
 const ROLE_DEFINITIONS: Array<{
-  code: PrismaUserRole;
+  code: UserRoleCode;
   name: string;
   description: string;
   permissions: string[];
@@ -163,14 +163,15 @@ async function main(): Promise<void> {
 
   console.log('Upserting roles and role permissions...');
   for (const roleDef of ROLE_DEFINITIONS) {
+    const code = roleDef.code as PrismaUserRole;
     const role = await prisma.role.upsert({
-      where: { code: roleDef.code },
+      where: { code },
       update: {
         name: roleDef.name,
         description: roleDef.description,
       },
       create: {
-        code: roleDef.code,
+        code,
         name: roleDef.name,
         description: roleDef.description,
       },
@@ -378,7 +379,7 @@ async function main(): Promise<void> {
     [UserRole.OPERATIONS]: 'RECRUITER',
   };
   const staff = await prisma.userRoleAssignment.findMany({
-    where: { role: { code: { in: Object.keys(staffRoleCodes) as UserRole[] } } },
+    where: { role: { code: { in: Object.keys(staffRoleCodes) as PrismaUserRole[] } } },
     include: { role: { select: { code: true } } },
   });
   const rank = { OWNER: 3, ADMIN: 2, RECRUITER: 1 } as const;
