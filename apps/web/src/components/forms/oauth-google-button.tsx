@@ -9,11 +9,11 @@ import { cn } from '@/lib/utils';
 let providersCache: Promise<{ google: boolean; linkedin: boolean }> | null = null;
 
 const oauthBtnDesktop =
-  'group relative flex h-11 sm:h-12 w-full items-center justify-center gap-2.5 sm:gap-3 overflow-hidden rounded-xl border bg-surface-elevated px-4 text-xs sm:text-sm font-semibold text-foreground no-underline transition-[border-color,background-color,box-shadow,transform] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.985]';
+  'group relative flex h-11 sm:h-12 w-full items-center justify-center gap-2.5 sm:gap-3 overflow-hidden rounded-xl border-[1.5px] border-border bg-surface-elevated px-4 text-xs sm:text-sm font-semibold text-foreground no-underline transition-[border-color,background-color,box-shadow,transform] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.985]';
 
 /** Mobile auth look — outlined pill buttons matching the reference upload. */
 const oauthBtnMobile =
-  'max-lg:h-12 max-lg:rounded-full max-lg:border-[1.5px] max-lg:border-foreground/85 max-lg:bg-transparent max-lg:shadow-none max-lg:text-[13.5px] max-lg:font-medium max-lg:text-foreground max-lg:hover:bg-foreground/[0.04] max-lg:hover:shadow-none max-lg:dark:border-white/80 max-lg:dark:hover:bg-white/[0.06]';
+  'max-lg:h-12 max-lg:rounded-full max-lg:border-[1.5px] max-lg:border-foreground/90 max-lg:bg-transparent max-lg:shadow-none max-lg:text-[13.5px] max-lg:font-medium max-lg:text-foreground max-lg:hover:bg-foreground/[0.04] max-lg:hover:shadow-none max-lg:dark:border-white/85 max-lg:dark:hover:bg-white/[0.06]';
 
 /** Google and LinkedIn buttons, each shown only when the API has it switched on. */
 export function SocialSignIn({
@@ -99,12 +99,12 @@ export function SocialSignIn({
           className={cn(
             oauthBtnDesktop,
             mobilePills && oauthBtnMobile,
-            'border-border/70 text-foreground shadow-[0_1px_0_rgba(15,23,42,0.04)]',
+            'text-foreground shadow-[0_1px_0_rgba(15,23,42,0.04)]',
             'hover:border-[#0A66C2]/55 hover:bg-[#0A66C2]/10 hover:text-foreground hover:shadow-[0_8px_20px_-12px_rgba(10,102,194,0.55)]',
             'focus-visible:ring-[#0A66C2]/45',
-            'dark:border-border/60 dark:text-foreground dark:hover:border-[#0A66C2]/45 dark:hover:bg-[#0A66C2]/18 dark:hover:text-white',
+            'dark:border-white/25 dark:text-foreground dark:hover:border-[#0A66C2]/45 dark:hover:bg-[#0A66C2]/18 dark:hover:text-white',
             mobilePills &&
-              'max-lg:hover:border-foreground/85 max-lg:hover:bg-foreground/[0.04] max-lg:hover:text-foreground max-lg:dark:hover:border-white/80 max-lg:dark:hover:text-white',
+              'max-lg:hover:border-foreground max-lg:hover:bg-foreground/[0.04] max-lg:hover:text-foreground max-lg:dark:hover:border-white max-lg:dark:hover:text-white',
           )}
         >
           <svg
@@ -154,12 +154,12 @@ export function OAuthGoogleButton({
       className={cn(
         oauthBtnDesktop,
         mobilePills && oauthBtnMobile,
-        'border-border/70 text-foreground shadow-[0_1px_0_rgba(15,23,42,0.04)]',
-        'hover:border-slate-300/90 hover:bg-slate-50 hover:text-slate-900 hover:shadow-[0_8px_20px_-12px_rgba(15,23,42,0.28)]',
+        'text-foreground shadow-[0_1px_0_rgba(15,23,42,0.04)]',
+        'hover:border-foreground/40 hover:bg-slate-50 hover:text-slate-900 hover:shadow-[0_8px_20px_-12px_rgba(15,23,42,0.28)]',
         'focus-visible:ring-brand/40',
-        'dark:border-border/60 dark:text-foreground dark:hover:border-white/25 dark:hover:bg-white/[0.08] dark:hover:text-white dark:hover:shadow-[0_8px_22px_-14px_rgba(0,0,0,0.65)]',
+        'dark:border-white/25 dark:text-foreground dark:hover:border-white/40 dark:hover:bg-white/[0.08] dark:hover:text-white dark:hover:shadow-[0_8px_22px_-14px_rgba(0,0,0,0.65)]',
         mobilePills &&
-          'max-lg:hover:border-foreground/85 max-lg:hover:bg-foreground/[0.04] max-lg:hover:text-foreground max-lg:dark:hover:border-white/80 max-lg:dark:hover:text-white',
+          'max-lg:hover:border-foreground max-lg:hover:bg-foreground/[0.04] max-lg:hover:text-foreground max-lg:dark:hover:border-white max-lg:dark:hover:text-white',
       )}
     >
       <svg

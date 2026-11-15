@@ -204,9 +204,9 @@ export function LoginForm({
           type="submit"
           disabled={!canSubmit || isSubmitting}
           className={cn(
-            'btn-primary w-full',
+            'btn-primary w-full border border-brand-strong/30',
             isPage &&
-              'max-lg:h-12 max-lg:rounded-full max-lg:border-transparent max-lg:bg-foreground max-lg:text-background max-lg:shadow-none max-lg:hover:bg-foreground/90 max-lg:hover:text-background max-lg:dark:bg-white max-lg:dark:text-[#04140d] max-lg:dark:hover:bg-white/90',
+              'max-lg:h-12 max-lg:rounded-full max-lg:border-[1.5px] max-lg:border-white/50 max-lg:bg-foreground max-lg:text-background max-lg:shadow-[0_0_0_1px_rgba(11,31,30,0.18)] max-lg:hover:bg-foreground/90 max-lg:hover:text-background max-lg:dark:border-white/40 max-lg:dark:bg-white max-lg:dark:text-[#04140d] max-lg:dark:shadow-[0_0_0_1px_rgba(255,255,255,0.35)] max-lg:dark:hover:bg-white/90',
           )}
         >
           {isSubmitting ? 'Signing in…' : isPage ? (
