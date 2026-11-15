@@ -49,7 +49,7 @@ export function getPrimaryCta(roles: string[]) {
   if (group === 'talent') {
     return { href: '/dashboard/talent-home', label: 'My profile' };
   }
-  return { href: '/hire', label: 'Request talent' };
+  return { href: '/dashboard/ats', label: 'Post a job' };
 }
 
 export function useAuthSession() {

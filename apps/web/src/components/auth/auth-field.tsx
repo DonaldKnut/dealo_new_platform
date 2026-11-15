@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, EyeOff, type LucideIcon } from 'lucide-react';
+import { ChevronDown, Eye, EyeOff, type LucideIcon } from 'lucide-react';
 import {
   useState,
   type InputHTMLAttributes,
@@ -43,8 +43,8 @@ function AuthControlShell({
       >
         <span
           className={cn(
-            'inline-flex items-center gap-1.5 font-medium text-foreground',
-            mobileUnderline && 'max-lg:text-[13px] max-lg:font-normal max-lg:text-muted',
+            'inline-flex items-center gap-1.5 text-[13px] font-medium tracking-wide text-foreground/90',
+            mobileUnderline && 'max-lg:text-[13px] max-lg:font-normal max-lg:tracking-normal max-lg:text-muted',
           )}
         >
           {label}
@@ -54,23 +54,23 @@ function AuthControlShell({
       </div>
       <span
         className={cn(
-          'group flex items-stretch overflow-hidden transition',
+          'group flex items-stretch overflow-hidden transition-colors duration-200',
           mobileUnderline
             ? cn(
                 'max-lg:rounded-none max-lg:border-0 max-lg:border-b max-lg:bg-transparent max-lg:shadow-none',
-                error ? 'max-lg:border-danger' : 'max-lg:border-border',
-                'lg:rounded-xl lg:border lg:bg-surface-elevated',
-                error ? 'lg:border-danger' : 'lg:border-border',
+                error ? 'max-lg:border-danger' : 'max-lg:border-border/80',
+                'lg:rounded-2xl lg:border lg:bg-surface-elevated/80 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] lg:dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]',
+                error ? 'lg:border-danger' : 'lg:border-border/70',
               )
             : cn(
-                'rounded-xl border bg-surface-elevated',
-                error ? 'border-danger' : 'border-border',
+                'rounded-2xl border bg-surface-elevated/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]',
+                error ? 'border-danger' : 'border-border/70',
               ),
         )}
       >
         <span
           className={cn(
-            'flex w-11 shrink-0 items-center justify-center border-r border-border bg-surface text-muted',
+            'flex w-11 shrink-0 items-center justify-center border-r border-border/60 bg-surface/70 text-muted',
             mobileUnderline && 'max-lg:hidden',
           )}
         >
@@ -125,7 +125,7 @@ export function AuthField({
           <button
             type="button"
             className={cn(
-              'flex w-11 shrink-0 items-center justify-center border-l border-border bg-surface text-muted transition hover:text-foreground',
+              'flex w-11 shrink-0 items-center justify-center border-l border-border/60 bg-surface/70 text-muted transition hover:text-foreground',
               mobileUnderline && 'max-lg:w-10 max-lg:border-0 max-lg:bg-transparent',
             )}
             onClick={() => setVisible((current) => !current)}
@@ -144,7 +144,7 @@ export function AuthField({
         {...inputProps}
         type={inputType}
         className={cn(
-          'auth-input min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 text-[0.95rem] text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none placeholder:text-muted/70 min-[400px]:px-3.5 min-[400px]:py-3',
+          'auth-input min-w-0 flex-1 border-0 bg-transparent px-3.5 py-3 text-[0.95rem] tracking-[0.01em] text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none placeholder:text-muted/55',
           mobileUnderline && 'max-lg:px-0 max-lg:py-2.5 max-lg:text-[15px]',
           className,
         )}
@@ -170,11 +170,21 @@ export function AuthSelectField({
   className?: string;
 } & SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <AuthControlShell label={label} icon={icon} error={error} help={help}>
+    <AuthControlShell
+      label={label}
+      icon={icon}
+      error={error}
+      help={help}
+      suffix={
+        <span className="pointer-events-none flex w-10 shrink-0 items-center justify-center text-muted" aria-hidden>
+          <ChevronDown className="h-4 w-4" strokeWidth={1.75} />
+        </span>
+      }
+    >
       <select
         {...selectProps}
         className={cn(
-          'auth-input min-w-0 flex-1 appearance-none border-0 bg-transparent px-3 py-2.5 text-[0.95rem] text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none min-[400px]:px-3.5 min-[400px]:py-3 dark:[color-scheme:dark]',
+          'auth-input min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent px-3.5 py-3 text-[0.95rem] tracking-[0.01em] text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none dark:[color-scheme:dark]',
           className,
         )}
       >

@@ -50,7 +50,7 @@ const PLANS = [
   { feature: 'Fit your CV to a job advert', free: false, premium: true },
   { feature: 'Cover letters', free: false, premium: true },
   { feature: 'Saved CVs', free: '1', premium: 'Up to 20' },
-  { feature: 'Any colour and font', free: false, premium: true },
+  { feature: 'Extra colours and premium fonts', free: false, premium: true },
   { feature: 'No “Made with Dealo” footer', free: false, premium: true },
 ];
 

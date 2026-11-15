@@ -6,11 +6,15 @@ import { useEffect, type ReactNode } from 'react';
 import { AtsFrame } from '@/components/ats/ats-frame';
 import { getDashboardHome, isStaffRole, useAuthSession } from '@/hooks/use-auth-session';
 
-/** ATS is an internal Dealo tool — employers and talent are redirected away. */
+/** Staff and business owners (EMPLOYER) can run hiring workspaces and post jobs. */
+function canUseAts(roles: string[]) {
+  return isStaffRole(roles) || roles.includes('EMPLOYER');
+}
+
 export default function AtsLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuthSession();
   const router = useRouter();
-  const allowed = Boolean(user && isStaffRole(user.roles));
+  const allowed = Boolean(user && canUseAts(user.roles));
 
   useEffect(() => {
     if (loading) return;
@@ -18,7 +22,7 @@ export default function AtsLayout({ children }: { children: ReactNode }) {
       router.replace('/auth/login?next=/dashboard/ats');
       return;
     }
-    if (!isStaffRole(user.roles)) {
+    if (!canUseAts(user.roles)) {
       router.replace(getDashboardHome(user.roles));
     }
   }, [loading, user, router]);

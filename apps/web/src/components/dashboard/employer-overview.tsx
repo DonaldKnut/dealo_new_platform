@@ -36,12 +36,15 @@ export function EmployerOverview({
         subtitle={workspace.subcopy}
         actions={
           <>
-            <button type="button" onClick={openHireRequest} className="btn-primary">
-              Request talent
+            <Link href="/dashboard/ats/jobs/new" className="btn-primary">
+              Post a job
               <ArrowUpRight className="h-4 w-4" />
+            </Link>
+            <button type="button" onClick={openHireRequest} className="btn-secondary">
+              Request talent
             </button>
-            <Link href="/dashboard/requests" className="btn-secondary">
-              My requests
+            <Link href="/dashboard/ats" className="btn-secondary">
+              Hiring dashboard
             </Link>
           </>
         }

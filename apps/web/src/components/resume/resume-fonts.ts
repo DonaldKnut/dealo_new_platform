@@ -37,7 +37,7 @@ export const FONT_NOTE: Record<ResumeFontId, string> = {
   lato: 'Warm and modern',
   inter: 'Crisp, tech-friendly',
   poppins: 'Bold and confident',
-  dmsans: 'Geometric, premium UI',
+  dmsans: 'Geometric and modern',
   librefranklin: 'Sharp editorial sans',
   lora: 'Elegant serif',
   merriweather: 'Easy to read, editorial',

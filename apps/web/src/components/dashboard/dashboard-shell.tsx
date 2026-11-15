@@ -186,6 +186,13 @@ const employerNav: NavItem[] = [
     help: 'A simple summary of your open requests and shortlists.',
   },
   {
+    href: '/dashboard/ats',
+    labelKey: 'dash.nav.ats',
+    icon: Kanban,
+    help: 'Post jobs, review applicants, and publish roles to the Dealo job board.',
+    tour: 'hiring',
+  },
+  {
     href: '/dashboard/requests',
     labelKey: 'dash.nav.myRequests',
     icon: Briefcase,
