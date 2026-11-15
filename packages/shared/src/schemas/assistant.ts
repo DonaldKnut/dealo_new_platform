@@ -2,10 +2,23 @@ import { z } from 'zod';
 
 export const ASSISTANT_NAME = 'Dealo AI';
 
-export const assistantMessageSchema = z.object({
-  role: z.enum(['user', 'assistant']),
-  text: z.string().trim().min(1).max(6000),
+const assistantImageSchema = z.object({
+  mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
+  /** Base64 without data-URL prefix. Keep small — client compresses before send. */
+  data: z.string().min(32).max(1_800_000),
 });
+
+export type AssistantImage = z.infer<typeof assistantImageSchema>;
+
+export const assistantMessageSchema = z
+  .object({
+    role: z.enum(['user', 'assistant']),
+    text: z.string().trim().max(6000).default(''),
+    images: z.array(assistantImageSchema).max(2).optional(),
+  })
+  .refine((m) => m.role === 'assistant' || m.text.length > 0 || (m.images?.length ?? 0) > 0, {
+    message: 'Send a message or an image',
+  });
 
 export type AssistantMessage = z.infer<typeof assistantMessageSchema>;
 
@@ -19,7 +32,9 @@ export const assistantChatSchema = z
     locale: z.enum(['en', 'fr', 'zh', 'ko']).optional(),
   })
   .refine((v) => v.messages[v.messages.length - 1]?.role === 'user', { message: 'The last message must be a question' })
-  .refine((v) => (v.messages[v.messages.length - 1]?.text.length ?? 0) <= 2000, { message: 'Keep your question under 2,000 characters' });
+  .refine((v) => (v.messages[v.messages.length - 1]?.text.length ?? 0) <= 2000, {
+    message: 'Keep your question under 2,000 characters',
+  });
 
 export type AssistantChatInput = z.infer<typeof assistantChatSchema>;
 

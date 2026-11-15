@@ -10,7 +10,11 @@ export function openAssistant(prompt?: string) {
   window.dispatchEvent(new CustomEvent(OPEN_ASSISTANT_EVENT, { detail: { prompt } }));
 }
 
-type Body = { messages: AssistantMessage[]; page?: string; locale?: 'en' | 'fr' | 'zh' | 'ko' };
+type Body = {
+  messages: AssistantMessage[];
+  page?: string;
+  locale?: 'en' | 'fr' | 'zh' | 'ko';
+};
 
 /**
  * Streams an answer over server-sent events. If the stream cannot be opened (an old proxy, a network

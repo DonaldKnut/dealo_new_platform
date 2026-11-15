@@ -77,7 +77,7 @@ export class GeminiClient {
 
   /**
    * Streams plain text for a multi-turn chat. Yields text pieces as Gemini produces them.
-   * `signal` stops the upstream request when the visitor closes the chat.
+   * Supports optional inline images on any turn (vision). `signal` cancels when the visitor closes chat.
    */
   async *streamText(
     system: string,
@@ -95,7 +95,15 @@ export class GeminiClient {
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': this.apiKey },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
-        contents: turns.map((turn) => ({ role: turn.role, parts: [{ text: turn.text }] })),
+        contents: turns.map((turn) => ({
+          role: turn.role,
+          parts: [
+            ...(turn.images ?? []).map((image) => ({
+              inlineData: { mimeType: image.mimeType, data: image.data },
+            })),
+            ...(turn.text.trim() ? [{ text: turn.text }] : [{ text: 'Please look at the attached image(s) and help.' }]),
+          ],
+        })),
         generationConfig: { temperature: options.temperature ?? 0.5, maxOutputTokens: options.maxOutputTokens ?? 1400 },
         safetySettings: [
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -138,4 +146,5 @@ export class GeminiClient {
   }
 }
 
-export type GeminiTurn = { role: 'user' | 'model'; text: string };
+export type GeminiImage = { mimeType: string; data: string };
+export type GeminiTurn = { role: 'user' | 'model'; text: string; images?: GeminiImage[] };

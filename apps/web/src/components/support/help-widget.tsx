@@ -1,6 +1,12 @@
 'use client';
 
-import { type AssistantLink, type AssistantMessage, type AssistantReply, type AssistantWelcome } from '@dealo/shared';
+import {
+  type AssistantImage,
+  type AssistantLink,
+  type AssistantMessage,
+  type AssistantReply,
+  type AssistantWelcome,
+} from '@dealo/shared';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -14,37 +20,47 @@ import {
   Copy,
   FileText,
   Headphones,
+  ImagePlus,
   Loader2,
   Maximize2,
-  MessageCircle,
   Minimize2,
+  Paperclip,
   RefreshCw,
+  RotateCcw,
   Send,
-  Sparkles,
   Square,
   SquarePen,
   ThumbsDown,
   ThumbsUp,
   UserRound,
+  WifiOff,
   X,
   type LucideIcon,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { AssistantMarkdown } from '@/components/assistant/markdown';
 import { useLocale } from '@/components/i18n/locale-context';
 import { useModal } from '@/components/modals/modal-context';
+import { useToast } from '@/components/ui/toast';
 import { useAuthSession } from '@/hooks/use-auth-session';
 import { ApiError, apiFetch } from '@/lib/api';
 import { OPEN_ASSISTANT_EVENT, streamAssistant } from '@/lib/assistant-client';
+import { DARK_LOGO, LIGHT_LOGO } from '@/lib/brand';
+import { prepareChatImage, type ChatImagePayload } from '@/lib/chat-image';
 import { cn } from '@/lib/utils';
+import { whatsappHref, whatsappMessageFor } from '@/lib/whatsapp';
 
 type ChatItem = {
   id: string;
   role: 'user' | 'assistant';
   text: string;
+  images?: AssistantImage[];
+  imagePreviews?: string[];
   links?: AssistantLink[];
   suggestions?: string[];
   handoff?: boolean;
@@ -59,38 +75,34 @@ const NUDGE_KEY = 'dealo-ai-nudged';
 const PERSON = 'Talk to a person';
 const MAX_INPUT = 2000;
 
-const CAPABILITIES: { icon: LucideIcon; title: string; body: string; prompt: string; gradient: string; ring: string }[] = [
+const CAPABILITIES: { icon: LucideIcon; title: string; body: string; prompt: string; gradient: string }[] = [
   {
     icon: FileText,
     title: 'Standout CV',
     body: 'Rewrite, tailor, download',
     prompt: 'Help me make my CV stand out for jobs in Nigeria',
     gradient: 'from-emerald-500 to-teal-600',
-    ring: 'ring-emerald-500/20',
   },
   {
     icon: Briefcase,
     title: 'Find a job',
     body: 'Nigerian & remote roles',
     prompt: 'Find jobs in Nigeria that match my skills, and how do I apply?',
-    gradient: 'from-sky-500 to-cyan-600',
-    ring: 'ring-sky-500/20',
+    gradient: 'from-[#10b981] to-[#047857]',
   },
   {
     icon: Bot,
     title: 'Hire with AI',
     body: 'Agents, ATS, shortlists',
     prompt: 'How can Dealo help me hire faster? Compare Hiring Agents, the ATS and your recruiters.',
-    gradient: 'from-violet-500 to-purple-600',
-    ring: 'ring-violet-500/20',
+    gradient: 'from-[#059669] to-[#0f766e]',
   },
   {
     icon: Code2,
     title: 'Build on API',
     body: 'Keys, webhooks, code',
     prompt: 'Show me how to create a hire request with the Dealo API in JavaScript, with webhooks',
-    gradient: 'from-amber-500 to-orange-600',
-    ring: 'ring-amber-500/20',
+    gradient: 'from-[#0284c7] to-[#0369a1]',
   },
 ];
 
@@ -101,9 +113,36 @@ const uid = () =>
 
 function transcript(items: ChatItem[]): AssistantMessage[] {
   return items
-    .filter((m) => m.status !== 'error' && m.text.trim())
+    .filter((m) => m.status !== 'error' && (m.text.trim() || (m.images?.length ?? 0) > 0))
     .slice(-20)
-    .map(({ role, text }) => ({ role, text: text.slice(0, 6000) }));
+    .map(({ role, text, images }) => ({
+      role,
+      text: (text || (images?.length ? 'Please look at the attached image.' : '')).slice(0, 6000),
+      images: role === 'user' ? images?.slice(0, 2) : undefined,
+    }));
+}
+
+/** Crisp Dealo logo + AI chip badge. */
+function DealoAiMark({ compact = false }: { compact?: boolean }) {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === 'dark';
+  return (
+    <div className="inline-flex min-w-0 items-center gap-2">
+      <Image
+        src={isDark ? DARK_LOGO : LIGHT_LOGO}
+        alt="Dealo"
+        width={compact ? 84 : 100}
+        height={compact ? 24 : 30}
+        className={cn('w-auto object-contain object-left', compact ? 'h-5.5' : 'h-6.5')}
+        priority
+      />
+      <span className="inline-flex items-center rounded-md bg-brand px-1.5 py-0.5 text-[10px] font-black tracking-wider text-on-brand shadow-xs">
+        AI
+      </span>
+    </div>
+  );
 }
 
 function useIsMobile() {
@@ -118,7 +157,7 @@ function useIsMobile() {
   return mobile;
 }
 
-/** Dealo AI launcher mark — chat icon on a theme-aware brand orb. */
+/** Compact glass orb — used for FAB / message avatar only (no star icon). */
 function AssistantOrb({
   size = 40,
   active = false,
@@ -131,31 +170,86 @@ function AssistantOrb({
   const reduce = useReducedMotion();
   return (
     <span
-      className={cn(
-        'relative inline-flex shrink-0 items-center justify-center rounded-full bg-brand text-on-brand shadow-[0_10px_28px_-10px_color-mix(in_srgb,var(--brand)_70%,transparent)] ring-2 ring-brand/25 dark:ring-brand/40',
-        className,
-      )}
+      className={cn('relative inline-flex shrink-0 items-center justify-center', className)}
       style={{ width: size, height: size }}
     >
       {active && !reduce ? (
         <motion.span
           aria-hidden
-          className="absolute -inset-1.5 rounded-full bg-brand/35"
-          animate={{ scale: [1, 1.18, 1], opacity: [0.55, 0.12, 0.55] }}
-          transition={{ duration: 1.4, repeat: Infinity }}
+          className="absolute -inset-2 rounded-full bg-brand/30 blur-xs"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.55, 0.15, 0.55] }}
+          transition={{ duration: 1.6, repeat: Infinity }}
         />
       ) : null}
-
       <span
         aria-hidden
-        className="absolute inset-0 rounded-full bg-gradient-to-b from-white/25 to-transparent dark:from-black/10"
+        className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400 via-teal-600 to-emerald-950 shadow-md ring-1 ring-white/35 dark:from-[#7cff4d] dark:via-emerald-600 dark:to-[#062417] dark:ring-brand/40"
       />
-
-      <MessageCircle
-        className="relative text-on-brand"
-        style={{ width: size * 0.42, height: size * 0.42 }}
-        strokeWidth={2.25}
+      <span
         aria-hidden
+        className="absolute inset-[18%] rounded-full bg-white/20 backdrop-blur-[2px]"
+      />
+    </span>
+  );
+}
+
+const LIVE_KEYS = ['chat.live.a', 'chat.live.b', 'chat.live.c'] as const;
+
+/** Types a phrase, holds, deletes, then cycles — beside the chat FAB. */
+function FabLiveTypewriter({ phrases }: { phrases: string[] }) {
+  const reduce = useReducedMotion();
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [shown, setShown] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const phrase = phrases[phraseIndex] ?? phrases[0] ?? '';
+
+  useEffect(() => {
+    if (reduce || !phrase) {
+      setShown(phrase.length);
+      return;
+    }
+
+    let timer: number | undefined;
+    const typeMs = 42;
+    const deleteMs = 28;
+    const holdMs = 2200;
+    const gapMs = 700;
+
+    if (!deleting && shown < phrase.length) {
+      timer = window.setTimeout(() => setShown((n) => n + 1), typeMs);
+    } else if (!deleting && shown >= phrase.length) {
+      timer = window.setTimeout(() => setDeleting(true), holdMs);
+    } else if (deleting && shown > 0) {
+      timer = window.setTimeout(() => setShown((n) => n - 1), deleteMs);
+    } else if (deleting && shown === 0) {
+      timer = window.setTimeout(() => {
+        setDeleting(false);
+        setPhraseIndex((i) => (i + 1) % phrases.length);
+      }, gapMs);
+    }
+
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [deleting, phrase, phrases.length, reduce, shown]);
+
+  if (reduce) {
+    return (
+      <span className="pointer-events-none max-w-[11.5rem] truncate text-[12px] font-semibold text-foreground">
+        {phrases[0]}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="pointer-events-none inline-flex max-w-[12.5rem] items-center text-[12px] font-semibold leading-tight text-foreground"
+      aria-live="polite"
+    >
+      <span className="truncate">{phrase.slice(0, shown)}</span>
+      <span
+        aria-hidden
+        className="ml-0.5 inline-block h-[0.9em] w-[2px] shrink-0 translate-y-[0.05em] animate-pulse rounded-sm bg-brand"
       />
     </span>
   );
@@ -179,12 +273,17 @@ export function HelpWidget() {
   const [welcome, setWelcome] = useState<AssistantWelcome | null>(null);
   const [sentNote, setSentNote] = useState('');
   const [nudge, setNudge] = useState(false);
+  const [pendingImages, setPendingImages] = useState<ChatImagePayload[]>([]);
+  const [attaching, setAttaching] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const stickRef = useRef(true);
   const pendingPrompt = useRef<string | null>(null);
+  const toast = useToast();
 
+  const whatsapp = whatsappHref(whatsappMessageFor(pathname, t('wa.prefill')));
   const onDashboard = pathname.startsWith('/dashboard');
   const big = expanded && !mobile;
 
@@ -212,7 +311,8 @@ export function HelpWidget() {
 
   useEffect(() => {
     if (items.some((m) => m.status === 'streaming')) return;
-    if (items.length) window.sessionStorage.setItem(STORE_KEY, JSON.stringify(items.slice(-40)));
+    const slim = items.slice(-40).map(({ images: _i, imagePreviews: _p, ...rest }) => rest);
+    if (slim.length) window.sessionStorage.setItem(STORE_KEY, JSON.stringify(slim));
     else window.sessionStorage.removeItem(STORE_KEY);
   }, [items]);
 
@@ -287,19 +387,28 @@ export function HelpWidget() {
   // ------------------------------------------------------------------ asking
 
   const ask = useCallback(
-    async (question: string, base?: ChatItem[]) => {
+    async (question: string, base?: ChatItem[], imagesOverride?: ChatImagePayload[]) => {
       const text = question.trim().slice(0, MAX_INPUT);
-      if (!text || streaming) return;
+      const images = imagesOverride ?? pendingImages;
+      if ((!text && !images.length) || streaming) return;
       if (text === PERSON) {
         setView('person');
         return;
       }
       const history = base ?? items;
-      const userItem: ChatItem = { id: uid(), role: 'user', text };
+      const imagePayload: AssistantImage[] = images.map(({ mimeType, data }) => ({ mimeType, data }));
+      const userItem: ChatItem = {
+        id: uid(),
+        role: 'user',
+        text: text || (images.length ? 'What do you see here?' : ''),
+        images: imagePayload.length ? imagePayload : undefined,
+        imagePreviews: images.map((image) => image.previewUrl),
+      };
       const assistantId = uid();
       const next = [...history, userItem];
       setItems([...next, { id: assistantId, role: 'assistant', text: '', status: 'streaming' }]);
       setInput('');
+      setPendingImages([]);
       setStreaming(true);
       stickRef.current = true;
 
@@ -331,7 +440,12 @@ export function HelpWidget() {
                 status: 'done',
               }));
             } else if (event.type === 'error') {
-              patch((m) => ({ ...m, text: m.text || event.message, status: m.text ? 'done' : 'error', suggestions: [PERSON] }));
+              patch((m) => ({
+                ...m,
+                text: m.text || event.message,
+                status: m.text ? 'done' : 'error',
+                suggestions: [PERSON],
+              }));
             }
           },
           controller.signal,
@@ -345,7 +459,7 @@ export function HelpWidget() {
             ...m,
             status: 'error',
             text: busy
-              ? 'You are sending messages very fast. Give it a minute, or talk to a person.'
+              ? 'You are sending messages very fast. Please give it a minute, or speak with our team.'
               : err instanceof ApiError && err.status === 400
                 ? err.message
                 : 'I cannot reach Dealo right now. Check your connection, or talk to a person.',
@@ -358,7 +472,25 @@ export function HelpWidget() {
         abortRef.current = null;
       }
     },
-    [items, streaming, pathname, locale],
+    [items, streaming, pathname, locale, pendingImages],
+  );
+
+  const attachFiles = useCallback(
+    async (files: FileList | File[]) => {
+      const list = Array.from(files).slice(0, 2);
+      if (!list.length) return;
+      setAttaching(true);
+      try {
+        const prepared: ChatImagePayload[] = [];
+        for (const file of list) prepared.push(await prepareChatImage(file));
+        setPendingImages((current) => [...current, ...prepared].slice(0, 2));
+      } catch (error) {
+        toast.error('Could not attach', error instanceof Error ? error.message : 'Try another image.');
+      } finally {
+        setAttaching(false);
+      }
+    },
+    [toast],
   );
 
   // Opening from anywhere: openAssistant('question') in lib/assistant-client.
@@ -432,7 +564,7 @@ export function HelpWidget() {
           <motion.button
             type="button"
             aria-label="Collapse assistant"
-            className="fixed inset-0 z-[95] bg-foreground/40 backdrop-blur-md dark:bg-black/55"
+            className="fixed inset-0 z-[95] bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -457,19 +589,19 @@ export function HelpWidget() {
               layout={!reduceMotion}
               role="dialog"
               aria-label={t('chat.title')}
-              initial={reduceMotion ? false : { opacity: 0, y: 28, scale: 0.93, filter: 'blur(8px)' }}
-              animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-              exit={reduceMotion ? undefined : { opacity: 0, y: 20, scale: 0.95, filter: 'blur(5px)' }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: 16, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 340, damping: 32 }}
               className={cn(
-                'pointer-events-auto flex origin-bottom-right flex-col overflow-hidden',
-                'border border-border bg-surface-elevated/98 text-foreground shadow-[0_28px_70px_-18px_color-mix(in_srgb,var(--brand)_28%,transparent)] backdrop-blur-xl',
+                'pointer-events-auto relative flex origin-bottom-right flex-col overflow-hidden',
+                'border border-border bg-background text-foreground shadow-2xl',
                 mobile
-                  ? 'fixed inset-0 h-dvh w-full rounded-none pb-[var(--safe-bottom)] pt-[var(--safe-top)]'
+                  ? 'fixed inset-0 z-[100] h-dvh w-full rounded-none'
                   : big
-                    ? 'fixed inset-0 m-auto h-[min(54rem,calc(100dvh-4rem))] w-[min(64rem,calc(100vw-3rem))] rounded-[2rem]'
+                    ? 'fixed inset-0 m-auto h-[min(54rem,calc(100dvh-4rem))] w-[min(64rem,calc(100vw-3rem))] rounded-3xl shadow-[0_32px_96px_-24px_rgba(0,0,0,0.45)]'
                     : cn(
-                        'w-[min(26rem,calc(100vw-1rem))] rounded-[1.75rem]',
+                        'w-[min(26rem,calc(100vw-1rem))] rounded-3xl shadow-[0_24px_64px_-16px_rgba(0,0,0,0.22)]',
                         onDashboard
                           ? 'h-[min(42rem,calc(100dvh-10.5rem))] lg:h-[min(42rem,calc(100dvh-7rem))]'
                           : 'h-[min(42rem,calc(100dvh-6.5rem))]',
@@ -497,14 +629,14 @@ export function HelpWidget() {
                       const el = e.currentTarget;
                       stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
                     }}
-                    className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain"
+                    className="relative z-[1] min-h-0 flex-1 overflow-y-auto overscroll-contain bg-surface/70"
                     aria-live="polite"
                   >
-                    <div className={cn('mx-auto w-full px-3.5 py-5 sm:px-5', big && 'max-w-3xl')}>
+                    <div className={cn('mx-auto w-full px-3.5 py-4 sm:px-5 sm:py-5', big && 'max-w-3xl')}>
                       {items.length === 0 ? (
-                        <EmptyState welcome={welcome} big={big} onAsk={(q) => void ask(q)} />
+                        <EmptyState welcome={welcome} big={big} whatsapp={whatsapp} onAsk={(q) => void ask(q)} />
                       ) : (
-                        <div className="space-y-5">
+                        <div className="space-y-4">
                           {items.map((m, index) => (
                             <Message
                               key={m.id}
@@ -516,14 +648,17 @@ export function HelpWidget() {
                               }}
                               onRate={(r) => rate(m, r)}
                               onRegenerate={regenerate}
+                              onActionPrompt={(p) => void ask(p)}
                             />
                           ))}
+
+                          {/* Action suggestion pills */}
                           {!streaming && last?.role === 'assistant' && last.suggestions?.length ? (
                             <motion.div
                               initial={{ opacity: 0, y: 6 }}
                               animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.1 }}
-                              className="flex flex-wrap gap-1.5 pl-10"
+                              transition={{ delay: 0.08 }}
+                              className="flex flex-wrap gap-2 pt-1 pl-10"
                             >
                               {last.suggestions.map((s) => (
                                 <button
@@ -531,16 +666,16 @@ export function HelpWidget() {
                                   type="button"
                                   onClick={() => void ask(s)}
                                   className={cn(
-                                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11.5px] font-medium transition hover:-translate-y-px',
+                                    'inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold shadow-xs transition hover:-translate-y-0.5 active:translate-y-0',
                                     s === PERSON
-                                      ? 'border-transparent bg-foreground text-background shadow-sm hover:opacity-90'
-                                      : 'border-border bg-surface text-muted hover:border-brand/40 hover:bg-brand-soft hover:text-brand',
+                                      ? 'bg-brand text-on-brand hover:bg-brand-strong'
+                                      : 'border border-border bg-surface-elevated text-foreground hover:border-brand hover:text-brand',
                                   )}
                                 >
                                   {s === PERSON ? (
-                                    <Headphones className="h-3 w-3" />
+                                    <Headphones className="h-3.5 w-3.5 shrink-0" />
                                   ) : (
-                                    <Sparkles className="h-3 w-3 text-brand" />
+                                    <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-brand" />
                                   )}
                                   {s === PERSON ? t('chat.person') : s}
                                 </button>
@@ -554,13 +689,27 @@ export function HelpWidget() {
 
                   <Composer
                     big={big}
+                    mobile={mobile}
                     input={input}
                     setInput={setInput}
                     inputRef={inputRef}
+                    fileRef={fileRef}
                     streaming={streaming}
+                    attaching={attaching}
+                    pendingImages={pendingImages}
+                    onRemoveImage={(index) =>
+                      setPendingImages((current) => {
+                        const next = [...current];
+                        const [removed] = next.splice(index, 1);
+                        if (removed) URL.revokeObjectURL(removed.previewUrl);
+                        return next;
+                      })
+                    }
+                    onAttach={(files) => void attachFiles(files)}
                     onSend={() => void ask(input)}
                     onStop={stop}
                     onPerson={() => setView('person')}
+                    whatsapp={whatsapp}
                   />
                 </>
               ) : null}
@@ -573,6 +722,7 @@ export function HelpWidget() {
                   defaultMessage={lastQuestion}
                   chat={transcript(items)}
                   page={pathname}
+                  whatsapp={whatsapp}
                   onSent={(note) => {
                     setSentNote(note);
                     setView('sent');
@@ -586,24 +736,26 @@ export function HelpWidget() {
                     initial={{ scale: 0.5, opacity: 0, rotate: -20 }}
                     animate={{ scale: 1, opacity: 1, rotate: 0 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 16 }}
-                    className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-brand text-on-brand shadow-lg shadow-[0_12px_28px_-12px_color-mix(in_srgb,var(--brand)_70%,transparent)]"
+                    className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-brand text-on-brand shadow-lg shadow-brand/30"
                   >
                     <CheckCircle2 className="h-8 w-8" />
                   </motion.span>
                   <div>
-                    <p className="font-display text-xl font-bold text-foreground">{t('chat.sent')}</p>
-                    <p className="mt-1 max-w-xs text-sm text-muted">{sentNote}</p>
+                    <p className="font-display text-xl font-bold text-foreground">
+                      {t('chat.sent')}
+                    </p>
+                    <p className="mt-1.5 max-w-xs text-sm text-muted">{sentNote}</p>
                   </div>
-                  <div className="flex flex-wrap justify-center gap-2">
+                  <div className="flex flex-wrap justify-center gap-2 pt-2">
                     {user ? (
-                      <Link href="/dashboard/support" onClick={close} className="btn-secondary px-3 text-xs">
+                      <Link href="/dashboard/support" onClick={close} className="btn-secondary px-3.5 py-2 text-xs">
                         {t('chat.tickets')}
                       </Link>
                     ) : null}
                     <button
                       type="button"
                       onClick={() => setView('chat')}
-                      className="btn-primary px-3 text-xs"
+                      className="btn-primary px-4 py-2 text-xs"
                     >
                       {t('chat.back')}
                     </button>
@@ -621,13 +773,8 @@ export function HelpWidget() {
               initial={{ opacity: 0, y: 10, scale: 0.94 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.95 }}
-              className="pointer-events-auto relative mr-1 flex max-w-[17rem] items-center gap-3 overflow-hidden rounded-2xl border border-border bg-surface-elevated/95 py-3 pl-3.5 pr-9 text-left shadow-xl backdrop-blur-xl"
+              className="pointer-events-auto relative mr-1 flex max-w-[17.5rem] items-center gap-3 overflow-hidden rounded-2xl border border-border bg-surface-elevated py-3 pl-3.5 pr-9 text-left shadow-xl"
             >
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-brand/20 blur-2xl"
-              />
-              <AssistantOrb size={32} />
               <button
                 type="button"
                 className="text-left"
@@ -636,8 +783,12 @@ export function HelpWidget() {
                   dismissNudge();
                 }}
               >
-                <p className="text-[12.5px] font-semibold text-foreground">{t('chat.nudge.title')}</p>
-                <p className="mt-0.5 text-[11px] text-muted">{t('chat.nudge.body')}</p>
+                <p className="text-[12.5px] font-bold text-foreground">
+                  {t('chat.nudge.title')}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted">
+                  {t('chat.nudge.body')}
+                </p>
               </button>
               <button
                 type="button"
@@ -645,7 +796,7 @@ export function HelpWidget() {
                 onClick={dismissNudge}
                 className="absolute right-2 top-2 rounded-full p-1 text-muted transition hover:bg-surface hover:text-foreground"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </motion.div>
           ) : null}
@@ -653,54 +804,77 @@ export function HelpWidget() {
 
         {/* ── FAB trigger button ── */}
         {!(open && (mobile || big)) ? (
-          <motion.button
-            type="button"
-            data-tour="support-help"
-            aria-label={open ? t('chat.close') : t('chat.open')}
-            aria-expanded={open}
-            title={`${t('chat.open')} (Ctrl + /)`}
-            onClick={() => {
-              setOpen((v) => !v);
-              dismissNudge();
-            }}
-            whileHover={reduceMotion ? undefined : { scale: 1.07 }}
-            whileTap={{ scale: 0.9 }}
-            className="pointer-events-auto relative inline-flex h-14 w-14 items-center justify-center rounded-full min-[340px]:h-[3.75rem] min-[340px]:w-[3.75rem]"
-          >
-            {!open && !reduceMotion ? (
-              <motion.span
-                aria-hidden
-                className="absolute -inset-1.5 rounded-full bg-brand/30"
-                animate={{ opacity: [0.35, 0.75, 0.35], scale: [0.92, 1.08, 0.92] }}
-                transition={{ duration: 3.5, repeat: Infinity }}
-              />
-            ) : null}
-
-            <AnimatePresence mode="wait" initial={false}>
-              {open ? (
-                <motion.span
-                  key="x"
-                  initial={{ rotate: -70, opacity: 0, scale: 0.7 }}
-                  animate={{ rotate: 0, opacity: 1, scale: 1 }}
-                  exit={{ rotate: 70, opacity: 0, scale: 0.7 }}
-                  transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-                  className="relative inline-flex h-full w-full items-center justify-center rounded-full bg-brand text-on-brand shadow-[0_12px_32px_-10px_color-mix(in_srgb,var(--brand)_70%,transparent)] ring-2 ring-brand/30"
+          <div className="pointer-events-auto flex items-center gap-2.5">
+            <AnimatePresence>
+              {!open ? (
+                <motion.button
+                  key="live-type"
+                  type="button"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8 }}
+                  transition={{ duration: 0.25 }}
+                  onClick={() => {
+                    setOpen(true);
+                    dismissNudge();
+                  }}
+                  className="hidden rounded-full border border-border bg-surface-elevated/95 px-3.5 py-2 shadow-lg backdrop-blur-md sm:inline-flex"
+                  aria-label={t('chat.open')}
                 >
-                  <X className="h-5 w-5" />
-                </motion.span>
-              ) : (
-                <motion.span
-                  key="orb"
-                  initial={{ scale: 0.6, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.6, opacity: 0 }}
-                  className="relative"
-                >
-                  <AssistantOrb size={56} />
-                </motion.span>
-              )}
+                  <FabLiveTypewriter phrases={LIVE_KEYS.map((key) => t(key))} />
+                </motion.button>
+              ) : null}
             </AnimatePresence>
-          </motion.button>
+
+            <motion.button
+              type="button"
+              data-tour="support-help"
+              aria-label={open ? t('chat.close') : t('chat.open')}
+              aria-expanded={open}
+              title={`${t('chat.open')} (Ctrl + /)`}
+              onClick={() => {
+                setOpen((v) => !v);
+                dismissNudge();
+              }}
+              whileHover={reduceMotion ? undefined : { scale: 1.06 }}
+              whileTap={{ scale: 0.92 }}
+              className="relative inline-flex h-14 w-14 items-center justify-center rounded-full min-[340px]:h-[3.75rem] min-[340px]:w-[3.75rem]"
+            >
+              {!open && !reduceMotion ? (
+                <motion.span
+                  aria-hidden
+                  className="absolute -inset-1.5 rounded-full bg-brand/25 blur-xs"
+                  animate={{ opacity: [0.35, 0.75, 0.35], scale: [0.92, 1.08, 0.92] }}
+                  transition={{ duration: 3.5, repeat: Infinity }}
+                />
+              ) : null}
+
+              <AnimatePresence mode="wait" initial={false}>
+                {open ? (
+                  <motion.span
+                    key="x"
+                    initial={{ rotate: -70, opacity: 0, scale: 0.7 }}
+                    animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                    exit={{ rotate: 70, opacity: 0, scale: 0.7 }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                    className="relative inline-flex h-full w-full items-center justify-center rounded-full bg-foreground text-background shadow-xl"
+                  >
+                    <X className="h-5 w-5" />
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="orb"
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.6, opacity: 0 }}
+                    className="relative"
+                  >
+                    <AssistantOrb size={56} />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          </div>
         ) : null}
       </div>
     </>
@@ -735,46 +909,55 @@ function Header({
   const { t } = useLocale();
 
   const iconBtn =
-    'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-surface text-muted ring-1 ring-border transition hover:bg-brand-soft hover:text-brand';
+    'inline-flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl border border-border bg-surface-elevated text-foreground shadow-2xs transition hover:bg-surface hover:text-brand';
 
   return (
-    <header className="relative shrink-0 border-b border-border bg-surface/80 px-4 py-3.5">
-      <div className="relative flex items-center gap-3">
+    <header className="relative z-10 shrink-0 border-b border-border bg-background/95 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 backdrop-blur-md">
+      <div className="flex items-center gap-3">
         {view !== 'chat' ? (
           <button type="button" onClick={onBack} aria-label="Back to chat" className={iconBtn}>
             <ArrowLeft className="h-4 w-4" />
           </button>
-        ) : (
-          <AssistantOrb size={36} active={streaming} />
-        )}
+        ) : null}
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-semibold leading-tight text-foreground">
-            {view === 'chat' ? t('chat.title') : t('chat.person')}
-          </p>
-          <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11px] text-muted">
-            {view === 'chat' ? (
-              <>
+          {view === 'chat' ? (
+            <>
+              <DealoAiMark />
+              <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-muted">
                 <span
                   className={cn(
                     'h-1.5 w-1.5 shrink-0 rounded-full',
-                    streaming ? 'bg-amber-500' : 'bg-brand',
+                    streaming
+                      ? 'animate-pulse bg-amber-500'
+                      : 'bg-brand shadow-[0_0_6px_color-mix(in_srgb,var(--brand)_80%,transparent)]',
                   )}
                 />
-                {streaming ? 'Writing…' : 'Online'}
-              </>
-            ) : signedIn ? (
-              'Opens a support ticket'
-            ) : (
-              'We reply by email'
-            )}
-          </p>
+                {streaming ? 'Writing answer…' : 'Online · can read images'}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="truncate text-sm font-bold text-foreground">
+                {t('chat.person')}
+              </p>
+              <p className="text-[11px] text-muted">
+                {signedIn ? 'Opens a support ticket' : 'We reply by email'}
+              </p>
+            </>
+          )}
         </div>
 
         {/* Action buttons */}
         <div className="flex items-center gap-1.5">
           {view === 'chat' && hasChat ? (
-            <button type="button" onClick={onRestart} aria-label="New chat" title="New chat" className={iconBtn}>
+            <button
+              type="button"
+              onClick={onRestart}
+              aria-label="New chat"
+              title="New chat"
+              className={iconBtn}
+            >
               <SquarePen className="h-3.5 w-3.5" />
             </button>
           ) : null}
@@ -789,8 +972,13 @@ function Header({
               {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
             </button>
           ) : null}
-          <button type="button" onClick={onClose} aria-label="Close" className={iconBtn}>
-            <X className="h-3.5 w-3.5" />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className={cn(iconBtn, 'hover:border-danger/40 hover:bg-danger/10 hover:text-danger')}
+          >
+            <X className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -803,10 +991,12 @@ function Header({
 function EmptyState({
   welcome,
   big,
+  whatsapp,
   onAsk,
 }: {
   welcome: AssistantWelcome | null;
   big: boolean;
+  whatsapp: string | null;
   onAsk: (q: string) => void;
 }) {
   const { t } = useLocale();
@@ -814,78 +1004,75 @@ function EmptyState({
   return (
     <div className="flex flex-col items-center pt-2 text-center">
       <motion.div
-        initial={{ scale: 0.65, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 200, damping: 18 }}
-        className="relative"
-      >
-        <span aria-hidden className="absolute inset-0 -z-10 scale-[1.8] rounded-full bg-brand/20 blur-3xl" />
-        <AssistantOrb size={big ? 72 : 64} />
-      </motion.div>
-
-      <motion.h3
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="mt-5 font-display text-[1.3rem] font-bold leading-tight text-foreground sm:text-2xl"
+        className="relative w-full overflow-hidden rounded-2xl border border-border bg-surface-elevated p-4.5 shadow-xs"
       >
-        {welcome ? (
-          <>
-            {welcome.greeting}. <span className="text-brand">{t('chat.help')}</span>
-          </>
-        ) : (
-          t('chat.help')
-        )}
-      </motion.h3>
+        <div className="min-w-0 text-left">
+          <DealoAiMark compact />
+          <h3 className="mt-2 font-display text-[1.2rem] font-bold leading-tight text-foreground sm:text-xl">
+            {welcome ? (
+              <>
+                {welcome.greeting},{' '}
+                <span className="text-brand">{t('chat.help')}</span>
+              </>
+            ) : (
+              t('chat.help')
+            )}
+          </h3>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted">
+            {welcome?.intro ?? t('chat.nudge.body')} Attach a CV screenshot or job description — I can analyze it
+            directly.
+          </p>
+        </div>
+      </motion.div>
 
-      <motion.p
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.16 }}
-        className="mt-2 max-w-xs text-[12.5px] leading-relaxed text-muted"
-      >
-        {welcome?.intro ?? t('chat.nudge.body')}
-      </motion.p>
-
-      <div className={cn('mt-6 grid w-full gap-2.5', big ? 'grid-cols-4' : 'grid-cols-2')}>
+      {/* Capabilities 2x2 or 4x1 grid */}
+      <div className={cn('mt-3.5 grid w-full gap-2.5', big ? 'grid-cols-4' : 'grid-cols-2')}>
         {CAPABILITIES.map((c, i) => (
           <motion.button
             key={c.title}
             type="button"
-            initial={{ opacity: 0, y: 14 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 + i * 0.07 }}
-            whileHover={{ y: -3 }}
+            transition={{ delay: 0.08 + i * 0.05 }}
+            whileHover={{ y: -2 }}
             onClick={() => onAsk(c.prompt)}
-            className="group relative overflow-hidden rounded-2xl border border-border bg-surface p-3 text-left transition hover:border-brand/35 hover:bg-brand-soft/60"
+            className="group relative overflow-hidden rounded-xl border border-border bg-surface-elevated p-3.5 text-left shadow-2xs transition hover:border-brand/50 hover:shadow-sm"
           >
             <span
               className={cn(
-                'inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md',
+                'inline-flex h-8.5 w-8.5 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-xs',
                 c.gradient,
               )}
             >
               <c.icon className="h-4 w-4" />
             </span>
-            <p className="mt-2.5 text-[12.5px] font-semibold text-foreground">{c.title}</p>
-            <p className="text-[11px] text-muted">{c.body}</p>
+            <p className="mt-2.5 text-xs font-bold text-foreground">{c.title}</p>
+            <p className="mt-0.5 text-[11px] leading-snug text-muted">{c.body}</p>
           </motion.button>
         ))}
       </div>
 
+      {/* Context prompts */}
+      {/* Page-context suggestion chips */}
       {welcome?.suggestions.length ? (
-        <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+        <div className="mt-3.5 flex flex-wrap gap-1.5">
           {welcome.suggestions.map((s, i) => (
             <motion.button
               key={s}
               type="button"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.42 + i * 0.05 }}
+              transition={{ delay: 0.3 + i * 0.04 }}
               onClick={() => onAsk(s)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[11.5px] font-medium text-muted transition hover:border-brand/40 hover:text-brand"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-elevated px-3 py-1.5 text-[11.5px] font-medium text-foreground shadow-2xs transition hover:border-brand hover:text-brand"
             >
-              {s === PERSON ? <Headphones className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3 text-brand" />}
+              {s === PERSON ? (
+                <Headphones className="h-3 w-3 shrink-0" />
+              ) : (
+                <ArrowUpRight className="h-3 w-3 shrink-0 text-brand" />
+              )}
               {s === PERSON ? t('chat.person') : s}
             </motion.button>
           ))}
@@ -904,6 +1091,7 @@ function Message({
   onNavigate,
   onRate,
   onRegenerate,
+  onActionPrompt,
 }: {
   item: ChatItem;
   isLast: boolean;
@@ -911,6 +1099,7 @@ function Message({
   onNavigate: () => void;
   onRate: (rating: 'up' | 'down') => void;
   onRegenerate: () => void;
+  onActionPrompt: (prompt: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
   const reduce = useReducedMotion();
@@ -918,67 +1107,109 @@ function Message({
   if (item.role === 'user') {
     return (
       <motion.div
-        initial={reduce ? false : { opacity: 0, y: 8, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
+        initial={reduce ? false : { opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
         className="flex justify-end"
       >
-        <p className="max-w-[85%] whitespace-pre-wrap rounded-[1.25rem] rounded-br-md bg-brand px-3.5 py-2.5 text-[13.5px] leading-relaxed text-on-brand shadow-[0_8px_22px_-12px_color-mix(in_srgb,var(--brand)_55%,transparent)]">
-          {item.text}
-        </p>
+        <div className="max-w-[85%] space-y-2">
+          {item.imagePreviews?.length ? (
+            <div className="flex flex-wrap justify-end gap-1.5">
+              {item.imagePreviews.map((src) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={src}
+                  src={src}
+                  alt="Attached"
+                  className="h-24 w-24 rounded-xl object-cover ring-2 ring-emerald-600/30 shadow-md"
+                />
+              ))}
+            </div>
+          ) : null}
+          {item.text ? (
+            <p className="whitespace-pre-wrap rounded-2xl rounded-br-xs bg-brand px-4 py-2.5 text-[13.5px] font-medium leading-relaxed text-on-brand shadow-sm">
+              {item.text}
+            </p>
+          ) : null}
+        </div>
       </motion.div>
     );
   }
 
   const thinking = item.status === 'streaming' && !item.text;
+  const isError = item.status === 'error';
 
   return (
     <motion.div
-      initial={reduce ? false : { opacity: 0, y: 8 }}
+      initial={reduce ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group flex gap-2.5"
+      className="group flex gap-2.5 items-start"
     >
       <AssistantOrb size={30} active={item.status === 'streaming'} className="mt-0.5" />
 
       <div className="min-w-0 flex-1">
         {thinking ? (
-          /* Animated "thinking" shimmer */
-          <div className="flex items-center gap-2 py-1.5">
+          <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface-elevated px-3.5 py-3 shadow-2xs">
             <div className="flex items-center gap-1">
               {[0, 1, 2].map((i) => (
                 <motion.span
                   key={i}
-                  className="h-1.5 w-1.5 rounded-full bg-brand/70"
+                  className="h-1.5 w-1.5 rounded-full bg-brand"
                   animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.2, 0.8] }}
                   transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.2 }}
                 />
               ))}
             </div>
-            <motion.span
-              className="text-[12.5px] font-medium text-muted"
-              animate={reduce ? undefined : { opacity: [0.6, 1, 0.6] }}
-              transition={{ duration: 1.6, repeat: Infinity }}
-            >
-              Thinking it through…
-            </motion.span>
+            <span className="text-xs font-medium text-muted">Thinking it through…</span>
+          </div>
+        ) : isError ? (
+          /* High-legibility Offline / Fallback Card */
+          <div className="rounded-2xl border border-amber-300 bg-amber-50/70 p-3.5 text-slate-900 shadow-2xs dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-zinc-100">
+            <div className="flex items-start gap-2.5">
+              <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-400">
+                <WifiOff className="h-3.5 w-3.5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-amber-900 dark:text-amber-300">
+                  Connection Notice
+                </p>
+                <p className="mt-1 text-[13px] leading-relaxed text-slate-800 dark:text-zinc-200">
+                  {item.text}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onActionPrompt(PERSON)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800 active:scale-95 dark:bg-[#7cff4d] dark:text-[#062417] dark:hover:bg-[#8eff63]"
+                  >
+                    <Headphones className="h-3.5 w-3.5" />
+                    Talk to a person
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onRegenerate}
+                    disabled={busy}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50 active:scale-95 dark:border-zinc-700 dark:bg-[#121c16] dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Try again
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
-          <div
-            className={cn(
-              'rounded-[1.25rem] rounded-tl-md border px-3.5 py-3',
-              item.status === 'error'
-                ? 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-200'
-                : 'border-border bg-surface text-foreground',
-            )}
-          >
+          <div className="rounded-2xl rounded-tl-xs border border-border bg-surface-elevated px-4 py-3 shadow-2xs">
             <AssistantMarkdown
               text={item.text}
               streaming={item.status === 'streaming'}
               onNavigate={onNavigate}
-              className="text-[14px] leading-relaxed text-foreground [&_a]:text-brand [&_blockquote]:text-muted [&_p]:text-foreground"
+              className="text-[13.5px] leading-relaxed text-foreground"
             />
           </div>
         )}
 
+        {/* Links */}
+        {/* Quick-access links */}
         {item.links?.length && item.status === 'done' ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {item.links.map((l) => (
@@ -986,7 +1217,7 @@ function Message({
                 key={l.href}
                 href={l.href}
                 onClick={onNavigate}
-                className="inline-flex items-center gap-1 rounded-full border border-brand/25 bg-brand-soft px-2.5 py-1 text-[11px] font-semibold text-brand transition hover:-translate-y-px hover:border-brand/50"
+                className="inline-flex items-center gap-1 rounded-full border border-emerald-600/30 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-[#7cff4d]/30 dark:bg-[#7cff4d]/10 dark:text-[#7cff4d]"
               >
                 {l.label} <ArrowUpRight className="h-3 w-3" />
               </Link>
@@ -994,11 +1225,11 @@ function Message({
           </div>
         ) : null}
 
-        {/* Message actions toolbar */}
-        {item.status === 'done' && item.text ? (
+        {/* Actions toolbar */}
+        {item.status === 'done' && item.text && !isError ? (
           <div
             className={cn(
-              'mt-1.5 flex items-center gap-0.5 transition',
+              'mt-1.5 flex items-center gap-0.5 text-slate-500 dark:text-zinc-400 transition',
               isLast ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100',
             )}
           >
@@ -1011,7 +1242,7 @@ function Message({
                 });
               }}
             >
-              {copied ? <Check className="h-3.5 w-3.5 text-brand" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
             </ActionButton>
             <ActionButton
               label="Helpful"
@@ -1035,10 +1266,12 @@ function Message({
               </ActionButton>
             ) : null}
             {item.rating ? (
-              <span className="ml-1 text-[10.5px] text-brand">Thanks for the feedback</span>
+              <span className="ml-1 text-[10.5px] font-medium text-emerald-600 dark:text-[#7cff4d]">
+                Thanks for feedback
+              </span>
             ) : null}
             {item.source ? (
-              <span className="ml-auto text-[10px] uppercase tracking-wider text-muted">
+              <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
                 {item.source === 'ai' ? 'Dealo AI' : 'Guide'}
               </span>
             ) : null}
@@ -1070,8 +1303,8 @@ function ActionButton({
       onClick={onClick}
       disabled={disabled && !active}
       className={cn(
-        'inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted transition hover:bg-surface hover:text-foreground disabled:cursor-default disabled:opacity-40',
-        active && 'bg-brand-soft text-brand opacity-100',
+        'inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white disabled:cursor-default disabled:opacity-40',
+        active && 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-[#7cff4d]',
       )}
     >
       {children}
@@ -1083,52 +1316,126 @@ function ActionButton({
 
 function Composer({
   big,
+  mobile,
   input,
   setInput,
   inputRef,
+  fileRef,
   streaming,
+  attaching,
+  pendingImages,
+  onRemoveImage,
+  onAttach,
   onSend,
   onStop,
   onPerson,
+  whatsapp,
 }: {
   big: boolean;
+  mobile: boolean;
   input: string;
   setInput: (v: string) => void;
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
+  fileRef: React.RefObject<HTMLInputElement | null>;
   streaming: boolean;
+  attaching: boolean;
+  pendingImages: ChatImagePayload[];
+  onRemoveImage: (index: number) => void;
+  onAttach: (files: FileList | File[]) => void;
   onSend: () => void;
   onStop: () => void;
   onPerson: () => void;
+  whatsapp: string | null;
 }) {
   const { t } = useLocale();
-  const placeholder = t('chat.placeholder');
+  const placeholder = pendingImages.length ? 'Ask about this image…' : t('chat.placeholder');
   const near = input.length > MAX_INPUT * 0.8;
+  const canSend = Boolean(input.trim() || pendingImages.length);
 
   return (
     <form
-      className="relative shrink-0 border-t border-border bg-surface/60 px-3 pb-3 pt-2.5"
+      className="relative z-10 shrink-0 border-t border-border bg-background px-3.5 pt-3 pb-[max(env(safe-area-inset-bottom),0.85rem)]"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!streaming) onSend();
+        if (!streaming && canSend) onSend();
+      }}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files?.length) onAttach(e.dataTransfer.files);
       }}
     >
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files?.length) onAttach(e.target.files);
+          e.target.value = '';
+        }}
+      />
       <div className={cn('mx-auto w-full', big && 'max-w-3xl')}>
-        <div className="rounded-[1.4rem] border border-border bg-surface-elevated p-px shadow-sm transition focus-within:border-brand/45 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand)_18%,transparent)]">
-          <div className="flex items-end gap-2 rounded-[calc(1.4rem-1px)] px-2.5 py-2">
+        {pendingImages.length ? (
+          <div className="mb-2 flex flex-wrap gap-2 px-1">
+            {pendingImages.map((image, index) => (
+              <div key={image.previewUrl} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={image.previewUrl}
+                  alt={`Attachment ${index + 1}`}
+                  className="h-14 w-14 rounded-xl object-cover ring-1 ring-slate-300 dark:ring-zinc-700 shadow-xs"
+                />
+                <button
+                  type="button"
+                  aria-label="Remove image"
+                  onClick={() => onRemoveImage(index)}
+                  className="absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-white shadow-xs hover:bg-slate-800 dark:bg-white dark:text-black"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {/* Input Pill */}
+        <div className="rounded-2xl border border-border bg-surface p-1.5 shadow-xs transition focus-within:border-brand focus-within:bg-surface-elevated focus-within:ring-2 focus-within:ring-brand/15">
+          <div className="flex items-end gap-1.5">
+            <button
+              type="button"
+              aria-label="Attach image"
+              disabled={streaming || attaching || pendingImages.length >= 2}
+              onClick={() => fileRef.current?.click()}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted transition hover:bg-surface-elevated hover:text-foreground disabled:opacity-40"
+            >
+              {attaching ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4.5 w-4.5" />}
+            </button>
             <textarea
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value.slice(0, MAX_INPUT))}
+              onPaste={(e) => {
+                const files = Array.from(e.clipboardData.items)
+                  .filter((item) => item.type.startsWith('image/'))
+                  .map((item) => item.getAsFile())
+                  .filter((file): file is File => Boolean(file));
+                if (files.length) {
+                  e.preventDefault();
+                  onAttach(files);
+                }
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                   e.preventDefault();
-                  if (!streaming) onSend();
+                  if (!streaming && canSend) onSend();
                 }
               }}
               rows={1}
               placeholder={placeholder}
               aria-label={placeholder}
-              className="max-h-[168px] min-h-[2.4rem] flex-1 resize-none bg-transparent px-1.5 py-2 text-[13.5px] leading-relaxed text-foreground outline-none placeholder:text-muted"
+              className="max-h-[160px] min-h-[2.4rem] flex-1 resize-none bg-transparent px-1 py-2 text-[13.5px] leading-relaxed text-foreground caret-brand outline-none placeholder:text-muted"
             />
 
             {streaming ? (
@@ -1136,22 +1443,22 @@ function Composer({
                 type="button"
                 onClick={onStop}
                 aria-label="Stop answering"
-                whileTap={{ scale: 0.88 }}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background shadow-md"
+                whileTap={{ scale: 0.9 }}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-foreground text-background shadow-xs"
               >
-                <Square className="h-3.5 w-3.5 fill-current" />
+                <Square className="h-3 w-3 fill-current" />
               </motion.button>
             ) : (
               <motion.button
                 type="submit"
-                disabled={!input.trim()}
+                disabled={!canSend}
                 aria-label="Send"
-                whileTap={{ scale: 0.88 }}
+                whileTap={{ scale: 0.9 }}
                 className={cn(
-                  'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition disabled:opacity-35',
-                  input.trim()
-                    ? 'bg-brand text-on-brand shadow-[0_8px_20px_-10px_color-mix(in_srgb,var(--brand)_70%,transparent)]'
-                    : 'bg-surface text-muted ring-1 ring-border',
+                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition shadow-xs disabled:opacity-35',
+                  canSend
+                    ? 'bg-brand text-on-brand hover:bg-brand-strong'
+                    : 'bg-surface-elevated text-muted',
                 )}
               >
                 <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
@@ -1164,18 +1471,23 @@ function Composer({
           <button
             type="button"
             onClick={onPerson}
-            className="inline-flex items-center gap-1 font-semibold text-muted transition hover:text-brand"
+            className="inline-flex items-center gap-1.5 font-semibold text-foreground transition hover:text-brand"
           >
-            <UserRound className="h-3.5 w-3.5" /> {t('chat.person')}
+            <UserRound className="h-3.5 w-3.5" />
+            {t('chat.person')}
           </button>
           {near ? (
-            <span className={cn('tabular-nums', input.length >= MAX_INPUT && 'text-red-500')}>
+            <span className={cn('tabular-nums', input.length >= MAX_INPUT && 'font-bold text-danger')}>
               {input.length}/{MAX_INPUT}
             </span>
           ) : (
-            <span className="text-[10px] text-muted/80">{t('chat.disclaimer')}</span>
+            <span className="inline-flex items-center gap-1 text-[10.5px]">
+              <Paperclip className="h-3 w-3" />
+              Attach or paste image
+            </span>
           )}
         </div>
+        <p className="mt-1 text-center text-[10px] text-muted">{t('chat.disclaimer')}</p>
       </div>
     </form>
   );
@@ -1198,6 +1510,7 @@ function PersonForm({
   defaultMessage,
   chat,
   page,
+  whatsapp,
   onSent,
 }: {
   signedIn: boolean;
@@ -1206,6 +1519,7 @@ function PersonForm({
   defaultMessage: string;
   chat: AssistantMessage[];
   page: string;
+  whatsapp: string | null;
   onSent: (note: string) => void;
 }) {
   const [name, setName] = useState(defaultName);
@@ -1218,7 +1532,7 @@ function PersonForm({
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
-    if (message.trim().length < 8) return setError('Please tell us a little more (at least 8 characters).');
+    if (message.trim().length < 8) return setError('Please provide a bit more detail (at least 8 characters).');
     setSending(true);
     try {
       if (signedIn) {
@@ -1234,7 +1548,7 @@ function PersonForm({
             category,
           },
         });
-        onSent('A person from our team will reply on your ticket. You can follow it under Dashboard, Support.');
+        onSent('A member of our team will reply on your support ticket. You can track it under Dashboard > Support.');
       } else {
         const res = await apiFetch<{ message: string }>('/assistant/handoff', {
           method: 'POST',
@@ -1255,23 +1569,26 @@ function PersonForm({
     }
   };
 
+  const field =
+    'mt-1 block w-full rounded-xl border border-border bg-surface-elevated px-3 py-2 text-xs text-foreground outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15';
+
   return (
-    <form onSubmit={(e) => void submit(e)} className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
-        <div className="flex items-start gap-3 rounded-2xl border border-brand/25 bg-brand-soft p-3">
-          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand text-on-brand shadow-sm">
+    <form onSubmit={(e) => void submit(e)} className="flex min-h-0 flex-1 flex-col bg-surface/70">
+      <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto px-4 py-4 sm:px-5">
+        <div className="flex items-start gap-3 rounded-xl border border-brand/25 bg-brand-soft p-3.5 text-foreground">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-on-brand">
             <Headphones className="h-4 w-4" />
           </span>
-          <p className="text-xs leading-relaxed text-foreground">
+          <p className="text-xs leading-relaxed text-muted">
             {signedIn
-              ? 'Your message and this chat go straight to our support team as a ticket.'
-              : 'Leave your name and email. Our team gets this chat too, so you will not need to repeat yourself.'}
+              ? 'Your message and conversation history will be sent directly to our support team.'
+              : 'Leave your details and message. Our team receives this chat context so you won’t have to repeat yourself.'}
           </p>
         </div>
 
         {!signedIn ? (
           <>
-            <label className="block text-xs font-semibold text-foreground">
+            <label className="block text-xs font-bold text-foreground">
               Your name
               <input
                 value={name}
@@ -1279,11 +1596,11 @@ function PersonForm({
                 required
                 minLength={2}
                 maxLength={120}
-                className="input-field mt-1"
+                className={field}
                 autoComplete="name"
               />
             </label>
-            <label className="block text-xs font-semibold text-foreground">
+            <label className="block text-xs font-bold text-foreground">
               Email
               <input
                 type="email"
@@ -1291,16 +1608,16 @@ function PersonForm({
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 maxLength={255}
-                className="input-field mt-1"
+                className={field}
                 autoComplete="email"
                 placeholder="you@email.com"
               />
             </label>
           </>
         ) : (
-          <label className="block text-xs font-semibold text-foreground">
-            What is it about?
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="input-field mt-1">
+          <label className="block text-xs font-bold text-foreground">
+            Topic
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className={field}>
               {CATEGORIES.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.label}
@@ -1310,29 +1627,29 @@ function PersonForm({
           </label>
         )}
 
-        <label className="block text-xs font-semibold text-foreground">
+        <label className="block text-xs font-bold text-foreground">
           How can we help?
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value.slice(0, 2000))}
             rows={4}
             required
-            className="input-field mt-1 min-h-[6rem]"
-            placeholder="What happened, and what you expected…"
+            className={field}
+            placeholder="Describe what you need help with…"
           />
         </label>
 
-        {error ? <p className="text-xs text-red-600 dark:text-red-400">{error}</p> : null}
+        {error ? <p className="text-xs font-medium text-danger">{error}</p> : null}
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-4 py-3">
+      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-background px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
         <button
           type="submit"
           disabled={sending}
-          className="btn-primary px-4 text-xs disabled:opacity-60"
+          className="btn-primary px-4 py-2 text-xs disabled:opacity-60"
         >
           {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-          {signedIn ? 'Open ticket' : 'Send'}
+          {signedIn ? 'Open ticket' : 'Send message'}
         </button>
       </div>
     </form>

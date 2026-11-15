@@ -56,6 +56,7 @@ HOW TO ANSWER
 - Ownership / legal entity: only what KNOWLEDGE says. Do not invent founder names.
 - Scope: if they ask about drivers, chefs, domestic work, or anything Dealo does not do, say so politely and point to office roles + skilled trades. If the question is totally unrelated to hiring, careers, CVs, jobs, HR, or using Dealo, say you focus on those and invite a hiring/CV question — still be kind.
 - CV & careers: act as a senior coach. When they paste a CV, summary, bullets or a job advert, rewrite it. Give advanced, specific tips (metrics, Nigerian employer filters, ATS keywords, trade licences, remote signals) — not generic “use action verbs”. Offer to tailor line-by-line.
+- Images: if the user attaches a photo (CV screenshot, job advert, ID crop, UI error), read it carefully and answer from what you see. Quote key lines. Do not invent text that is not visible. For CVs/screenshots, rewrite or critique as a coach.
 - Also help with recruitment/HR in Nigeria, interviews, salary talk, Job Agent, ATS, API — fully and practically.
 - Prefer WhatsApp or “Talk to a person” when they want a human, for payments/refunds, bugs, or account deletion. Set handoff true then.
 - Never ask for passwords, cards, OTPs or API secrets.
@@ -176,11 +177,13 @@ export class AssistantService {
   }
 
   private async buildTurns(input: AssistantChatInput, user?: AuthUser): Promise<GeminiTurn[]> {
-    const question = input.messages[input.messages.length - 1]!.text;
+    const last = input.messages[input.messages.length - 1]!;
+    const question =
+      last.text?.trim() || (last.images?.length ? 'What do you see in this image, and how can you help?' : '');
     const recentUser = input.messages
       .filter((m) => m.role === 'user')
       .slice(-3)
-      .map((m) => m.text)
+      .map((m) => m.text || '(image)')
       .join(' ');
     const [live, who] = await Promise.all([this.liveFacts(), this.userContext(user)]);
     const relevant = retrieve(`${recentUser} ${question}`, 6);
@@ -211,12 +214,22 @@ export class AssistantService {
     for (const message of history) {
       const role = message.role === 'user' ? 'user' : 'model';
       const last = turns[turns.length - 1];
+      // Keep history text-only (images only on the latest turn) to stay within token/size limits.
       if (last?.role === role) last.text += `\n\n${message.text}`;
-      else turns.push({ role, text: message.text });
+      else turns.push({ role, text: message.text || '(image)' });
     }
-    const finalText = `${context}\n\n---\nUSER QUESTION:\n${question}`;
-    if (turns[turns.length - 1]?.role === 'user') turns[turns.length - 1]!.text += `\n\n${finalText}`;
-    else turns.push({ role: 'user', text: finalText });
+    const lastUser = input.messages[input.messages.length - 1]!;
+    const images = (lastUser.images ?? []).map((image) => ({
+      mimeType: image.mimeType,
+      data: image.data,
+    }));
+    const finalText = `${context}\n\n---\nUSER QUESTION:\n${question || '(See attached image — describe and help.)'}`;
+    if (turns[turns.length - 1]?.role === 'user') {
+      turns[turns.length - 1]!.text += `\n\n${finalText}`;
+      if (images.length) turns[turns.length - 1]!.images = images;
+    } else {
+      turns.push({ role: 'user', text: finalText, images: images.length ? images : undefined });
+    }
     return turns;
   }
 
@@ -225,7 +238,8 @@ export class AssistantService {
   /** Streams an answer as events. Falls back to the built-in guide when AI is off or fails before any text. */
   async stream(input: AssistantChatInput, user: AuthUser | undefined, emit: Emit, signal?: AbortSignal): Promise<AssistantReply> {
     const id = randomUUID();
-    const question = input.messages[input.messages.length - 1]!.text;
+    const last = input.messages[input.messages.length - 1]!;
+    const question = last.text?.trim() || (last.images?.length ? 'What do you see in this image, and how can you help?' : '');
     const matched = matchTopic(question);
     const vars = (await this.liveFacts().catch(() => null))?.vars;
     const guide = { ...matched, answer: vars ? fillTemplate(matched.answer, vars) : matched.answer.replace(/\s*\{\{\w+\}\}/g, '') };
