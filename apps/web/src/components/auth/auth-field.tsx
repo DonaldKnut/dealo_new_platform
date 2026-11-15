@@ -58,25 +58,19 @@ function AuthControlShell({
           mobileUnderline
             ? cn(
                 'max-lg:rounded-none max-lg:border-0 max-lg:border-b max-lg:bg-transparent max-lg:shadow-none',
-                error
-                  ? 'max-lg:border-danger'
-                  : 'max-lg:border-border max-lg:focus-within:border-foreground',
+                error ? 'max-lg:border-danger' : 'max-lg:border-border',
                 'lg:rounded-xl lg:border lg:bg-surface-elevated',
-                error
-                  ? 'lg:border-danger'
-                  : 'lg:border-border lg:focus-within:border-brand lg:focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand)_25%,transparent)]',
+                error ? 'lg:border-danger' : 'lg:border-border',
               )
             : cn(
                 'rounded-xl border bg-surface-elevated',
-                error
-                  ? 'border-danger'
-                  : 'border-border focus-within:border-brand focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--brand)_25%,transparent)]',
+                error ? 'border-danger' : 'border-border',
               ),
         )}
       >
         <span
           className={cn(
-            'flex w-11 shrink-0 items-center justify-center border-r border-border bg-surface text-muted transition group-focus-within:text-brand',
+            'flex w-11 shrink-0 items-center justify-center border-r border-border bg-surface text-muted',
             mobileUnderline && 'max-lg:hidden',
           )}
         >
@@ -150,7 +144,7 @@ export function AuthField({
         {...inputProps}
         type={inputType}
         className={cn(
-          'auth-input min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 text-[0.95rem] text-foreground outline-none placeholder:text-muted/70 min-[400px]:px-3.5 min-[400px]:py-3',
+          'auth-input min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 text-[0.95rem] text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none placeholder:text-muted/70 min-[400px]:px-3.5 min-[400px]:py-3',
           mobileUnderline && 'max-lg:px-0 max-lg:py-2.5 max-lg:text-[15px]',
           className,
         )}
@@ -180,7 +174,7 @@ export function AuthSelectField({
       <select
         {...selectProps}
         className={cn(
-          'auth-input min-w-0 flex-1 appearance-none border-0 bg-transparent px-3 py-2.5 text-[0.95rem] text-foreground outline-none min-[400px]:px-3.5 min-[400px]:py-3 dark:[color-scheme:dark]',
+          'auth-input min-w-0 flex-1 appearance-none border-0 bg-transparent px-3 py-2.5 text-[0.95rem] text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none min-[400px]:px-3.5 min-[400px]:py-3 dark:[color-scheme:dark]',
           className,
         )}
       >
