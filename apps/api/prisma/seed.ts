@@ -134,6 +134,12 @@ const ROLE_DEFINITIONS: Array<{
     permissions: [],
   },
   {
+    code: UserRole.JOB_PARTNER,
+    name: 'Job partner',
+    description: 'Admin-approved partner who can post jobs on Dealo',
+    permissions: [PermissionCode.JOBS_PUBLISH],
+  },
+  {
     code: UserRole.TALENT,
     name: 'Talent',
     description: 'Professional / candidate user',

@@ -5,6 +5,8 @@ export const UserRole = {
   FINANCE: 'FINANCE',
   OPERATIONS: 'OPERATIONS',
   EMPLOYER: 'EMPLOYER',
+  /** Admin-granted: can post jobs on Dealo ATS / public board. */
+  JOB_PARTNER: 'JOB_PARTNER',
   TALENT: 'TALENT',
 } as const;
 
@@ -37,6 +39,8 @@ export const PermissionCode = {
   SUPPORT_MANAGE: 'support.manage',
   USERS_MAIL: 'users.mail',
   API_KEYS_MANAGE: 'api_keys.manage',
+  /** Post and publish jobs on the Dealo board (job partners). */
+  JOBS_PUBLISH: 'jobs.publish',
 } as const;
 
 export type PermissionCode = (typeof PermissionCode)[keyof typeof PermissionCode];

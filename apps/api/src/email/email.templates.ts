@@ -79,3 +79,21 @@ ${notes ? `<p style="margin-top:16px"><strong>Brief</strong></p><p style="white-
     text: `New talent request: ${params.roleTitle} @ ${params.companyName}. ${people} in ${params.location}. Contact ${params.contactName} <${params.email}>. Open: ${params.dashboardUrl}`,
   };
 }
+
+/** Admin enabled job posting for a partner account. */
+export function jobPartnerGrantedEmail(params: {
+  to: string;
+  firstName: string;
+  atsUrl: string;
+}): SendEmailInput {
+  const name = escapeHtml(params.firstName.trim() || 'there');
+  return {
+    to: params.to,
+    subject: 'You can post jobs on Dealo',
+    html: `<p>Hi ${name},</p>
+<p>Good news — Dealo has approved your account as a <strong>job partner</strong>. You can now create hiring workspaces, post open roles, and receive Easy Apply applications on Dealo.</p>
+<p style="margin-top:20px"><a href="${escapeHtml(params.atsUrl)}" style="display:inline-block;padding:10px 18px;background:#0f766e;color:#fff;text-decoration:none;border-radius:999px;font-weight:600">Open hiring dashboard</a></p>
+<p style="margin-top:16px;color:#6b7280;font-size:13px">Sign in again if the new access does not show up right away.</p>`,
+    text: `Hi ${params.firstName.trim() || 'there'}, Dealo approved your account as a job partner. Post jobs here: ${params.atsUrl}`,
+  };
+}

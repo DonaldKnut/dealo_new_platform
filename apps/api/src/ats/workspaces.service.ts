@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { CreateWorkspaceInput, InviteMemberInput, UpdateWorkspaceInput } from '@dealo/shared';
-import { JobStatus, WorkspaceRole } from '@prisma/client';
+import { JobStatus, UserRole, WorkspaceRole } from '@prisma/client';
 import { createHash, randomBytes } from 'crypto';
 
 import type { AuthUser } from '../auth/auth.types';
@@ -52,6 +52,19 @@ export class WorkspacesService {
 
   async create(input: CreateWorkspaceInput, user: AuthUser) {
     if (user.authType === 'api_key') throw new ForbiddenException('Sign in to create a workspace');
+    const staff = user.roles.some(
+      (role) =>
+        role === UserRole.SUPER_ADMIN ||
+        role === UserRole.ADMIN ||
+        role === UserRole.RECRUITER ||
+        role === UserRole.OPERATIONS ||
+        role === UserRole.FINANCE,
+    );
+    if (!staff && !user.roles.includes(UserRole.JOB_PARTNER)) {
+      throw new ForbiddenException(
+        'Job posting is for approved Dealo partners. Ask Dealo to enable posting on your account.',
+      );
+    }
     const { available } = await this.slugAvailable(input.slug);
     if (!available) throw new ConflictException('That web address is taken. Try another.');
 

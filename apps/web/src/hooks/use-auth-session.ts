@@ -28,9 +28,21 @@ export function isStaffRole(roles: string[]) {
   return roles.some((role) => STAFF_ROLES.has(role));
 }
 
+/** Admin-granted partners who may post jobs on Dealo ATS. */
+export function isJobPartner(roles: string[]) {
+  return roles.includes('JOB_PARTNER');
+}
+
+/** Staff or job partners can open the ATS hiring dashboard. */
+export function canUseAts(roles: string[]) {
+  return isStaffRole(roles) || isJobPartner(roles);
+}
+
 export function getRoleGroup(roles: string[]): 'admin' | 'employer' | 'talent' {
   if (isStaffRole(roles)) return 'admin';
-  if (roles.includes('TALENT') && !roles.includes('EMPLOYER')) return 'talent';
+  if (roles.includes('TALENT') && !roles.includes('EMPLOYER') && !isJobPartner(roles)) {
+    return 'talent';
+  }
   return 'employer';
 }
 
@@ -49,7 +61,10 @@ export function getPrimaryCta(roles: string[]) {
   if (group === 'talent') {
     return { href: '/dashboard/talent-home', label: 'My profile' };
   }
-  return { href: '/dashboard/ats', label: 'Post a job' };
+  if (isJobPartner(roles)) {
+    return { href: '/dashboard/ats', label: 'Post a job' };
+  }
+  return { href: '/hire', label: 'Request talent' };
 }
 
 export function useAuthSession() {

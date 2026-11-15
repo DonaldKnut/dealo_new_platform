@@ -18,6 +18,7 @@ import {
   StatusChip,
 } from '@/components/dashboard/dashboard-ui';
 import { useOpenHireRequest } from '@/components/dashboard/dashboard-session';
+import { isJobPartner } from '@/hooks/use-auth-session';
 import type { DashboardUserCore, EmployerWorkspace } from '@/lib/dashboard-api';
 
 export function EmployerOverview({
@@ -28,25 +29,38 @@ export function EmployerOverview({
   workspace: EmployerWorkspace;
 }) {
   const openHireRequest = useOpenHireRequest();
+  const partner = isJobPartner(user.roles);
   return (
     <div className="dash-atmosphere space-y-8">
       <DashHero
-        eyebrow="Employer"
+        eyebrow={partner ? 'Job partner' : 'Employer'}
         title={`Welcome, ${user.firstName}`}
         subtitle={workspace.subcopy}
         actions={
-          <>
-            <Link href="/dashboard/ats/jobs/new" className="btn-primary">
-              Post a job
-              <ArrowUpRight className="h-4 w-4" />
-            </Link>
-            <button type="button" onClick={openHireRequest} className="btn-secondary">
-              Request talent
-            </button>
-            <Link href="/dashboard/ats" className="btn-secondary">
-              Hiring dashboard
-            </Link>
-          </>
+          partner ? (
+            <>
+              <Link href="/dashboard/ats/jobs/new" className="btn-primary">
+                Post a job
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+              <button type="button" onClick={openHireRequest} className="btn-secondary">
+                Request talent
+              </button>
+              <Link href="/dashboard/ats" className="btn-secondary">
+                Hiring dashboard
+              </Link>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={openHireRequest} className="btn-primary">
+                Request talent
+                <ArrowUpRight className="h-4 w-4" />
+              </button>
+              <Link href="/dashboard/requests" className="btn-secondary">
+                My requests
+              </Link>
+            </>
+          )
         }
       />
 

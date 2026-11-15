@@ -37,6 +37,7 @@ const ROLE_META: Record<string, { label: string; tone: string }> = {
   FINANCE: { label: 'Finance', tone: 'bg-amber-500/12 text-amber-700 dark:text-amber-300' },
   OPERATIONS: { label: 'Operations', tone: 'bg-cyan-500/12 text-cyan-700 dark:text-cyan-300' },
   EMPLOYER: { label: 'Employer', tone: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300' },
+  JOB_PARTNER: { label: 'Job partner', tone: 'bg-teal-500/15 text-teal-800 dark:text-teal-300' },
   TALENT: { label: 'Job seeker', tone: 'bg-lime-500/15 text-lime-800 dark:text-lime-300' },
 };
 const ALL_ROLES = Object.keys(ROLE_META);
@@ -49,7 +50,12 @@ const PAGE = 40;
 const DAY = 86_400_000;
 
 const fullName = (u: DashboardUser) => `${u.firstName} ${u.lastName}`.trim() || u.email.split('@')[0]!;
-const segmentOf = (u: DashboardUser): Exclude<Segment, 'all'> => (u.roles.some((r) => STAFF.has(r)) ? 'staff' : u.roles.includes('EMPLOYER') ? 'employers' : 'talent');
+const segmentOf = (u: DashboardUser): Exclude<Segment, 'all'> =>
+  u.roles.some((r) => STAFF.has(r))
+    ? 'staff'
+    : u.roles.includes('EMPLOYER') || u.roles.includes('JOB_PARTNER')
+      ? 'employers'
+      : 'talent';
 
 function relative(iso: string | null) {
   if (!iso) return 'Never';
@@ -514,6 +520,9 @@ function UserDrawer({ user, me, onClose, onChanged }: { user: DashboardUser | nu
               );
             })}
           </div>
+          <p className="mt-2 text-[11px] text-muted">
+            Job partner can post roles on Dealo. They get an email when you add that role.
+          </p>
           {isSuper && !isSelf ? (
             <button type="button" className="btn-primary mt-3 text-sm" disabled={!rolesChanged || !roles.length || busy !== null} onClick={() => void act('roles', { roles })}>
               {busy === 'roles' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Save roles

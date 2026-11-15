@@ -200,9 +200,20 @@ export const adminUpdateUserSchema = z
     /** Only marks an email as confirmed; it cannot be un-confirmed here. */
     isEmailVerified: z.literal(true).optional(),
     roles: z
-      .array(z.enum(['SUPER_ADMIN', 'ADMIN', 'RECRUITER', 'FINANCE', 'OPERATIONS', 'EMPLOYER', 'TALENT']))
+      .array(
+        z.enum([
+          'SUPER_ADMIN',
+          'ADMIN',
+          'RECRUITER',
+          'FINANCE',
+          'OPERATIONS',
+          'EMPLOYER',
+          'JOB_PARTNER',
+          'TALENT',
+        ]),
+      )
       .min(1, 'Keep at least one role')
-      .max(7)
+      .max(8)
       .optional(),
   })
   .refine((v) => v.isActive !== undefined || v.isEmailVerified !== undefined || v.roles !== undefined, 'Nothing to change');

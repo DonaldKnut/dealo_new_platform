@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { AdminUpdateUserInput } from '@dealo/shared';
 import {
   CandidateScreenStatus,
@@ -10,6 +11,10 @@ import { NOT_REVOKED } from '../auth/auth.service';
 import type { AuthUser } from '../auth/auth.types';
 import { AuditLogService } from '../common/audit-log.service';
 import { normalizeEmail } from '../common/normalize-email';
+import type { AppEnv } from '../config/env.validation';
+import { EmailService } from '../email/email.service';
+import { jobPartnerGrantedEmail } from '../email/email.templates';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 const STAFF_ROLES: UserRole[] = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.RECRUITER, UserRole.FINANCE, UserRole.OPERATIONS];
@@ -25,10 +30,18 @@ type RoleGroup = 'admin' | 'employer' | 'talent';
 
 @Injectable()
 export class DashboardService {
+  private readonly logger = new Logger(DashboardService.name);
+  private readonly appUrl: string;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
-  ) {}
+    private readonly email: EmailService,
+    private readonly notifications: NotificationsService,
+    config: ConfigService<AppEnv, true>,
+  ) {
+    this.appUrl = config.get('APP_URL', { infer: true }).replace(/\/$/, '');
+  }
 
   private canManageAll(user: AuthUser) {
     return user.roles.some((role) => MANAGE_ROLES.includes(role));
@@ -564,15 +577,44 @@ export class DashboardService {
     if (input.isActive === false) {
       await this.prisma.refreshToken.updateMany({ where: { userId: id, ...NOT_REVOKED }, data: { revokedAt: new Date() } });
     }
+    let grantedJobPartner = false;
     if (input.roles) {
       const wanted = [...new Set(input.roles)];
+      // Partners post jobs as employers — keep EMPLOYER when JOB_PARTNER is granted.
+      if (wanted.includes(UserRole.JOB_PARTNER) && !wanted.includes(UserRole.EMPLOYER)) {
+        wanted.push(UserRole.EMPLOYER);
+      }
       const roleRows = await this.prisma.role.findMany({ where: { code: { in: wanted as UserRole[] } } });
       await this.prisma.userRoleAssignment.deleteMany({ where: { userId: id, role: { code: { notIn: wanted as UserRole[] } } } });
       for (const role of roleRows.filter((r) => !current.includes(r.code))) {
         await this.prisma.userRoleAssignment.create({ data: { userId: id, roleId: role.id } });
       }
+      grantedJobPartner = wanted.includes(UserRole.JOB_PARTNER) && !current.includes(UserRole.JOB_PARTNER);
       // Old sign-ins carry the old roles, so make them sign in again.
       await this.prisma.refreshToken.updateMany({ where: { userId: id, ...NOT_REVOKED }, data: { revokedAt: new Date() } });
+    }
+
+    if (grantedJobPartner) {
+      const atsUrl = `${this.appUrl}/dashboard/ats`;
+      await this.notifications.notify([id], {
+        type: 'ats.job_partner.granted',
+        title: 'You can post jobs on Dealo',
+        body: 'Your account is now a job partner. Open Hiring to create a workspace and publish roles.',
+        link: '/dashboard/ats',
+      });
+      try {
+        await this.email.send(
+          jobPartnerGrantedEmail({
+            to: target.email,
+            firstName: target.firstName,
+            atsUrl,
+          }),
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Job partner email failed for ${target.email}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
 
     await this.auditLog.record({
@@ -580,7 +622,12 @@ export class DashboardService {
       entityType: 'User',
       entityId: id,
       actorId: actor.id,
-      metadata: { ...input, previousRoles: current, staff: current.some((r) => STAFF_ROLES.includes(r)) },
+      metadata: {
+        ...input,
+        previousRoles: current,
+        staff: current.some((r) => STAFF_ROLES.includes(r)),
+        grantedJobPartner,
+      },
     });
     return (await this.users(actor)).find((u) => u.id === id) ?? null;
   }

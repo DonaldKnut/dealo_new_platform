@@ -4,13 +4,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 
 import { AtsFrame } from '@/components/ats/ats-frame';
-import { getDashboardHome, isStaffRole, useAuthSession } from '@/hooks/use-auth-session';
+import { canUseAts, getDashboardHome, useAuthSession } from '@/hooks/use-auth-session';
 
-/** Staff and business owners (EMPLOYER) can run hiring workspaces and post jobs. */
-function canUseAts(roles: string[]) {
-  return isStaffRole(roles) || roles.includes('EMPLOYER');
-}
-
+/** Staff and admin-approved job partners can run hiring workspaces and post jobs. */
 export default function AtsLayout({ children }: { children: ReactNode }) {
   const { user, loading } = useAuthSession();
   const router = useRouter();

@@ -14,6 +14,7 @@ enum UserRole {
   FINANCE
   OPERATIONS
   EMPLOYER
+  JOB_PARTNER
   TALENT
 }
 

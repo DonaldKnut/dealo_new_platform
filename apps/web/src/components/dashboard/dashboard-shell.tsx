@@ -46,7 +46,12 @@ import { useLocale } from '@/components/i18n/locale-context';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { useToast } from '@/components/ui/toast';
-import { getDashboardHome, getRoleGroup, type AuthSessionUser } from '@/hooks/use-auth-session';
+import {
+  getDashboardHome,
+  getRoleGroup,
+  isJobPartner,
+  type AuthSessionUser,
+} from '@/hooks/use-auth-session';
 import { ApiError, apiFetch } from '@/lib/api';
 import { atsApi } from '@/lib/ats-api';
 import { logClientAudit } from '@/lib/client-audit';
@@ -178,19 +183,12 @@ const adminNav: NavItem[] = [
   },
 ];
 
-const employerNav: NavItem[] = [
+const employerNavBase: NavItem[] = [
   {
     href: '/dashboard',
     labelKey: 'dash.nav.overview',
     icon: LayoutDashboard,
     help: 'A simple summary of your open requests and shortlists.',
-  },
-  {
-    href: '/dashboard/ats',
-    labelKey: 'dash.nav.ats',
-    icon: Kanban,
-    help: 'Post jobs, review applicants, and publish roles to the Dealo job board.',
-    tour: 'hiring',
   },
   {
     href: '/dashboard/requests',
@@ -225,6 +223,19 @@ const employerNav: NavItem[] = [
     help: 'Profile and security for your account.',
   },
 ];
+
+const employerAtsNavItem: NavItem = {
+  href: '/dashboard/ats',
+  labelKey: 'dash.nav.ats',
+  icon: Kanban,
+  help: 'Post jobs, review applicants, and publish roles to the Dealo job board.',
+  tour: 'hiring',
+};
+
+function employerNavFor(roles: string[]): NavItem[] {
+  if (!isJobPartner(roles)) return employerNavBase;
+  return [employerNavBase[0]!, employerAtsNavItem, ...employerNavBase.slice(1)];
+}
 
 const talentNav: NavItem[] = [
   {
@@ -390,11 +401,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     });
 
   const nav = useMemo(() => {
-    if (!user) return employerNav;
+    if (!user) return employerNavBase;
     const group = getRoleGroup(user.roles);
     if (group === 'admin') return adminNav;
     if (group === 'talent') return talentNav;
-    return employerNav;
+    return employerNavFor(user.roles);
   }, [user]);
 
   const logout = async () => {
