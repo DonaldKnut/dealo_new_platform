@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { contactSchema, type ContactInput } from '@dealo/shared';
+import { Building2, Mail, MessageSquareText, Tag, UserRound } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
 import { FormField } from '@/components/forms/form-field';
@@ -68,20 +69,20 @@ export function ContactForm({ onSuccess }: { onSuccess?: () => void }) {
         </a>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
-        <FormField label="Your name" error={errors.name?.message}>
-          <input className="input-field" {...register('name')} />
+        <FormField label="Your name" icon={UserRound} error={errors.name?.message}>
+          <input className="input-field" autoComplete="name" {...register('name')} />
         </FormField>
-        <FormField label="Email" error={errors.email?.message}>
-          <input type="email" className="input-field" {...register('email')} />
+        <FormField label="Email" icon={Mail} error={errors.email?.message}>
+          <input type="email" className="input-field" autoComplete="email" {...register('email')} />
         </FormField>
       </div>
-      <FormField label="Company (optional)">
-        <input className="input-field" {...register('company')} />
+      <FormField label="Company (optional)" icon={Building2} optional>
+        <input className="input-field" autoComplete="organization" {...register('company')} />
       </FormField>
-      <FormField label="What is it about?" error={errors.subject?.message}>
+      <FormField label="What is it about?" icon={Tag} error={errors.subject?.message}>
         <input className="input-field" {...register('subject')} />
       </FormField>
-      <FormField label="Message" error={errors.message?.message}>
+      <FormField label="Message" icon={MessageSquareText} error={errors.message?.message}>
         <textarea rows={5} className="input-field" {...register('message')} />
       </FormField>
       <FormStatus error={serverError} message={serverMessage} />

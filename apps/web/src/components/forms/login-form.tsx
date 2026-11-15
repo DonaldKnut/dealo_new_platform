@@ -21,6 +21,7 @@ import { useToast } from '@/components/ui/toast';
 import { ApiError, apiFetch } from '@/lib/api';
 import { logClientAudit } from '@/lib/client-audit';
 import { loadRememberedAuth, saveRememberedAuth } from '@/lib/remember-auth';
+import { cn } from '@/lib/utils';
 
 const loginFormSchema = z.object({
   email: z.string().email().max(255),
@@ -44,6 +45,7 @@ export function LoginForm({
     useServerFormStatus();
   const [hydrated, setHydrated] = useState(false);
   const [issue, setIssue] = useState<ReturnType<typeof authIssueFromError>>(null);
+  const isPage = variant === 'page';
 
   const {
     register,
@@ -108,81 +110,148 @@ export function LoginForm({
     }
   });
 
+  const forgotControl =
+    variant === 'page' ? (
+      <Link href="/auth/forgot-password" className="text-xs font-semibold text-brand">
+        Forgot password?
+      </Link>
+    ) : (
+      <button
+        type="button"
+        className="text-xs font-semibold text-brand"
+        onClick={() => modal.switchTo('forgot-password')}
+      >
+        Forgot password?
+      </button>
+    );
+
   return (
-    <form onSubmit={onSubmit} className="mt-8 space-y-4" noValidate>
+    <form
+      onSubmit={onSubmit}
+      className={cn('mt-8 flex flex-col gap-4', isPage && 'max-lg:mt-10 max-lg:gap-5')}
+      noValidate
+    >
       <AuthIssueDialog code={issue} open={Boolean(issue)} onClose={() => setIssue(null)} />
-      <SocialSignIn intent="signin" verb="Sign in" />
-      <AuthDivider />
 
-      <AuthField
-        label="Email"
-        icon={Mail}
-        type="email"
-        autoComplete="email"
-        placeholder="you@company.com"
-        error={errors.email?.message}
-        {...register('email')}
-      />
-      <AuthField
-        label="Password"
-        icon={LockKeyhole}
-        type="password"
-        revealable
-        autoComplete="current-password"
-        placeholder="••••••••"
-        error={errors.password?.message}
-        trailing={
-          variant === 'page' ? (
-            <Link href="/auth/forgot-password" className="text-xs font-semibold text-brand">
-              Forgot password?
-            </Link>
-          ) : (
-            <button
-              type="button"
-              className="text-xs font-semibold text-brand"
-              onClick={() => modal.switchTo('forgot-password')}
-            >
-              Forgot password?
-            </button>
-          )
-        }
-        {...register('password')}
-      />
-
-      <div className="flex flex-col gap-3 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between">
-        <label className="flex items-center gap-2 text-sm text-muted">
-          <input type="checkbox" className="h-4 w-4 rounded border-border" {...register('rememberMe')} />
-          <span>Remember me</span>
-        </label>
-        <p className="text-[11px] text-muted">Stay signed in on this device.</p>
+      {/* Desktop / modal: OAuth first. Page mobile: OAuth after email submit. */}
+      <div className={cn(isPage && 'order-4 max-lg:mt-4 lg:order-1')}>
+        <SocialSignIn intent="signin" verb="Continue" mobilePills={isPage} />
+      </div>
+      <div className={cn(isPage ? 'order-2 hidden lg:order-2 lg:block' : undefined)}>
+        <AuthDivider />
       </div>
 
-      <FormStatus error={serverError} message={serverMessage} />
-      {issue === 'EMAIL_UNVERIFIED' ? (
-        <button
-          type="button"
-          className="text-sm font-semibold text-brand hover:underline"
-          onClick={async () => {
-            const email = watch('email');
-            try {
-              await apiFetch('/auth/request-verification', { method: 'POST', json: { email } });
-              toast.success('Check your inbox', 'If that email is on Dealo, we sent a fresh confirmation link.');
-            } catch {
-              toast.error('Could not send', 'Wait a minute and try again.');
-            }
-          }}
-        >
-          Send the confirmation link again
-        </button>
-      ) : null}
+      <div className={cn('space-y-4', isPage && 'order-1 space-y-5 lg:order-3')}>
+        <AuthField
+          label="Email"
+          icon={Mail}
+          type="email"
+          autoComplete="email"
+          placeholder="you@company.com"
+          error={errors.email?.message}
+          mobileUnderline={isPage}
+          {...register('email')}
+        />
+        <AuthField
+          label="Password"
+          icon={LockKeyhole}
+          type="password"
+          revealable
+          autoComplete="current-password"
+          placeholder="••••••••"
+          error={errors.password?.message}
+          mobileUnderline={isPage}
+          trailing={forgotControl}
+          {...register('password')}
+        />
 
-      <button type="submit" className="btn-primary w-full" disabled={!canSubmit || isSubmitting}>
-        {isSubmitting ? 'Signing in…' : 'Sign in'}
-      </button>
-      <p className="text-center text-sm text-muted">
-        New to Dealo?{' '}
+        <div
+          className={cn(
+            'flex flex-col gap-3 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between',
+            isPage && 'max-lg:hidden',
+          )}
+        >
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <input type="checkbox" className="h-4 w-4 rounded border-border" {...register('rememberMe')} />
+            <span>Remember me</span>
+          </label>
+          <p className="text-[11px] text-muted">Stay signed in on this device.</p>
+        </div>
+
+        <FormStatus error={serverError} message={serverMessage} />
+        {issue === 'EMAIL_UNVERIFIED' ? (
+          <button
+            type="button"
+            className="text-sm font-semibold text-brand hover:underline"
+            onClick={async () => {
+              const email = watch('email');
+              try {
+                await apiFetch('/auth/request-verification', { method: 'POST', json: { email } });
+                toast.success(
+                  'Check your inbox',
+                  'If that email is on Dealo, we sent a fresh confirmation link.',
+                );
+              } catch {
+                toast.error('Could not send', 'Wait a minute and try again.');
+              }
+            }}
+          >
+            Send the confirmation link again
+          </button>
+        ) : null}
+
+        <button
+          type="submit"
+          disabled={!canSubmit || isSubmitting}
+          className={cn(
+            'btn-primary w-full',
+            isPage &&
+              'max-lg:h-12 max-lg:rounded-full max-lg:border-transparent max-lg:bg-foreground max-lg:text-background max-lg:shadow-none max-lg:hover:bg-foreground/90 max-lg:hover:text-background max-lg:dark:bg-white max-lg:dark:text-[#04140d] max-lg:dark:hover:bg-white/90',
+          )}
+        >
+          {isSubmitting ? 'Signing in…' : isPage ? (
+            <>
+              <span className="lg:hidden">Log in with Email</span>
+              <span className="hidden lg:inline">Sign in</span>
+            </>
+          ) : (
+            'Sign in'
+          )}
+        </button>
+
+        {isPage ? (
+          <p className="text-center text-[13px] text-muted lg:hidden">
+            Forgot password?{' '}
+            <Link href="/auth/forgot-password" className="font-medium text-foreground underline-offset-2 hover:underline">
+              Reset it
+            </Link>
+          </p>
+        ) : null}
+      </div>
+
+      <p
+        className={cn(
+          'text-center text-sm text-muted',
+          isPage && 'order-5 max-lg:mt-2 max-lg:text-[13px] lg:order-4',
+        )}
+      >
+        {isPage ? (
+          <>
+            <span className="lg:hidden">New user? </span>
+            <span className="hidden lg:inline">New to Dealo? </span>
+          </>
+        ) : (
+          'New to Dealo? '
+        )}
         <AuthNavLink variant={variant} href="/auth/register" modalView="register">
-          Create an account
+          {isPage ? (
+            <>
+              <span className="lg:hidden">Sign up</span>
+              <span className="hidden lg:inline">Create an account</span>
+            </>
+          ) : (
+            'Create an account'
+          )}
         </AuthNavLink>
       </p>
     </form>

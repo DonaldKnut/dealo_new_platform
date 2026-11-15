@@ -102,31 +102,25 @@ export function AuthShell({ children }: { children: ReactNode }) {
       </aside>
 
       <section className="relative flex h-svh min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 min-[340px]:px-5 sm:px-8">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-muted transition hover:text-foreground lg:hidden"
-              aria-label="Back to home"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <div className="lg:hidden">
-              <BrandLogo href="/" />
-            </div>
-            <Link
-              href="/"
-              className="hidden items-center gap-2 text-sm text-muted transition hover:text-foreground lg:inline-flex"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to site
-            </Link>
-          </div>
+        {/* Desktop chrome — unchanged */}
+        <div className="hidden shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 min-[340px]:px-5 sm:px-8 lg:flex">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-muted transition hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to site
+          </Link>
           <ThemeToggle />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-8 min-[340px]:px-5 sm:px-8 sm:py-10">
-          <div className="mx-auto w-full max-w-md pb-10">{children}</div>
+        {/* Mobile: minimal top bar — theme only; logo lives in the header block */}
+        <div className="flex shrink-0 items-center justify-end px-4 pt-3 lg:hidden">
+          <ThemeToggle />
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 min-[340px]:px-6 sm:px-8 sm:py-10 lg:py-10">
+          <div className="mx-auto w-full max-w-md pb-10 lg:pb-10">{children}</div>
         </div>
       </section>
     </div>
@@ -143,10 +137,15 @@ export function AuthPageHeader({
   subtitle: string;
 }) {
   return (
-    <div>
-      <p className="eyebrow">{eyebrow}</p>
-      <h1 className="display-title mt-2 text-3xl text-foreground sm:text-4xl">{title}</h1>
-      <p className="mt-3 text-sm leading-relaxed text-muted sm:text-base">{subtitle}</p>
+    <div className="text-center lg:text-left">
+      <div className="mb-5 flex justify-center lg:hidden">
+        <BrandLogo href="/" />
+      </div>
+      <p className="eyebrow hidden lg:block">{eyebrow}</p>
+      <h1 className="font-display text-[1.85rem] leading-tight tracking-tight text-foreground min-[340px]:text-3xl sm:text-4xl lg:display-title lg:mt-2">
+        {title}
+      </h1>
+      <p className="mt-3 hidden text-sm leading-relaxed text-muted sm:text-base lg:block">{subtitle}</p>
     </div>
   );
 }
