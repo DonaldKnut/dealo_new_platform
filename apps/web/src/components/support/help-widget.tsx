@@ -158,7 +158,10 @@ function useIsMobile() {
   return mobile;
 }
 
-/** Compact glass orb — used for FAB / message avatar only (no star icon). */
+/** Live Dealo AI orb — Cloudinary mesh, centered in the chat circle. */
+const ASSISTANT_ORB_SRC =
+  'https://res.cloudinary.com/dyaetoldv/image/upload/v1794849375/download__60_-removebg-preview_lg8gip.png';
+
 function AssistantOrb({
   size = 40,
   active = false,
@@ -169,27 +172,63 @@ function AssistantOrb({
   className?: string;
 }) {
   const reduce = useReducedMotion();
+  const breathe = active ? 1.8 : 3.6;
   return (
     <span
       className={cn('relative inline-flex shrink-0 items-center justify-center', className)}
       style={{ width: size, height: size }}
     >
-      {active && !reduce ? (
+      {/* Soft outer glow — “listening” aura */}
+      {!reduce ? (
         <motion.span
           aria-hidden
-          className="absolute -inset-2 rounded-full bg-brand/30 blur-xs"
-          animate={{ scale: [1, 1.2, 1], opacity: [0.55, 0.15, 0.55] }}
-          transition={{ duration: 1.6, repeat: Infinity }}
+          className="absolute -inset-[18%] rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.45)_0%,rgba(168,85,247,0.2)_45%,transparent_70%)] blur-[2px]"
+          animate={
+            active
+              ? { opacity: [0.35, 0.85, 0.35], scale: [0.92, 1.12, 0.92] }
+              : { opacity: [0.28, 0.55, 0.28], scale: [0.96, 1.06, 0.96] }
+          }
+          transition={{ duration: breathe, repeat: Infinity, ease: 'easeInOut' }}
         />
       ) : null}
+
+      {/* Black disc — matches the asset’s void background */}
       <span
         aria-hidden
-        className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-400 via-teal-600 to-emerald-950 shadow-md ring-1 ring-white/35 dark:from-[#7cff4d] dark:via-emerald-600 dark:to-[#062417] dark:ring-brand/40"
+        className="absolute inset-0 overflow-hidden rounded-full bg-black shadow-[0_10px_28px_-8px_rgba(0,0,0,0.65)] ring-1 ring-white/15"
       />
-      <span
-        aria-hidden
-        className="absolute inset-[18%] rounded-full bg-white/20 backdrop-blur-[2px]"
-      />
+
+      {/* Wavelength mesh — centered, breathes + slight yaw like a live signal */}
+      <motion.span
+        className="absolute inset-[6%] overflow-hidden rounded-full"
+        animate={
+          reduce
+            ? undefined
+            : {
+                scale: active ? [0.94, 1.06, 0.94] : [0.97, 1.03, 0.97],
+                rotate: active ? [0, 4, -3, 0] : [0, 2.5, -1.5, 0],
+              }
+        }
+        transition={{ duration: breathe, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <Image
+          src={ASSISTANT_ORB_SRC}
+          alt=""
+          fill
+          sizes={`${Math.ceil(size)}px`}
+          className="object-contain object-center"
+          priority={size >= 48}
+        />
+        {/* Sweeping highlight — reads as a live energy wave across the mesh */}
+        {!reduce ? (
+          <motion.span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,transparent_35%,rgba(125,211,252,0.35)_50%,transparent_65%)]"
+            animate={{ x: ['-120%', '120%'] }}
+            transition={{ duration: active ? 2.2 : 4.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: active ? 0.2 : 0.8 }}
+          />
+        ) : null}
+      </motion.span>
     </span>
   );
 }
