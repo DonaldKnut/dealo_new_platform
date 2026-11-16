@@ -271,7 +271,12 @@ export const grantJobAgentCredits = (userId: string, credits: number, note?: str
     json: { userId, credits, note },
   });
 
-export type JobAgentHostFrequencyRow = { host: string; count: number; hasAdapter: boolean };
+export type JobAgentHostFrequencyRow = {
+  host: string;
+  count: number;
+  hasAdapter: boolean;
+  suggestion?: 'covered' | 'assist_only' | 'adapter_candidate';
+};
 
 export type JobAgentAssistAbuse = {
   days: number;

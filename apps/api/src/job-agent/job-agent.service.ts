@@ -1357,11 +1357,20 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
       Boolean(findAtsAdapter(`https://${host}/jobs/1234567`)) ||
       Boolean(findAtsAdapter(`https://${host}/o/software-engineer`));
     return [...counts.entries()]
-      .map(([host, count]) => ({
-        host,
-        count,
-        hasAdapter: adapterHost(host),
-      }))
+      .map(([host, count]) => {
+        const hasAdapter = adapterHost(host);
+        const assistOnly = /(^|\.)(myworkdayjobs|wd\d*\.myworkday|teamtailor|linkedin|indeed)\./i.test(host);
+        return {
+          host,
+          count,
+          hasAdapter,
+          suggestion: hasAdapter
+            ? ('covered' as const)
+            : assistOnly
+              ? ('assist_only' as const)
+              : ('adapter_candidate' as const),
+        };
+      })
       .sort((a, b) => b.count - a.count)
       .slice(0, Math.min(100, Math.max(5, limit)));
   }
@@ -1763,8 +1772,8 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
   }
 
   /**
-   * Prefer a built Dealo CV for structured matching; fall back to uploaded PDF/Word + vault
-   * so agents can apply with either source.
+   * Matching uses Dealo-built CV data when linked, plus any uploaded PDF/Word text.
+   * The file sent to employers is always profile.cvData (upload or a PDF rendered from the built CV).
    */
   private async resolveSeekerMaterial(
     profile: JobAgentProfile,
@@ -1774,11 +1783,10 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
       ? await this.prisma.resume.findFirst({ where: { id: profile.resumeId, userId: profile.userId, kind: 'RESUME' } })
       : null;
     const parsed = resume ? resumeDataSchema.safeParse(resume.data) : null;
+    const uploadedText = profile.cvData
+      ? extractUploadedCvText(Buffer.from(profile.cvData), profile.cvFileName)
+      : '';
     if (parsed?.success) {
-      const uploadedText =
-        profile.cvData && (!profile.cvUpdatedAt || !resume || profile.cvUpdatedAt >= resume.updatedAt)
-          ? extractUploadedCvText(Buffer.from(profile.cvData), profile.cvFileName)
-          : '';
       return { seeker: this.seekerFrom(profile, parsed.data, uploadedText), resumeData: parsed.data };
     }
 

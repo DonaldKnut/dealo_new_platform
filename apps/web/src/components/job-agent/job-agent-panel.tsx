@@ -58,6 +58,7 @@ import { useLocale } from '@/components/i18n/locale-context';
 import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
+import { JobAgentTour } from '@/components/job-agent/job-agent-tour';
 import { connectApplyExtension, detectApplyExtension } from '@/lib/apply-extension';
 import { jobAgentApi, type JobAgentMatchTab } from '@/lib/job-agent-api';
 import { JOB_TYPE_LABEL } from '@/lib/jobs-api';
@@ -509,6 +510,7 @@ export function JobAgentPanel() {
     <div className="min-w-0 space-y-5 sm:space-y-6">
       {/* ------------------------------------------------------- command centre */}
       <motion.section
+        data-ja-tour="hero"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#05170e] p-4 text-white shadow-[0_30px_80px_-30px_rgba(4,47,46,0.7)] min-[360px]:rounded-[2rem] min-[360px]:p-5 sm:p-7"
@@ -563,6 +565,7 @@ export function JobAgentPanel() {
                 <Settings2 className="h-4 w-4" />
                 {t(configured ? 'ja.settings' : 'ja.setUp')}
               </button>
+              <JobAgentTour autoStart={configured} />
             </div>
           </div>
         </div>
@@ -595,7 +598,7 @@ export function JobAgentPanel() {
         <Onboarding onStart={() => setSetupOpen(true)} />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-3 min-[300px]:grid-cols-2 lg:grid-cols-4">
+          <div data-ja-tour="stats" className="grid grid-cols-1 gap-3 min-[300px]:grid-cols-2 lg:grid-cols-4">
             <Stat
               delay={0}
               icon={Send}
@@ -610,21 +613,23 @@ export function JobAgentPanel() {
 
           {!premium ? <UpgradeCard onUpgrade={() => void upgrade()} busy={busy === 'upgrade'} /> : null}
           {overview.paymentsEnabled ? (
-            <CreditPacksCard
-              packs={[...(overview.creditPacks ?? [])]}
-              freeLeft={stats.creditsRemaining}
-              wallet={stats.creditBalance ?? 0}
-              pricing={overview.pricing}
-              receipts={overview.creditReceipts ?? []}
-              assistUsed={stats.assistedToday ?? 0}
-              assistCap={stats.assistDailyCap ?? overview.limits.dailyAssistCap}
-              busy={busy?.startsWith('pack:') ? busy : null}
-              onBuy={(packId) => void buyCredits(packId)}
-            />
+            <div data-ja-tour="credits">
+              <CreditPacksCard
+                packs={[...(overview.creditPacks ?? [])]}
+                freeLeft={stats.creditsRemaining}
+                wallet={stats.creditBalance ?? 0}
+                pricing={overview.pricing}
+                receipts={overview.creditReceipts ?? []}
+                assistUsed={stats.assistedToday ?? 0}
+                assistCap={stats.assistDailyCap ?? overview.limits.dailyAssistCap}
+                busy={busy?.startsWith('pack:') ? busy : null}
+                onBuy={(packId) => void buyCredits(packId)}
+              />
+            </div>
           ) : null}
 
           <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-            <section className="min-w-0">
+            <section data-ja-tour="inbox" className="min-w-0">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div role="tablist" className="scrollbar-none flex max-w-full overflow-x-auto rounded-full border border-border bg-surface p-1">
                   {(
@@ -707,7 +712,26 @@ export function JobAgentPanel() {
             </section>
 
             <aside className="min-w-0 space-y-4">
-              <div className="rounded-2xl border border-border bg-surface-elevated p-4">
+              <div data-ja-tour="cv" className="rounded-2xl border border-border bg-surface-elevated p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t('ja.side.cv')}</p>
+                <p className="mt-2 text-sm text-foreground">
+                  {overview.settings?.resumeId && overview.cv
+                    ? t('ja.side.cvBoth')
+                    : overview.cv
+                      ? t('ja.side.cvUpload')
+                      : overview.settings?.resumeId
+                        ? t('ja.side.cvBuilt')
+                        : t('ja.side.cvNone')}
+                </p>
+                {overview.cv ? (
+                  <p className="mt-1 truncate text-xs text-muted">{fill(t('ja.side.sends'), { file: overview.cv.fileName })}</p>
+                ) : null}
+                <button type="button" onClick={() => setSetupOpen(true)} className="btn-secondary mt-3 w-full justify-center text-sm">
+                  <FileText className="h-4 w-4" /> {t('ja.side.cvEdit')}
+                </button>
+              </div>
+
+              <div data-ja-tour="vault" className="rounded-2xl border border-border bg-surface-elevated p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t('ja.vault.title')}</p>
                 <p className="mt-2 text-sm text-foreground">{t(overview.vaultReady ? 'ja.vault.ready' : 'ja.vault.empty')}</p>
                 <button type="button" onClick={() => setVaultOpen(true)} className="btn-secondary mt-3 w-full justify-center text-sm">
@@ -715,7 +739,9 @@ export function JobAgentPanel() {
                 </button>
               </div>
 
-              <AssistPolicyCard overview={overview} onSaved={setOverview} />
+              <div data-ja-tour="policy">
+                <AssistPolicyCard overview={overview} onSaved={setOverview} />
+              </div>
 
               <div className="rounded-2xl border border-border bg-surface-elevated p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t('ja.side.hunts')}</p>
@@ -1861,16 +1887,13 @@ function SetupWizard({ open, onClose, overview, onSaved }: { open: boolean; onCl
                 ) : resumes.length ? (
                   <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {resumes.map((r) => {
-                      const active = form.resumeId === r.id && !ownFile;
+                      const active = form.resumeId === r.id;
                       return (
                         <motion.button
                           key={r.id}
                           type="button"
                           whileTap={{ scale: 0.98 }}
-                          onClick={() => {
-                            set('resumeId', r.id);
-                            setOwnFile(null);
-                          }}
+                          onClick={() => set('resumeId', r.id)}
                           className={cn('flex min-w-0 items-center gap-3 rounded-xl border p-3 text-left transition', active ? 'border-brand bg-brand-soft/50 ring-1 ring-brand' : 'border-border hover:border-brand/40')}
                         >
                           <FileText className="h-5 w-5 shrink-0 text-brand" />
@@ -1898,11 +1921,7 @@ function SetupWizard({ open, onClose, overview, onSaved }: { open: boolean; onCl
                     type="file"
                     accept=".pdf,.doc,.docx"
                     hidden
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] ?? null;
-                      setOwnFile(file);
-                      if (file) set('resumeId', null);
-                    }}
+                    onChange={(e) => setOwnFile(e.target.files?.[0] ?? null)}
                   />
                   <button type="button" onClick={() => fileRef.current?.click()} className="max-w-full truncate font-semibold text-brand">
                     {ownFile ? fill(t('ja.wz.using'), { file: ownFile.name }) : t('ja.wz.upload')}
@@ -1913,7 +1932,15 @@ function SetupWizard({ open, onClose, overview, onSaved }: { open: boolean; onCl
                     </button>
                   ) : null}
                 </div>
-                {ownFile ? <p className="mt-2 text-xs text-muted">{t('ja.wz.uploadOk')}</p> : null}
+                <p className="mt-2 text-xs text-muted">
+                  {form.resumeId && ownFile
+                    ? t('ja.wz.bothOk')
+                    : ownFile
+                      ? t('ja.wz.uploadOk')
+                      : form.resumeId
+                        ? t('ja.wz.builtOk')
+                        : t('ja.wz.pickEither')}
+                </p>
               </section>
             ) : null}
 
