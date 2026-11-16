@@ -8,20 +8,28 @@ Supervised browser assist for `site_assisted` Job Agent matches.
 - Pauses on CAPTCHA, SSO/password walls, file pickers, and fee/payment fields
 - Reports field coverage back to `POST /job-agent/matches/:id/assist-report`
 
-## Load unpacked
+## Load unpacked / sideload zip
 
 ```bash
 pnpm --filter @dealo/apply-extension install
 pnpm --filter @dealo/apply-extension build
-# optional zip for sharing (still load the unzipped dist/ folder in Chrome)
+# zip for dashboard download + sharing (Chrome still wants an unzipped folder for Load unpacked)
 pnpm --filter @dealo/apply-extension package
 ```
 
+Signed download: authenticated `GET /api/v1/job-agent/extension/download` serves `dealo-apply-copilot.zip` when the package exists on the API host.
+
 1. Open `chrome://extensions`
 2. Enable **Developer mode**
-3. **Load unpacked** → select `apps/apply-extension/dist`
+3. **Load unpacked** → select `apps/apply-extension/dist` (or the unzipped zip)
 
 Keep that folder path stable — Chrome reloads the same unpacked path after rebuilds.
+
+### Chrome Web Store (listing prep)
+
+Full listing pack: [`STORE_LISTING.md`](./STORE_LISTING.md) (copy, permissions justifications, screenshot shot-list, privacy pointers).
+
+Until the public listing ships, set `DEALO_APPLY_EXTENSION_STORE_URL` on the API so Job Agent overview can surface the store link.
 
 ## Auth flow
 

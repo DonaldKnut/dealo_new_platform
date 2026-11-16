@@ -3,11 +3,13 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   Param,
   Post,
   Put,
   Query,
+  StreamableFile,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -15,11 +17,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { jobAgentToggleSchema, type JobAgentToggleInput } from '@dealo/shared';
+import { UserRole } from '@prisma/client';
 import { memoryStorage } from 'multer';
 
 import { CV_MAX_BYTES } from '../ats/applications.service';
 import type { AuthUser } from '../auth/auth.types';
 import { CurrentUser } from '../common/current-user.decorator';
+import { Roles } from '../common/roles.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { JobAgentService } from './job-agent.service';
 
@@ -40,6 +44,13 @@ export class JobAgentController {
   @ApiOperation({ summary: 'Job Agent: save what to hunt for and how freely to apply' })
   save(@Body() body: unknown, @CurrentUser() user: AuthUser) {
     return this.agent.saveSettings(body, user);
+  }
+
+  @Put('assist-policy')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Job Agent: personal Assist allow/deny hosts and daily Assist cap' })
+  saveAssistPolicy(@Body() body: unknown, @CurrentUser() user: AuthUser) {
+    return this.agent.saveAssistPolicy(body, user);
   }
 
   @Post('cv')
@@ -181,12 +192,48 @@ export class JobAgentController {
     return this.agent.verifyCreditPack(user, body.reference.trim());
   }
 
+  @Post('credits/grant')
+  @HttpCode(200)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Staff: grant or refund prepaid Job Agent apply credits' })
+  grantCredits(@Body() body: unknown, @CurrentUser() user: AuthUser) {
+    return this.agent.grantApplyCredits(body, user);
+  }
+
   @Get('ops/host-frequency')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATIONS)
   @ApiOperation({
     summary: 'Staff/debug: ExternalJob URL host frequency to prioritize next ATS adapters',
   })
   hostFrequency(@Query('limit') limit: string | undefined) {
     const n = limit ? Number(limit) : 25;
     return this.agent.externalJobHostFrequency(Number.isFinite(n) ? n : 25);
+  }
+
+  @Get('ops/assist-abuse')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.OPERATIONS)
+  @ApiOperation({ summary: 'Staff: Assist report outcomes / pauses / coverage for listing safety' })
+  assistAbuse(@Query('days') days: string | undefined, @CurrentUser() user: AuthUser) {
+    const n = days ? Number(days) : 7;
+    return this.agent.assistAbuseMetrics(user, Number.isFinite(n) ? n : 7);
+  }
+
+  @Get('extension')
+  @ApiOperation({ summary: 'Apply Copilot zip availability (sideload until Chrome Web Store listing)' })
+  extensionInfo() {
+    return this.agent.extensionDownloadInfo();
+  }
+
+  @Get('extension/download')
+  @Header('Cache-Control', 'private, max-age=300')
+  @ApiOperation({ summary: 'Download packaged Apply Copilot zip for Load unpacked / sideload' })
+  downloadExtension(): StreamableFile {
+    const { stream, bytes, fileName } = this.agent.openExtensionZipStream();
+    return new StreamableFile(stream, {
+      type: 'application/zip',
+      disposition: `attachment; filename="${fileName}"`,
+      length: bytes,
+    });
   }
 }

@@ -15,6 +15,8 @@ import {
   ASSIST_DISCLOSURE,
   JOB_AGENT_CREDIT_PACKS,
   JOB_AGENT_PLANS,
+  grantApplyCreditsSchema,
+  jobAgentAssistPolicySchema,
   applyVaultDraftsSchema,
   applyVaultEducationItemSchema,
   applyVaultIdentitySchema,
@@ -46,7 +48,9 @@ import {
   type JobAgentToggleInput,
   type ResumeData,
 } from '@dealo/shared';
-import { JobStatus, Prisma, type ApplyVault, type JobAgentMatch, type JobAgentProfile } from '@prisma/client';
+import { JobStatus, Prisma, UserRole, type ApplyVault, type JobAgentMatch, type JobAgentProfile } from '@prisma/client';
+import { createReadStream, existsSync, statSync } from 'fs';
+import { join } from 'path';
 import { z } from 'zod';
 
 import { GeminiClient } from '../ai/gemini.client';
@@ -106,6 +110,36 @@ const aiJudgementSchema = z.object({
 });
 
 const plainText = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+
+/**
+ * Best-effort plain text from an uploaded CV (PDF/DOCX bytes) without a heavy parser.
+ * Enough for token matching when the seeker did not pick a built Dealo CV.
+ */
+function extractUploadedCvText(buffer: Buffer, fileName?: string | null): string {
+  const name = (fileName ?? '').toLowerCase();
+  const raw = buffer.toString('latin1');
+  const chunks: string[] = [];
+  if (name.endsWith('.docx') || raw.startsWith('PK')) {
+    // DOCX is a zip; pull readable UTF-8-ish runs from the compressed package.
+    const loose = raw.match(/[A-Za-z][A-Za-z0-9+#./,&'’\- ]{3,80}/g) ?? [];
+    chunks.push(...loose);
+  } else {
+    const paren = /\((?:\\.|[^\\)]){2,200}\)/g;
+    let match: RegExpExecArray | null;
+    while ((match = paren.exec(raw))) {
+      const s = match[0]
+        .slice(1, -1)
+        .replace(/\\n/g, ' ')
+        .replace(/\\r/g, ' ')
+        .replace(/\\t/g, ' ')
+        .replace(/\\([()\\])/g, '$1');
+      if (/[A-Za-z]{3,}/.test(s)) chunks.push(s);
+    }
+    const loose = raw.match(/[A-Za-z][A-Za-z0-9+#./,&'’\- ]{3,80}/g) ?? [];
+    chunks.push(...loose.slice(0, 400));
+  }
+  return chunks.join(' ').replace(/\s+/g, ' ').trim().slice(0, 40_000).toLowerCase();
+}
 
 /** Midnight in Lagos (UTC+1, no daylight saving), so "today" matches what the person sees. */
 function startOfLagosDay(now = Date.now()) {
@@ -215,22 +249,36 @@ export class JobAgentService implements OnModuleInit, OnModuleDestroy {
     ]);
     const limits = JOB_AGENT_PLANS[plan];
     const today = startOfLagosDay();
-    const [appliedToday, appliedWeek, appliedTotal, suggested, ready, runs, overnightSent] = await Promise.all([
-      this.appliedSince(user.id, today),
-      this.appliedSince(user.id, new Date(Date.now() - 7 * DAY_MS)),
-      this.prisma.jobAgentMatch.count({ where: { userId: user.id, status: 'APPLIED' } }),
-      this.prisma.jobAgentMatch.count({ where: { userId: user.id, status: 'SUGGESTED' } }),
-      this.prisma.jobAgentMatch.count({ where: { userId: user.id, status: 'READY' } }),
-      this.prisma.jobAgentRun.findMany({ where: { userId: user.id }, orderBy: { startedAt: 'desc' }, take: 8 }),
-      this.prisma.jobAgentMatch.count({
-        where: {
-          userId: user.id,
-          status: 'APPLIED',
-          appliedAt: { gte: today },
-          channel: { in: ['easy_apply', 'email', 'ats_api'] },
-        },
-      }),
-    ]);
+    const [appliedToday, appliedWeek, appliedTotal, suggested, ready, runs, overnightSent, assistedToday, creditReceipts] =
+      await Promise.all([
+        this.appliedSince(user.id, today),
+        this.appliedSince(user.id, new Date(Date.now() - 7 * DAY_MS)),
+        this.prisma.jobAgentMatch.count({ where: { userId: user.id, status: 'APPLIED' } }),
+        this.prisma.jobAgentMatch.count({ where: { userId: user.id, status: 'SUGGESTED' } }),
+        this.prisma.jobAgentMatch.count({ where: { userId: user.id, status: 'READY' } }),
+        this.prisma.jobAgentRun.findMany({ where: { userId: user.id }, orderBy: { startedAt: 'desc' }, take: 8 }),
+        this.prisma.jobAgentMatch.count({
+          where: {
+            userId: user.id,
+            status: 'APPLIED',
+            appliedAt: { gte: today },
+            channel: { in: ['easy_apply', 'email', 'ats_api'] },
+          },
+        }),
+        this.prisma.jobAgentMatch.count({
+          where: {
+            userId: user.id,
+            status: 'APPLIED',
+            appliedAt: { gte: today },
+            OR: [{ channel: 'site_assisted' }, { channel: 'site' }],
+          },
+        }),
+        this.listCreditReceipts(user.id),
+      ]);
+    const assistDailyCap = Math.min(
+      profile?.assistDailyCap ?? limits.dailyAssistCap,
+      limits.dailyAssistCap,
+    );
 
     const chosen = resumes.find((r) => r.id === profile?.resumeId) ?? resumes[0];
     const parsed = chosen ? resumeDataSchema.safeParse(chosen.data) : null;
@@ -283,9 +331,26 @@ export class JobAgentService implements OnModuleInit, OnModuleDestroy {
         creditsRemaining,
         creditBalance,
         totalCreditsAvailable: creditsRemaining + creditBalance,
+        assistedToday,
+        assistDailyCap,
+      },
+      assistPolicy: {
+        denyHosts: profile?.denyHosts ?? [],
+        allowHosts: profile?.allowHosts ?? [],
+        assistDailyCap: profile?.assistDailyCap ?? null,
+        planAssistCap: limits.dailyAssistCap,
+      },
+      pricing: {
+        creditCostAuto: limits.creditCostAuto,
+        creditCostAssist: limits.creditCostAssist,
       },
       creditPacks: JOB_AGENT_CREDIT_PACKS,
+      creditReceipts,
       paymentsEnabled: this.paystack.isConfigured,
+      extension: {
+        downloadAvailable: Boolean(this.extensionZipPath()),
+        chromeStoreUrl: process.env.DEALO_APPLY_EXTENSION_STORE_URL?.trim() || null,
+      },
       digest:
         overnightSent || ready
           ? { sent: overnightSent, ready, at: profile?.lastDigestAt?.toISOString() ?? null }
@@ -305,6 +370,65 @@ export class JobAgentService implements OnModuleInit, OnModuleDestroy {
       aiAvailable: this.gemini.isConfigured,
       vaultReady: Boolean(identity?.success && identity.data.fullName.trim()),
     };
+  }
+
+  /** Purchases + staff grant/refund rows for the credits receipt strip. */
+  private async listCreditReceipts(userId: string) {
+    const [invoices, grants] = await Promise.all([
+      this.prisma.applyCreditInvoice.findMany({
+        where: { userId, status: { in: ['PAID', 'FAILED', 'PENDING'] } },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        select: {
+          id: true,
+          reference: true,
+          credits: true,
+          packId: true,
+          status: true,
+          paidAt: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.auditLog.findMany({
+        where: {
+          entityType: 'User',
+          entityId: userId,
+          action: { in: ['JOB_AGENT_CREDITS_GRANTED', 'JOB_AGENT_CREDITS_REFUNDED'] },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        select: { id: true, action: true, metadata: true, createdAt: true },
+      }),
+    ]);
+    const purchaseRows = invoices.map((inv) => {
+      const pack = JOB_AGENT_CREDIT_PACKS.find((p) => p.id === inv.packId);
+      return {
+        id: inv.id,
+        kind: 'purchase' as const,
+        credits: inv.credits,
+        label: pack?.label ?? inv.packId,
+        reference: inv.reference,
+        at: (inv.paidAt ?? inv.createdAt).toISOString(),
+        status: inv.status,
+      };
+    });
+    const grantRows = grants.map((row) => {
+      const meta = (row.metadata ?? {}) as Record<string, unknown>;
+      const credits = typeof meta.credits === 'number' ? meta.credits : 0;
+      const note = typeof meta.note === 'string' && meta.note.trim() ? meta.note.trim() : null;
+      return {
+        id: row.id,
+        kind: (credits < 0 ? 'refund' : 'grant') as 'refund' | 'grant',
+        credits,
+        label: note ?? (credits < 0 ? 'Staff refund' : 'Staff grant'),
+        reference: null,
+        at: row.createdAt.toISOString(),
+        status: 'SETTLED',
+      };
+    });
+    return [...purchaseRows, ...grantRows]
+      .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+      .slice(0, 10);
   }
 
   // ---------------------------------------------------------------- settings
@@ -470,12 +594,39 @@ export class JobAgentService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Daily free allowance is spent first; prepaid applyCreditBalance covers overflow (pay-as-you-go).
+   * Assist also respects a separate daily Assist cap (plan + optional profile override).
    * Returns how many prepaid credits to debit after a successful apply.
    */
-  private async assertCredits(userId: string, profile: Pick<JobAgentProfile, 'dailyLimit'>, kind: 'auto' | 'assist') {
+  private async assertCredits(
+    userId: string,
+    profile: Pick<JobAgentProfile, 'dailyLimit' | 'assistDailyCap'>,
+    kind: 'auto' | 'assist',
+  ) {
     const plan = await this.planFor(userId);
     const limits = JOB_AGENT_PLANS[plan];
     const cost = kind === 'auto' ? limits.creditCostAuto : limits.creditCostAssist;
+
+    if (kind === 'assist') {
+      const assistCap = Math.min(
+        profile.assistDailyCap ?? limits.dailyAssistCap,
+        limits.dailyAssistCap,
+      );
+      const assistedToday = await this.prisma.jobAgentMatch.count({
+        where: {
+          userId,
+          status: 'APPLIED',
+          appliedAt: { gte: startOfLagosDay() },
+          OR: [{ channel: 'site_assisted' }, { channel: 'site' }],
+        },
+      });
+      if (assistedToday >= assistCap) {
+        throw new HttpException(
+          `You have used today's ${assistCap} Assist applies. More tomorrow, buy credits after the free Assist cap resets, or upgrade Premium.`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    }
+
     const allowance = Math.min(profile.dailyLimit, limits.dailyApplications);
     const used = await this.appliedSince(userId, startOfLagosDay());
     const freeLeft = Math.max(0, allowance - used);
@@ -738,11 +889,131 @@ questionKey: snake_case. Reply as JSON.`,
         fileName: resume?.title ? `${resume.title}.pdf` : cvFile,
         hint: 'Attach your preferred CV when the site shows a file picker. Dealo never uploads files without your click.',
       },
-      sitePolicy: assistSitePolicyForUrl(match.url),
+      sitePolicy: assistSitePolicyForUrl(match.url, {
+        denyHosts: profile?.denyHosts ?? [],
+        allowHosts: profile?.allowHosts ?? [],
+      }),
       disclosure: ASSIST_DISCLOSURE,
       fillHints: this.buildFillHints(vault, match.coverNote),
       creditsRemaining: freeLeft + wallet,
     };
+  }
+
+  /** Save personal Assist allow/deny hosts and optional Assist daily cap. */
+  async saveAssistPolicy(raw: unknown, user: AuthUser) {
+    const parsed = jobAgentAssistPolicySchema.safeParse(raw);
+    if (!parsed.success) throw new BadRequestException(parsed.error.issues[0]?.message ?? 'Check Assist policy');
+    const plan = await this.planFor(user.id);
+    const cap = parsed.data.assistDailyCap;
+    const clamped =
+      cap == null ? null : Math.min(Math.max(0, cap), JOB_AGENT_PLANS[plan].dailyAssistCap);
+    await this.prisma.jobAgentProfile.upsert({
+      where: { userId: user.id },
+      create: {
+        userId: user.id,
+        denyHosts: parsed.data.denyHosts,
+        allowHosts: parsed.data.allowHosts,
+        assistDailyCap: clamped,
+      },
+      update: {
+        denyHosts: parsed.data.denyHosts,
+        allowHosts: parsed.data.allowHosts,
+        assistDailyCap: clamped,
+      },
+    });
+    return this.overview(user);
+  }
+
+  /** Staff: grant (positive) or refund/clawback (negative) prepaid apply credits. */
+  async grantApplyCredits(raw: unknown, actor: AuthUser) {
+    if (!actor.roles.includes(UserRole.SUPER_ADMIN) && !actor.roles.includes(UserRole.ADMIN)) {
+      throw new ForbiddenException('Staff only');
+    }
+    const parsed = grantApplyCreditsSchema.safeParse(raw);
+    if (!parsed.success) throw new BadRequestException(parsed.error.issues[0]?.message ?? 'Check credit grant');
+    const { userId, credits, note } = parsed.data;
+    const target = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true, applyCreditBalance: true } });
+    if (!target) throw new NotFoundException('User not found');
+    if (credits < 0 && (target.applyCreditBalance ?? 0) + credits < 0) {
+      throw new BadRequestException('Cannot refund more prepaid credits than the balance');
+    }
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { applyCreditBalance: { increment: credits } },
+      select: { id: true, applyCreditBalance: true, email: true },
+    });
+    await this.audit.record({
+      action: credits > 0 ? 'JOB_AGENT_CREDITS_GRANTED' : 'JOB_AGENT_CREDITS_REFUNDED',
+      entityType: 'User',
+      entityId: userId,
+      actorId: actor.id,
+      metadata: { credits, note: note ?? null, balance: updated.applyCreditBalance },
+    });
+    return { userId: updated.id, email: updated.email, creditBalance: updated.applyCreditBalance, delta: credits };
+  }
+
+  /** Recent Assist abuse / pause signals for staff (from audit log). */
+  async assistAbuseMetrics(actor: AuthUser, days = 7) {
+    if (!actor.roles.includes(UserRole.SUPER_ADMIN) && !actor.roles.includes(UserRole.ADMIN) && !actor.roles.includes(UserRole.OPERATIONS)) {
+      throw new ForbiddenException('Staff only');
+    }
+    const since = new Date(Date.now() - Math.min(90, Math.max(1, days)) * DAY_MS);
+    const rows = await this.prisma.auditLog.findMany({
+      where: { action: 'JOB_AGENT_ASSIST_REPORT', createdAt: { gte: since } },
+      select: { metadata: true, createdAt: true },
+      take: 2_000,
+      orderBy: { createdAt: 'desc' },
+    });
+    const byOutcome = new Map<string, number>();
+    const byHost = new Map<string, number>();
+    const byPause = new Map<string, number>();
+    let coverageSum = 0;
+    let coverageN = 0;
+    for (const row of rows) {
+      const meta = (row.metadata ?? {}) as Record<string, unknown>;
+      const outcome = typeof meta.outcome === 'string' ? meta.outcome : 'unknown';
+      byOutcome.set(outcome, (byOutcome.get(outcome) ?? 0) + 1);
+      const host = typeof meta.host === 'string' ? meta.host.toLowerCase() : '';
+      if (host) byHost.set(host, (byHost.get(host) ?? 0) + 1);
+      const pauses = Array.isArray(meta.pauses) ? meta.pauses : [];
+      for (const p of pauses) {
+        if (typeof p === 'string') byPause.set(p, (byPause.get(p) ?? 0) + 1);
+      }
+      if (typeof meta.coverage === 'number') {
+        coverageSum += meta.coverage;
+        coverageN += 1;
+      }
+    }
+    return {
+      days,
+      reports: rows.length,
+      avgCoveragePct: coverageN ? Math.round(coverageSum / coverageN) : null,
+      outcomes: [...byOutcome.entries()].map(([k, v]) => ({ outcome: k, count: v })).sort((a, b) => b.count - a.count),
+      topHosts: [...byHost.entries()].map(([k, v]) => ({ host: k, count: v })).sort((a, b) => b.count - a.count).slice(0, 20),
+      pauses: [...byPause.entries()].map(([k, v]) => ({ pause: k, count: v })).sort((a, b) => b.count - a.count),
+    };
+  }
+
+  /** Sideload zip for Apply Copilot (built via pnpm --filter @dealo/apply-extension package). */
+  extensionZipPath() {
+    const candidates = [
+      join(process.cwd(), 'apps/apply-extension/dealo-apply-copilot.zip'),
+      join(process.cwd(), '../apply-extension/dealo-apply-copilot.zip'),
+      join(__dirname, '../../../../apply-extension/dealo-apply-copilot.zip'),
+    ];
+    return candidates.find((p) => existsSync(p)) ?? null;
+  }
+
+  extensionDownloadInfo() {
+    const path = this.extensionZipPath();
+    if (!path) return { available: false as const, bytes: null, hint: 'Run pnpm --filter @dealo/apply-extension package on the API host' };
+    return { available: true as const, bytes: statSync(path).size, hint: 'Load the unzipped folder as an unpacked Chrome extension' };
+  }
+
+  openExtensionZipStream() {
+    const path = this.extensionZipPath();
+    if (!path) throw new NotFoundException('Extension package not built on this server yet');
+    return { stream: createReadStream(path), bytes: statSync(path).size, fileName: 'dealo-apply-copilot.zip' };
   }
 
   /**
@@ -801,6 +1072,9 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
       await this.learnVaultQa(user.id, report.editedAnswers);
     }
 
+    const vault = await this.prisma.applyVault.findUnique({ where: { userId: user.id }, select: { qaPairs: true, drafts: true } });
+    const qaCount = applyVaultQaPairSchema.array().safeParse(vault?.qaPairs ?? []);
+    const drafts = applyVaultDraftsSchema.safeParse(vault?.drafts ?? null);
     const persisted = await this.prisma.jobAgentMatch.update({
       where: { id: match.id },
       data: {
@@ -813,8 +1087,8 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
                 score: match.score,
                 hasCoverNote: Boolean(match.coverNote),
                 vaultIdentityReady: true,
-                draftAnswerCount: 0,
-                qaPairCount: report.editedAnswers?.length ?? 0,
+                draftAnswerCount: drafts.success ? drafts.data.commonAnswers.length : 0,
+                qaPairCount: qaCount.success ? qaCount.data.length : report.editedAnswers?.length ?? 0,
                 lastCoveragePct: coveragePct,
               }),
             }
@@ -1075,10 +1349,13 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
       }
     }
     const adapterHost = (host: string) =>
-      /(^|\.)(greenhouse|lever|workable|ashbyhq)\.(io|co|com)$/i.test(host) ||
+      /(^|\.)(greenhouse|lever|workable|ashbyhq|smartrecruiters|bamboohr|recruitee)\.(io|co|com)$/i.test(host) ||
       Boolean(findAtsAdapter(`https://${host}/j/ABCDEF12`)) ||
       Boolean(findAtsAdapter(`https://${host}/acme/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee`)) ||
-      Boolean(findAtsAdapter(`https://${host}/jobs/1234567`));
+      Boolean(findAtsAdapter(`https://${host}/acme/job-title/ABC123`)) ||
+      Boolean(findAtsAdapter(`https://${host}/careers/12345`)) ||
+      Boolean(findAtsAdapter(`https://${host}/jobs/1234567`)) ||
+      Boolean(findAtsAdapter(`https://${host}/o/software-engineer`));
     return [...counts.entries()]
       .map(([host, count]) => ({
         host,
@@ -1230,14 +1507,14 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
    */
   private async morningDigestSweep() {
     const since = new Date(Date.now() - DIGEST_THROTTLE_MS);
+    // Include everyone due for email (not only recent lastRunAt) so READY assists still get a morning nudge.
     const profiles = await this.prisma.jobAgentProfile.findMany({
       where: {
         enabled: true,
         OR: [{ lastDigestAt: null }, { lastDigestAt: { isSet: false } }, { lastDigestAt: { lt: since } }],
-        lastRunAt: { gte: since },
       },
-      take: 40,
-      select: { id: true, userId: true, lastDigestAt: true },
+      take: 80,
+      select: { id: true, userId: true, lastDigestAt: true, lastRunAt: true },
     });
     for (const profile of profiles) {
       const account = await this.prisma.user.findUnique({
@@ -1260,6 +1537,9 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
         }),
       ]);
       if (!sent && !ready) continue;
+      // Avoid cold spam: need a run in the last 48h or pending READY assists.
+      const ranRecently = profile.lastRunAt && Date.now() - profile.lastRunAt.getTime() < 2 * DAY_MS;
+      if (!ranRecently && !ready) continue;
       const full = await this.prisma.jobAgentProfile.findUnique({ where: { id: profile.id } });
       if (!full || !canSendDigestEmail(full.lastDigestAt)) continue;
       await this.sendMorningDigest(full, account, { sent, ready });
@@ -1293,11 +1573,13 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
         await this.prisma.jobAgentProfile.update({ where: { id: profile.id }, data: { enabled: false } });
         return finish({ error: 'Account is not active' });
       }
-      const resume = profile.resumeId ? await this.prisma.resume.findFirst({ where: { id: profile.resumeId, userId: profile.userId } }) : null;
-      const data = resume ? resumeDataSchema.safeParse(resume.data) : null;
-      if (!data?.success) return finish({ error: 'Choose the CV your agent should use' });
+      if (!profile.cvData && !profile.resumeId) {
+        return finish({ error: 'Attach a CV (upload a PDF or pick a Dealo-built CV) for your agent to use' });
+      }
+      const resolved = await this.resolveSeekerMaterial(profile, account);
+      if (!resolved) return finish({ error: 'Attach a CV (upload a PDF or pick a Dealo-built CV) for your agent to use' });
+      const { seeker, resumeData } = resolved;
 
-      const seeker = this.seekerFrom(profile, data.data);
       const { candidates, scanned } = await this.candidatesFor(profile, seeker);
       let planned = candidates
         .map((candidate) => ({ candidate, result: scoreJob(seeker, candidate) }))
@@ -1319,7 +1601,7 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
           applyEmail: null,
         }));
 
-      planned = await this.enrich(planned, data.data, profile, limits.aiMatching, limits.coverNotes && profile.coverNotes);
+      planned = await this.enrich(planned, resumeData, profile, limits.aiMatching, limits.coverNotes && profile.coverNotes);
       planned = planned.filter((p) => p.score >= profile.minScore).sort((a, b) => b.score - a.score);
 
       const emailApplyAllowed = Boolean(limits.emailApply && profile.emailApply);
@@ -1337,6 +1619,7 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
 
       // Overnight / scheduled: refresh vault drafts so Assist packs have answers ready.
       const vaultPrep = await this.ensureVaultDraftsForRun(profile.userId, trigger === 'overnight' || isOvernightLagos());
+      const hostCoverage = await this.recentHostAssistCoverage(profile.userId);
 
       const created: JobAgentMatch[] = [];
       for (const p of planned) {
@@ -1344,6 +1627,15 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
           const assisted = p.channel === 'site_assisted';
           let coverNote = p.coverNote;
           if (assisted && !coverNote && vaultPrep.coverBlurb) coverNote = vaultPrep.coverBlurb;
+          let lastCoveragePct: number | null = null;
+          if (assisted) {
+            try {
+              const host = new URL(p.candidate.url).hostname.replace(/^www\./i, '').toLowerCase();
+              lastCoveragePct = hostCoverage.get(host) ?? null;
+            } catch {
+              lastCoveragePct = null;
+            }
+          }
           const assistConfidence = assisted
             ? computeAssistConfidence({
                 score: p.score,
@@ -1351,6 +1643,7 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
                 vaultIdentityReady: vaultPrep.identityReady,
                 draftAnswerCount: vaultPrep.draftAnswerCount,
                 qaPairCount: vaultPrep.qaPairCount,
+                lastCoveragePct,
               })
             : null;
           created.push(
@@ -1454,18 +1747,117 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
     }
   }
 
-  private seekerFrom(profile: JobAgentProfile, data: ResumeData): SeekerProfile {
+  private seekerFrom(profile: JobAgentProfile, data: ResumeData, extraCvText = ''): SeekerProfile {
+    const built = cvText(data);
     return {
       titles: profile.targetTitles,
-      skills: [...new Set(data.skills.map((s) => s.trim()).filter((s) => s.length >= 2))].slice(0, 30),
+      skills: [...new Set([...data.skills, ...profile.mustHave].map((s) => s.trim()).filter((s) => s.length >= 2))].slice(0, 30),
       years: yearsOfExperience(data),
-      cvText: cvText(data),
+      cvText: `${built} ${extraCvText} ${profile.targetTitles.join(' ')} ${profile.mustHave.join(' ')}`.toLowerCase(),
       mustHave: profile.mustHave,
       exclude: profile.exclude,
       locations: profile.locations,
       remote: profile.remote as SeekerProfile['remote'],
       types: profile.employmentTypes,
     };
+  }
+
+  /**
+   * Prefer a built Dealo CV for structured matching; fall back to uploaded PDF/Word + vault
+   * so agents can apply with either source.
+   */
+  private async resolveSeekerMaterial(
+    profile: JobAgentProfile,
+    account: { email: string; firstName: string; lastName: string },
+  ): Promise<{ seeker: SeekerProfile; resumeData: ResumeData } | null> {
+    const resume = profile.resumeId
+      ? await this.prisma.resume.findFirst({ where: { id: profile.resumeId, userId: profile.userId, kind: 'RESUME' } })
+      : null;
+    const parsed = resume ? resumeDataSchema.safeParse(resume.data) : null;
+    if (parsed?.success) {
+      const uploadedText =
+        profile.cvData && (!profile.cvUpdatedAt || !resume || profile.cvUpdatedAt >= resume.updatedAt)
+          ? extractUploadedCvText(Buffer.from(profile.cvData), profile.cvFileName)
+          : '';
+      return { seeker: this.seekerFrom(profile, parsed.data, uploadedText), resumeData: parsed.data };
+    }
+
+    if (!profile.cvData) return null;
+    const vault = await this.prisma.applyVault.findUnique({ where: { userId: profile.userId } });
+    const identity = vault?.identity ? applyVaultIdentitySchema.safeParse(vault.identity) : null;
+    const links = vault?.links ? applyVaultLinksSchema.safeParse(vault.links) : null;
+    const work = vault?.workHistory ? applyVaultWorkItemSchema.array().safeParse(vault.workHistory) : null;
+    const education = vault?.education ? applyVaultEducationItemSchema.array().safeParse(vault.education) : null;
+    const uploadedText = extractUploadedCvText(Buffer.from(profile.cvData), profile.cvFileName);
+    const skillGuess = [
+      ...profile.mustHave,
+      ...uploadedText
+        .split(/[^a-z0-9+#]+/i)
+        .filter((w) => w.length >= 3 && w.length <= 24)
+        .slice(0, 40),
+    ];
+    const resumeData: ResumeData = resumeDataSchema.parse({
+      personal: {
+        fullName:
+          (identity?.success && identity.data.fullName.trim()) ||
+          `${account.firstName} ${account.lastName}`.trim(),
+        headline: profile.targetTitles[0] ?? '',
+        email: (identity?.success && identity.data.email.trim()) || account.email,
+        phone: (identity?.success && identity.data.phone.trim()) || profile.phone || '',
+        location: (identity?.success && identity.data.location.trim()) || '',
+        website: links?.success ? links.data.website : '',
+        linkedin: links?.success ? links.data.linkedin : '',
+      },
+      summary: uploadedText.slice(0, 900),
+      skills: [...new Set(skillGuess.map((s) => s.trim()).filter(Boolean))].slice(0, 30),
+      experience: (work?.success ? work.data : []).slice(0, 8).map((item, i) => ({
+        id: `upl_${i}`,
+        role: item.role,
+        company: item.company,
+        location: item.location || '',
+        start: item.start || '',
+        end: item.end || '',
+        current: Boolean(item.current),
+        bullets: item.bullets ?? [],
+      })),
+      education: (education?.success ? education.data : []).slice(0, 6).map((item, i) => ({
+        id: `edu_${i}`,
+        school: item.school,
+        qualification: item.qualification,
+        field: item.field || '',
+        start: item.start || '',
+        end: item.end || '',
+      })),
+    });
+    return { seeker: this.seekerFrom(profile, resumeData, uploadedText), resumeData };
+  }
+
+  /** Average Assist fill coverage by job host for this seeker (feeds confidence tuning). */
+  private async recentHostAssistCoverage(userId: string) {
+    const rows = await this.prisma.jobAgentMatch.findMany({
+      where: {
+        userId,
+        assistCoveragePct: { not: null },
+        OR: [{ channel: 'site_assisted' }, { channel: 'site' }],
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 120,
+      select: { url: true, assistCoveragePct: true },
+    });
+    const sums = new Map<string, { total: number; n: number }>();
+    for (const row of rows) {
+      if (typeof row.assistCoveragePct !== 'number') continue;
+      try {
+        const host = new URL(row.url).hostname.replace(/^www\./i, '').toLowerCase();
+        const cur = sums.get(host) ?? { total: 0, n: 0 };
+        cur.total += row.assistCoveragePct;
+        cur.n += 1;
+        sums.set(host, cur);
+      } catch {
+        /* skip */
+      }
+    }
+    return new Map([...sums.entries()].map(([host, v]) => [host, Math.round(v.total / v.n)]));
   }
 
   /** Recent Dealo and outside jobs whose title shares a word with what the person wants, minus anything already seen. */

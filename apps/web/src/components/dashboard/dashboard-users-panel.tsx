@@ -27,7 +27,14 @@ import { FormField } from '@/components/forms/form-field';
 import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
-import { fetchAuthMe, fetchDashboardUsers, grantResumePremium, updateDashboardUser, type DashboardUser } from '@/lib/dashboard-api';
+import {
+  fetchAuthMe,
+  fetchDashboardUsers,
+  grantJobAgentCredits,
+  grantResumePremium,
+  updateDashboardUser,
+  type DashboardUser,
+} from '@/lib/dashboard-api';
 import { cn } from '@/lib/utils';
 
 const ROLE_META: Record<string, { label: string; tone: string }> = {
@@ -408,10 +415,16 @@ function UserDrawer({ user, me, onClose, onChanged }: { user: DashboardUser | nu
   const [busy, setBusy] = useState<string | null>(null);
   const [roles, setRoles] = useState<string[]>([]);
   const [days, setDays] = useState(30);
+  const [creditDelta, setCreditDelta] = useState(10);
+  const [creditNote, setCreditNote] = useState('');
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
 
   useEffect(() => {
     setRoles(user?.roles ?? []);
     setDays(30);
+    setCreditDelta(10);
+    setCreditNote('');
+    setCreditBalance(null);
   }, [user?.id, user?.roles]);
 
   if (!user) return null;
@@ -441,6 +454,20 @@ function UserDrawer({ user, me, onClose, onChanged }: { user: DashboardUser | nu
       onChanged({ ...user, premiumUntil: result.premiumUntil });
     } catch (err) {
       toast.error('Could not change premium', err instanceof ApiError ? err.message : '');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const adjustCredits = async (credits: number) => {
+    if (!credits) return;
+    setBusy('credits');
+    try {
+      const result = await grantJobAgentCredits(user.id, credits, creditNote.trim() || undefined);
+      setCreditBalance(result.creditBalance);
+      toast.success(credits > 0 ? `Granted ${credits} apply credits` : `Refunded ${Math.abs(credits)} apply credits`, `Balance now ${result.creditBalance}`);
+    } catch (err) {
+      toast.error('Could not adjust credits', err instanceof ApiError ? err.message : '');
     } finally {
       setBusy(null);
     }
@@ -564,6 +591,48 @@ function UserDrawer({ user, me, onClose, onChanged }: { user: DashboardUser | nu
                 Remove premium
               </button>
             ) : null}
+          </div>
+        </Section>
+
+        <Section title="Job Agent apply credits">
+          <p className="text-sm text-muted">
+            Grant prepaid apply credits or enter a negative number to refund/clawback.
+            {creditBalance != null ? (
+              <>
+                {' '}
+                Balance now <strong className="text-foreground">{creditBalance}</strong>.
+              </>
+            ) : null}
+          </p>
+          <FormField label="Credits (+ grant / − refund)">
+            <input
+              className="input-field"
+              type="number"
+              min={-10_000}
+              max={10_000}
+              value={creditDelta}
+              onChange={(e) => setCreditDelta(Number(e.target.value))}
+            />
+          </FormField>
+          <FormField label="Note (optional)">
+            <input className="input-field" value={creditNote} onChange={(e) => setCreditNote(e.target.value)} maxLength={240} placeholder="Support ticket / reason" />
+          </FormField>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-primary text-sm"
+              disabled={!isAdmin || busy !== null || !Number.isInteger(creditDelta) || creditDelta === 0}
+              onClick={() => void adjustCredits(creditDelta)}
+            >
+              {busy === 'credits' ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {creditDelta >= 0 ? `Grant ${creditDelta}` : `Refund ${Math.abs(creditDelta)}`}
+            </button>
+            <button type="button" className="btn-secondary text-sm" disabled={!isAdmin || busy !== null} onClick={() => void adjustCredits(10)}>
+              +10
+            </button>
+            <button type="button" className="btn-secondary text-sm text-danger" disabled={!isAdmin || busy !== null} onClick={() => void adjustCredits(-10)}>
+              −10
+            </button>
           </div>
         </Section>
       </div>

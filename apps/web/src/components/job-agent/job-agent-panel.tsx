@@ -614,6 +614,10 @@ export function JobAgentPanel() {
               packs={[...(overview.creditPacks ?? [])]}
               freeLeft={stats.creditsRemaining}
               wallet={stats.creditBalance ?? 0}
+              pricing={overview.pricing}
+              receipts={overview.creditReceipts ?? []}
+              assistUsed={stats.assistedToday ?? 0}
+              assistCap={stats.assistDailyCap ?? overview.limits.dailyAssistCap}
               busy={busy?.startsWith('pack:') ? busy : null}
               onBuy={(packId) => void buyCredits(packId)}
             />
@@ -710,6 +714,8 @@ export function JobAgentPanel() {
                   <Wallet className="h-4 w-4" /> {t('ja.vault.open')}
                 </button>
               </div>
+
+              <AssistPolicyCard overview={overview} onSaved={setOverview} />
 
               <div className="rounded-2xl border border-border bg-surface-elevated p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t('ja.side.hunts')}</p>
@@ -938,12 +944,20 @@ function CreditPacksCard({
   packs,
   freeLeft,
   wallet,
+  pricing,
+  receipts,
+  assistUsed,
+  assistCap,
   busy,
   onBuy,
 }: {
   packs: { id: string; credits: number; priceMinor: number; label: string }[];
   freeLeft: number;
   wallet: number;
+  pricing?: { creditCostAuto: number; creditCostAssist: number };
+  receipts: JobAgentOverview['creditReceipts'];
+  assistUsed: number;
+  assistCap: number;
   busy: string | null;
   onBuy: (packId: string) => void;
 }) {
@@ -956,8 +970,14 @@ function CreditPacksCard({
           <p className="font-semibold text-foreground">{t('ja.pack.title')}</p>
           <p className="mt-0.5 text-xs text-muted">{t('ja.pack.body')}</p>
           <p className="mt-2 text-[11px] text-muted">
-            {fill(t('ja.credits'), { n: freeLeft })} · {fill(t('ja.credits.wallet'), { n: wallet })}
+            {fill(t('ja.credits'), { n: freeLeft })} · {fill(t('ja.credits.wallet'), { n: wallet })} ·{' '}
+            {fill(t('ja.credits.assistCap'), { used: assistUsed, cap: assistCap })}
           </p>
+          {pricing ? (
+            <p className="mt-1 text-[11px] text-muted">
+              {fill(t('ja.credits.pricing'), { auto: pricing.creditCostAuto, assist: pricing.creditCostAssist })}
+            </p>
+          ) : null}
         </div>
         <Wallet className="h-5 w-5 shrink-0 text-brand" />
       </div>
@@ -979,7 +999,107 @@ function CreditPacksCard({
           );
         })}
       </div>
+      {receipts.length ? (
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{t('ja.pack.receipts')}</p>
+          <ul className="mt-2 space-y-1.5">
+            {receipts.slice(0, 5).map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
+                <span>
+                  {r.kind === 'purchase'
+                    ? fill(t('ja.pack.receiptPurchase'), { label: r.label, n: r.credits })
+                    : r.kind === 'refund'
+                      ? fill(t('ja.pack.receiptRefund'), { n: r.credits })
+                      : fill(t('ja.pack.receiptGrant'), { n: r.credits })}
+                  {r.reference ? <span className="ml-1 opacity-70">· {r.reference.slice(0, 14)}</span> : null}
+                </span>
+                <span className="tabular-nums">{new Date(r.at).toLocaleDateString()}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </motion.div>
+  );
+}
+
+function AssistPolicyCard({
+  overview,
+  onSaved,
+}: {
+  overview: JobAgentOverview;
+  onSaved: (o: JobAgentOverview) => void;
+}) {
+  const { t } = useLocale();
+  const toast = useToast();
+  const policy = overview.assistPolicy ?? {
+    denyHosts: [] as string[],
+    allowHosts: [] as string[],
+    assistDailyCap: null as number | null,
+    planAssistCap: overview.limits.dailyAssistCap,
+  };
+  const [deny, setDeny] = useState(policy.denyHosts.join('\n'));
+  const [allow, setAllow] = useState(policy.allowHosts.join('\n'));
+  const [cap, setCap] = useState(policy.assistDailyCap == null ? '' : String(policy.assistDailyCap));
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const next = overview.assistPolicy ?? {
+      denyHosts: [] as string[],
+      allowHosts: [] as string[],
+      assistDailyCap: null as number | null,
+      planAssistCap: overview.limits.dailyAssistCap,
+    };
+    setDeny(next.denyHosts.join('\n'));
+    setAllow(next.allowHosts.join('\n'));
+    setCap(next.assistDailyCap == null ? '' : String(next.assistDailyCap));
+  }, [overview]);
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const lines = (text: string) =>
+        text
+          .split(/[\n,]+/)
+          .map((s) => s.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, ''))
+          .filter((s) => s.length >= 3)
+          .slice(0, 40);
+      const next = await jobAgentApi.saveAssistPolicy({
+        denyHosts: lines(deny),
+        allowHosts: lines(allow),
+        assistDailyCap: cap.trim() === '' ? null : Number(cap),
+      });
+      onSaved(next);
+      toast.success(t('ja.policy.saved'));
+    } catch (err) {
+      toast.error(t('ja.toast.actFail'), err instanceof ApiError ? err.message : '');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface-elevated p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t('ja.policy.title')}</p>
+      <p className="mt-2 text-xs text-muted">{t('ja.policy.body')}</p>
+      <label className="mt-3 block text-[11px] font-semibold text-muted">{t('ja.policy.deny')}</label>
+      <textarea className="input-field mt-1 min-h-[72px] text-xs" value={deny} onChange={(e) => setDeny(e.target.value)} />
+      <label className="mt-3 block text-[11px] font-semibold text-muted">{t('ja.policy.allow')}</label>
+      <textarea className="input-field mt-1 min-h-[56px] text-xs" value={allow} onChange={(e) => setAllow(e.target.value)} />
+      <label className="mt-3 block text-[11px] font-semibold text-muted">{t('ja.policy.cap')}</label>
+      <input
+        className="input-field mt-1 text-xs"
+        type="number"
+        min={0}
+        max={policy.planAssistCap}
+        placeholder={fill(t('ja.policy.capHint'), { n: policy.planAssistCap })}
+        value={cap}
+        onChange={(e) => setCap(e.target.value)}
+      />
+      <button type="button" disabled={busy} onClick={() => void save()} className="btn-secondary mt-3 w-full justify-center text-sm">
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} {t('ja.policy.save')}
+      </button>
+    </div>
   );
 }
 
@@ -1344,6 +1464,11 @@ function AssistContinueModal({
                 <li>{t('ja.continue.install3')}</li>
                 <li>{t('ja.continue.install4')}</li>
               </ol>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a href={jobAgentApi.extensionDownloadUrl()} className="btn-secondary text-xs" download>
+                  {t('ja.ext.download')}
+                </a>
+              </div>
               <button
                 type="button"
                 className="mt-3 text-xs font-semibold text-brand"
@@ -1768,7 +1893,17 @@ function SetupWizard({ open, onClose, overview, onSaved }: { open: boolean; onCl
                   </p>
                 )}
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                  <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" hidden onChange={(e) => setOwnFile(e.target.files?.[0] ?? null)} />
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      setOwnFile(file);
+                      if (file) set('resumeId', null);
+                    }}
+                  />
                   <button type="button" onClick={() => fileRef.current?.click()} className="max-w-full truncate font-semibold text-brand">
                     {ownFile ? fill(t('ja.wz.using'), { file: ownFile.name }) : t('ja.wz.upload')}
                   </button>
@@ -1778,7 +1913,7 @@ function SetupWizard({ open, onClose, overview, onSaved }: { open: boolean; onCl
                     </button>
                   ) : null}
                 </div>
-                {!form.resumeId && ownFile ? <p className="mt-2 text-xs text-amber-600">{t('ja.wz.pickToo')}</p> : null}
+                {ownFile ? <p className="mt-2 text-xs text-muted">{t('ja.wz.uploadOk')}</p> : null}
               </section>
             ) : null}
 

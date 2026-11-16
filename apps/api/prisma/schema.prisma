@@ -979,6 +979,12 @@ model JobAgentProfile {
   exclude         String[]
   minScore        Int       @default(70)
   dailyLimit      Int       @default(5)
+  /// Personal Assist (site) daily cap; null = use plan default.
+  assistDailyCap  Int?
+  /// Extra hosts Assist must not auto-fill (merged with platform deny list).
+  denyHosts       String[]
+  /// Hosts the seeker allows Assist to fill (never overrides hard LinkedIn/Indeed denials).
+  allowHosts      String[]
   coverNotes      Boolean   @default(true)
   emailApply      Boolean   @default(false)
   phone           String?

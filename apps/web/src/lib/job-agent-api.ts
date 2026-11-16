@@ -52,6 +52,16 @@ export const jobAgentApi = {
       '/job-agent/credits/verify',
       { method: 'POST', json: { reference } },
     ),
+  saveAssistPolicy: (body: { denyHosts: string[]; allowHosts: string[]; assistDailyCap: number | null }) =>
+    apiFetch<JobAgentOverview>('/job-agent/assist-policy', { method: 'PUT', json: body }),
+  grantCredits: (body: { userId: string; credits: number; note?: string }) =>
+    apiFetch<{ userId: string; email: string; creditBalance: number; delta: number }>('/job-agent/credits/grant', {
+      method: 'POST',
+      json: body,
+    }),
+  extensionInfo: () => apiFetch<{ available: boolean; bytes: number | null; hint: string }>('/job-agent/extension'),
+  /** Same-origin rewrite so the session cookie attaches for sideload zip download. */
+  extensionDownloadUrl: () => '/api/v1/job-agent/extension/download',
   /**
    * Absolute API base for the extension. Prefer the real API host so Bearer `dja_…`
    * does not depend on the Next rewrite (content scripts / SW call this directly).

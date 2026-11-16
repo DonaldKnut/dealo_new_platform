@@ -224,16 +224,31 @@ async function fillPage(matchId: string, session: AssistSession) {
   watchUserSubmit(matchId, session, statsBase, filledSnapshot);
 
   const coverage = statsBase.fieldsTotal ? Math.round((filled / statsBase.fieldsTotal) * 100) : 0;
+  const nextStep = findNextStepControl();
+  const actions: { id: string; label: string }[] = [
+    { id: 'mark', label: 'I submitted' },
+    { id: 'dismiss', label: 'Dismiss' },
+  ];
+  if (nextStep) actions.unshift({ id: 'next', label: 'Fill next step' });
+
   showOverlay({
     title: 'Fields filled — you submit',
-    body: `Filled ${filled}/${statsBase.fieldsTotal} fields (~${coverage}% coverage). Review answers, attach your CV if asked, then click the highlighted Submit yourself. Assist never auto-submits.`,
+    body: `Filled ${filled}/${statsBase.fieldsTotal} fields (~${coverage}% coverage).${
+      nextStep ? ' This looks like a multi-step form — use Fill next step, then review and Submit yourself.' : ' Review answers, attach your CV if asked, then click the highlighted Submit yourself.'
+    } Assist never auto-submits.`,
     tone: 'ok',
-    actions: [
-      { id: 'mark', label: 'I submitted' },
-      { id: 'dismiss', label: 'Dismiss' },
-    ],
+    actions,
   }, async (id) => {
     const editedAnswers = collectEditedAnswers(filledSnapshot);
+    if (id === 'next' && nextStep) {
+      await sendReport(matchId, { ...baseReport('filled', session), ...statsBase, editedAnswers, notes: 'Advancing multi-step form' });
+      nextStep.click();
+      await waitForDomSettle(900);
+      // Allow re-run on the same match after a Next click.
+      ranForMatch = null;
+      await fillPage(matchId, session);
+      return;
+    }
     if (id === 'mark') {
       await sendReport(matchId, {
         ...baseReport('submitted_by_user', session),
@@ -253,12 +268,31 @@ async function fillPage(matchId: string, session: AssistSession) {
   });
 }
 
+const FIELD_SEL =
+  'input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=image]):not([type=file]), textarea, select';
+
+/** Collect fields from the page, open shadow roots, and same-origin iframes (cross-origin frames are skipped). */
 function collectFields(): FieldDescriptor[] {
-  const nodes = [
-    ...document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
-      'input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=image]):not([type=file]), textarea, select',
-    ),
-  ];
+  const nodes: Array<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement> = [];
+  const visit = (root: Document | ShadowRoot | Element) => {
+    if ('querySelectorAll' in root) {
+      nodes.push(...root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(FIELD_SEL));
+    }
+    const host = root instanceof Element ? root : root instanceof Document ? root.documentElement : null;
+    const scope = host ?? (root as Document | ShadowRoot);
+    for (const el of scope.querySelectorAll?.('*') ?? []) {
+      if (el instanceof HTMLElement && el.shadowRoot) visit(el.shadowRoot);
+    }
+  };
+  visit(document);
+  for (const frame of document.querySelectorAll('iframe')) {
+    try {
+      const doc = frame.contentDocument;
+      if (doc) visit(doc);
+    } catch {
+      // Cross-origin iframe — Assist cannot read it; user finishes those fields.
+    }
+  }
   return nodes
     .filter((el) => el.offsetParent !== null || el.getClientRects().length > 0)
     .map((el, index) => {
@@ -308,16 +342,28 @@ function setValue(el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
   el.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+function controlText(btn: HTMLElement) {
+  return `${btn.textContent ?? ''} ${btn.getAttribute('value') ?? ''} ${btn.getAttribute('aria-label') ?? ''}`.toLowerCase();
+}
+
 function findSubmitControls() {
-  const buttons = [
-    ...document.querySelectorAll<HTMLElement>(
-      'button[type="submit"], input[type="submit"], button, a[role="button"]',
-    ),
-  ];
-  return buttons.filter((btn) => {
-    const text = `${btn.textContent ?? ''} ${btn.getAttribute('value') ?? ''} ${btn.getAttribute('aria-label') ?? ''}`.toLowerCase();
-    return /submit|apply|send application|continue|next|finish|save and continue/.test(text);
+  const buttons = [...document.querySelectorAll<HTMLElement>('button[type="submit"], input[type="submit"], button, a[role="button"]')];
+  return buttons.filter((btn) => /submit|apply|send application|continue|next|finish|save and continue/.test(controlText(btn)));
+}
+
+/** Next/Continue that advances a multi-step form without final submit. */
+function findNextStepControl(): HTMLElement | null {
+  const buttons = [...document.querySelectorAll<HTMLElement>('button, input[type="button"], input[type="submit"], a[role="button"]')];
+  const next = buttons.find((btn) => {
+    const text = controlText(btn);
+    if (/submit|apply|send application|finish|done/.test(text) && !/continue|next|save and continue/.test(text)) return false;
+    return /^(next|continue|save and continue)$|next step|continue to|save and continue/.test(text) || /\bnext\b|\bcontinue\b/.test(text);
   });
+  return next && (next.offsetParent !== null || next.getClientRects().length > 0) ? next : null;
+}
+
+function waitForDomSettle(ms = 700) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 }
 
 function detectCaptcha() {

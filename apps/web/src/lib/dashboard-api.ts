@@ -265,6 +265,29 @@ export const updateDashboardOrganization = (
 export const grantResumePremium = (userId: string, days: number) =>
   apiFetch<{ userId: string; premiumUntil: string | null }>('/resumes/admin/premium', { method: 'POST', json: { userId, days } });
 
+export const grantJobAgentCredits = (userId: string, credits: number, note?: string) =>
+  apiFetch<{ userId: string; email: string; creditBalance: number; delta: number }>('/job-agent/credits/grant', {
+    method: 'POST',
+    json: { userId, credits, note },
+  });
+
+export type JobAgentHostFrequencyRow = { host: string; count: number; hasAdapter: boolean };
+
+export type JobAgentAssistAbuse = {
+  days: number;
+  reports: number;
+  avgCoveragePct: number | null;
+  outcomes: { outcome: string; count: number }[];
+  topHosts: { host: string; count: number }[];
+  pauses: { pause: string; count: number }[];
+};
+
+export const fetchJobAgentHostFrequency = (limit = 40) =>
+  apiFetch<JobAgentHostFrequencyRow[]>(`/job-agent/ops/host-frequency?limit=${limit}`);
+
+export const fetchJobAgentAssistAbuse = (days = 7) =>
+  apiFetch<JobAgentAssistAbuse>(`/job-agent/ops/assist-abuse?days=${days}`);
+
 export type BlogPost = {
   id: string;
   title: string;

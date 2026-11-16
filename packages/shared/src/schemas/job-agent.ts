@@ -32,6 +32,8 @@ export const JOB_AGENT_PLANS = {
   FREE: {
     name: 'Free',
     dailyApplications: 2,
+    /** Max assisted (site) completes per Lagos day on Free. */
+    dailyAssistCap: 3,
     runEveryHours: 12,
     maxTargets: 3,
     matchesPerRun: 10,
@@ -40,12 +42,13 @@ export const JOB_AGENT_PLANS = {
     emailApply: false,
     /** Apply credits spent per offline (auto) send. */
     creditCostAuto: 1,
-    /** Apply credits spent when an assisted apply is completed. */
-    creditCostAssist: 1,
+    /** Assist costs more on Free — supervised fill is the expensive path. */
+    creditCostAssist: 2,
   },
   PREMIUM: {
     name: 'Premium',
     dailyApplications: 15,
+    dailyAssistCap: 25,
     runEveryHours: 3,
     maxTargets: 8,
     matchesPerRun: 25,
@@ -73,6 +76,24 @@ export const jobAgentCreditPackCheckoutSchema = z.object({
   packId: z.enum(['pack_10', 'pack_40', 'pack_100']),
 });
 export type JobAgentCreditPackCheckout = z.infer<typeof jobAgentCreditPackCheckoutSchema>;
+
+/** Staff grant/refund prepaid Job Agent apply credits (positive = grant, negative = refund/clawback). */
+export const grantApplyCreditsSchema = z.object({
+  userId: z.string().regex(/^[a-f0-9]{24}$/),
+  credits: z.number().int().min(-10_000).max(10_000).refine((n) => n !== 0, 'credits must be non-zero'),
+  note: z.string().trim().max(240).optional(),
+});
+export type GrantApplyCreditsInput = z.infer<typeof grantApplyCreditsSchema>;
+
+export const jobAgentAssistPolicySchema = z.object({
+  /** Extra hosts Assist must never auto-fill (added to platform deny list). */
+  denyHosts: z.array(z.string().trim().min(3).max(120)).max(40).default([]),
+  /** Hosts the user explicitly allows even if on a soft deny list (never overrides LinkedIn/Indeed hard denials). */
+  allowHosts: z.array(z.string().trim().min(3).max(120)).max(40).default([]),
+  /** Optional personal Assist daily cap (clamped by plan). */
+  assistDailyCap: z.number().int().min(0).max(50).nullable().default(null),
+});
+export type JobAgentAssistPolicyInput = z.infer<typeof jobAgentAssistPolicySchema>;
 
 const term = (max: number) => z.string().trim().min(2).max(max);
 const short = (max: number) => z.string().trim().max(max).default('');
@@ -249,6 +270,16 @@ export type JobAgentRunDto = {
   finishedAt: string | null;
 };
 
+export type JobAgentCreditReceipt = {
+  id: string;
+  kind: 'purchase' | 'grant' | 'refund';
+  credits: number;
+  label: string;
+  reference: string | null;
+  at: string;
+  status: string;
+};
+
 export type JobAgentOverview = {
   plan: JobAgentPlan;
   limits: (typeof JOB_AGENT_PLANS)[JobAgentPlan];
@@ -270,9 +301,25 @@ export type JobAgentOverview = {
     creditBalance: number;
     /** Effective credits left today = free remaining + prepaid balance. */
     totalCreditsAvailable: number;
+    /** Assist completes today (site_assisted / site). */
+    assistedToday: number;
+    /** Effective Assist daily cap after plan + personal clamp. */
+    assistDailyCap: number;
   };
+  /** Personal Assist host policy (merged with platform denials at session time). */
+  assistPolicy: {
+    denyHosts: string[];
+    allowHosts: string[];
+    assistDailyCap: number | null;
+    planAssistCap: number;
+  };
+  /** Plan credit costs so the UI can show auto vs Assist pricing. */
+  pricing: { creditCostAuto: number; creditCostAssist: number };
   creditPacks: typeof JOB_AGENT_CREDIT_PACKS;
+  creditReceipts: JobAgentCreditReceipt[];
   paymentsEnabled: boolean;
+  /** Sideload zip availability (Chrome Web Store listing is separate). */
+  extension: { downloadAvailable: boolean; chromeStoreUrl: string | null };
   /** Last overnight / morning digest snapshot for light UI (null if none yet today). */
   digest: { sent: number; ready: number; at: string | null } | null;
   suggestedTitles: string[];
@@ -289,6 +336,16 @@ export const ASSIST_DENY_HOSTS = [
   'www.indeed.com',
   'glassdoor.com',
   'www.glassdoor.com',
+  'facebook.com',
+  'www.facebook.com',
+] as const;
+
+/** Hard denials that user allowHosts can never override. */
+export const ASSIST_HARD_DENY_HOSTS = [
+  'linkedin.com',
+  'www.linkedin.com',
+  'indeed.com',
+  'www.indeed.com',
   'facebook.com',
   'www.facebook.com',
 ] as const;
@@ -374,31 +431,50 @@ export type AssistSessionDto = {
   creditsRemaining: number;
 };
 
+function hostMatches(host: string, pattern: string) {
+  const bare = pattern.toLowerCase().replace(/^www\./, '');
+  return host === bare || host.endsWith(`.${bare}`);
+}
+
 /**
  * Evaluate whether the extension may fill on this host.
- * Deny known credential-walled boards; everything else is allowed with disclosure.
+ * Deny known credential-walled boards (+ optional personal deny list); everything else is allowed with disclosure.
+ * `allowHosts` can soften personal denials but never LinkedIn/Indeed/Facebook hard denials.
  */
-export function assistSitePolicyForUrl(url: string): AssistSitePolicy {
+export function assistSitePolicyForUrl(
+  url: string,
+  opts?: { denyHosts?: string[]; allowHosts?: string[] },
+): AssistSitePolicy {
+  const denyHosts = [...ASSIST_DENY_HOSTS, ...(opts?.denyHosts ?? [])];
+  const allowHosts = opts?.allowHosts ?? [];
   let host = '';
   try {
     host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
   } catch {
-    return { allowed: false, reason: 'Invalid job URL', denyHosts: [...ASSIST_DENY_HOSTS] };
+    return { allowed: false, reason: 'Invalid job URL', denyHosts };
   }
-  const denied = ASSIST_DENY_HOSTS.some((d) => {
-    const bare = d.replace(/^www\./, '');
-    return host === bare || host.endsWith(`.${bare}`);
-  });
-  if (denied) {
+
+  const hardDenied = ASSIST_HARD_DENY_HOSTS.some((d) => hostMatches(host, d));
+  if (hardDenied) {
     return {
       allowed: false,
       reason: 'This host requires your own account login. Use the prep pack and apply manually — Dealo will not fill forms here.',
-      denyHosts: [...ASSIST_DENY_HOSTS],
+      denyHosts,
+    };
+  }
+
+  const userAllowed = allowHosts.some((d) => hostMatches(host, d));
+  const denied = denyHosts.some((d) => hostMatches(host, d));
+  if (denied && !userAllowed) {
+    return {
+      allowed: false,
+      reason: 'This host is on your Assist deny list (or the platform list). Remove it in Job Agent settings or use the prep pack.',
+      denyHosts,
     };
   }
   return {
     allowed: true,
     reason: 'Site allowed for supervised fill. Confirm Submit yourself; Dealo never auto-submits.',
-    denyHosts: [...ASSIST_DENY_HOSTS],
+    denyHosts,
   };
 }

@@ -23,6 +23,7 @@ import {
   ScrollText,
   Send,
   Settings,
+  ShieldAlert,
   UserRound,
   UserSearch,
   Users,
@@ -153,6 +154,13 @@ const adminNav: NavItem[] = [
     labelKey: 'dash.nav.audit',
     icon: ScrollText,
     help: 'Backend and frontend activity trail for compliance review.',
+    tour: 'admin',
+  },
+  {
+    href: '/dashboard/job-agent-ops',
+    labelKey: 'dash.nav.jobAgentOps',
+    icon: ShieldAlert,
+    help: 'Assist abuse metrics and ExternalJob host frequency for ATS expansion.',
     tour: 'admin',
   },
   {

@@ -118,6 +118,38 @@ describe('helpers', () => {
         emailApplyAllowed: false,
       }).channel,
     ).toBe('ats_api');
+    expect(
+      classifyChannel({
+        kind: 'external',
+        url: 'https://jobs.smartrecruiters.com/Acme/software-engineer/744000012345678',
+        applyEmail: null,
+        emailApplyAllowed: false,
+      }).channel,
+    ).toBe('ats_api');
+    expect(
+      classifyChannel({
+        kind: 'external',
+        url: 'https://acme.bamboohr.com/careers/42',
+        applyEmail: null,
+        emailApplyAllowed: false,
+      }).channel,
+    ).toBe('ats_api');
+    expect(
+      classifyChannel({
+        kind: 'external',
+        url: 'https://acme.recruitee.com/o/software-engineer',
+        applyEmail: null,
+        emailApplyAllowed: false,
+      }).channel,
+    ).toBe('ats_api');
+    expect(
+      classifyChannel({
+        kind: 'external',
+        url: 'https://acme.wd1.myworkdayjobs.com/en-US/Careers/job/Lagos/Engineer_R123',
+        applyEmail: null,
+        emailApplyAllowed: false,
+      }).channel,
+    ).toBe('site_assisted');
     expect(classifyChannel({ kind: 'external', url: 'https://careers.example.com/job/1', applyEmail: null, emailApplyAllowed: true }).channel).toBe(
       'site_assisted',
     );
@@ -129,5 +161,20 @@ describe('assistSitePolicyForUrl', () => {
     expect(assistSitePolicyForUrl('https://www.linkedin.com/jobs/view/1').allowed).toBe(false);
     expect(assistSitePolicyForUrl('https://indeed.com/viewjob?jk=1').allowed).toBe(false);
     expect(assistSitePolicyForUrl('https://careers.example.com/apply/123').allowed).toBe(true);
+  });
+
+  it('honours personal deny/allow without overriding hard denials', () => {
+    expect(assistSitePolicyForUrl('https://boards.example.com/j/1', { denyHosts: ['boards.example.com'] }).allowed).toBe(false);
+    expect(
+      assistSitePolicyForUrl('https://boards.example.com/j/1', {
+        denyHosts: ['boards.example.com'],
+        allowHosts: ['boards.example.com'],
+      }).allowed,
+    ).toBe(true);
+    expect(
+      assistSitePolicyForUrl('https://www.linkedin.com/jobs/view/1', {
+        allowHosts: ['linkedin.com'],
+      }).allowed,
+    ).toBe(false);
   });
 });

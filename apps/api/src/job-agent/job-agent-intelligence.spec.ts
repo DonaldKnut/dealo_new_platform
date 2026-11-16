@@ -80,7 +80,7 @@ describe('job-agent-intelligence', () => {
   });
 
   describe('vault Q&A merge', () => {
-    it('upserts by questionKey and drops empty answers', () => {
+    it('upserts by questionKey, drops empty answers, and aliases Assist edits by label slug', () => {
       const merged = mergeVaultQaPairs(
         [
           { questionKey: 'notice_period', question: 'Notice?', answer: '2 weeks' },
@@ -91,10 +91,11 @@ describe('job-agent-intelligence', () => {
           { questionKey: 'empty', question: 'Skip', answer: '  ' },
         ],
       );
-      expect(merged).toEqual([
-        { questionKey: 'notice_period', question: 'Notice?', answer: '2 weeks' },
-        { questionKey: 'why_company', question: 'Why this company?', answer: 'New answer' },
-      ]);
+      const byKey = Object.fromEntries(merged.map((p) => [p.questionKey, p]));
+      expect(byKey.notice_period).toEqual({ questionKey: 'notice_period', question: 'Notice?', answer: '2 weeks' });
+      expect(byKey.why_company).toEqual({ questionKey: 'why_company', question: 'Why this company?', answer: 'New answer' });
+      expect(byKey.why_this_company?.answer).toBe('New answer');
+      expect(merged.some((p) => p.questionKey === 'empty')).toBe(false);
     });
 
     it('slugs labels into keys', () => {

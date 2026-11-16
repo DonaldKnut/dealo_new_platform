@@ -39,20 +39,45 @@ function slugLabel(label: string) {
     .slice(0, 60);
 }
 
-/** Match qa_* / draft_* hints by questionKey ↔ field label similarity. */
+function tokenSet(value: string) {
+  return new Set(value.split('_').filter((t) => t.length >= 3));
+}
+
+function jaccard(a: Set<string>, b: Set<string>) {
+  if (!a.size || !b.size) return 0;
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter += 1;
+  return inter / (a.size + b.size - inter);
+}
+
+/** Match qa_* / draft_* hints by questionKey ↔ field label similarity (exact, contains, token overlap). */
 function mapQaHint(
   field: Omit<FieldDescriptor, 'el'>,
   hints: Record<string, string>,
 ): { vaultKey: string; value: string; confidence: number } | null {
-  const labelKey = slugLabel(field.label || field.name || field.ariaLabel || field.placeholder);
-  if (!labelKey || labelKey.length < 4) return null;
+  const labelRaw = `${field.label} ${field.name} ${field.ariaLabel} ${field.placeholder}`.trim();
+  const labelKey = slugLabel(labelRaw);
+  if (!labelKey || labelKey.length < 3) return null;
+  const labelTokens = tokenSet(labelKey);
   const entries = Object.entries(hints).filter(([key]) => key.startsWith('qa_') || key.startsWith('draft_'));
-  const hit = entries.find(([key]) => {
+  let best: { key: string; value: string; score: number } | null = null;
+  for (const [key, value] of entries) {
+    if (!value.trim()) continue;
     const bare = key.replace(/^(qa_|draft_)/, '');
-    return bare === labelKey || bare.includes(labelKey) || labelKey.includes(bare);
-  });
-  if (!hit) return null;
-  return { vaultKey: hit[0], value: hit[1], confidence: 0.72 };
+    let score = 0;
+    if (bare === labelKey) score = 1;
+    else if (bare.includes(labelKey) || labelKey.includes(bare)) score = 0.85;
+    else score = jaccard(labelTokens, tokenSet(bare));
+    // Also compare against human-readable question text encoded in the key.
+    if (score < 0.5) {
+      const soft = jaccard(labelTokens, tokenSet(slugLabel(bare.replace(/_/g, ' '))));
+      score = Math.max(score, soft);
+    }
+    if (!best || score > best.score) best = { key, value, score };
+  }
+  // Slightly softer threshold so career-page label variants (and vault edits) still match.
+  if (!best || best.score < 0.38) return null;
+  return { vaultKey: best.key, value: best.value, confidence: Math.min(0.9, 0.52 + best.score * 0.35) };
 }
 
 export function mapFieldLocally(
