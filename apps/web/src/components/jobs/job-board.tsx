@@ -330,21 +330,21 @@ export function JobBoard() {
   return (
     <div className="pb-16">
       {/* ------------------------------------------------------------ hero */}
-      <section className="relative overflow-hidden border-b border-border bg-[radial-gradient(ellipse_at_top,var(--hero-glow),transparent_60%)] pb-8 pt-24 min-[340px]:pt-28 sm:pb-12 sm:pt-32">
+      <section className="relative overflow-hidden border-b border-border bg-[radial-gradient(ellipse_at_top,var(--hero-glow),transparent_60%)] pb-8 pt-6 sm:pb-12 sm:pt-8">
         <div aria-hidden className="pointer-events-none absolute -right-24 top-10 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
         <div aria-hidden className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-emerald-300/20 blur-3xl" />
         <div className="container-page relative">
           <p className="eyebrow inline-flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" /> Dealo job board
+            <Sparkles className="h-3.5 w-3.5" /> Dealo job board · Nigeria
           </p>
           <TypewriterHeadline
-            text="Find work that fits. Apply in one tap."
+            text="Jobs in Nigeria. Apply in one tap."
             highlight="Apply in one tap."
             className="display-title mt-3 max-w-3xl text-[1.9rem] leading-[1.05] text-foreground min-[340px]:text-4xl sm:text-5xl lg:text-6xl"
             speedMs={24}
           />
           <p className="mt-4 max-w-2xl text-sm text-muted min-[340px]:text-base sm:text-lg">
-            Fresh jobs from Dealo employers and trusted job sites, updated through the day. Send the CV you built on Dealo, and track every application in one place.
+            Lagos, Abuja, Port Harcourt, Ibadan, and remote — Dealo Easy Apply plus trusted boards. Use your Dealo CV, track every send, or let Job Agent hunt overnight.
           </p>
 
           <form
@@ -436,10 +436,9 @@ export function JobBoard() {
           </div>
           <div className="scrollbar-none -mx-2 mt-4 flex snap-x gap-3 overflow-x-auto px-2 pb-2">
             {featured.map((job) => (
-              <button
+              <Link
                 key={job.id}
-                type="button"
-                onClick={() => openJob(job.id)}
+                href={`/jobs/${job.id}`}
                 className="group w-[min(17rem,80vw)] shrink-0 snap-start rounded-2xl border border-brand/25 bg-gradient-to-br from-brand-soft/70 to-surface-elevated p-4 text-left transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg"
               >
                 <p className="truncate text-xs font-semibold text-brand">{job.company}</p>
@@ -448,7 +447,7 @@ export function JobBoard() {
                   <MapPin className="h-3.5 w-3.5 shrink-0" /> {job.location}
                 </p>
                 {job.salary ? <p className="mt-1 text-xs font-semibold text-foreground">{job.salary}</p> : null}
-              </button>
+              </Link>
             ))}
           </div>
         </section>
@@ -494,7 +493,6 @@ export function JobBoard() {
                       index={index}
                       active={desktop && job.id === activeId}
                       saved={saved.has(job.id)}
-                      onOpen={() => openJob(job.id)}
                       onToggleSave={() => void toggleSave(job)}
                     />
                     {index === 4 ? <CvPromo /> : null}

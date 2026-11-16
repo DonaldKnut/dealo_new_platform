@@ -8,10 +8,17 @@ import { APP_URL, breadcrumbJsonLd, pageMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = pageMetadata({
   path: '/resume-builder',
-  title: 'Free CV builder — make a professional CV on your phone',
+  title: 'Free CV builder Nigeria — ATS-friendly PDF on your phone',
   description:
-    'Build a clean, professional CV in minutes, even on a small phone. Pick a template, fill simple steps and download a PDF that hiring software can read. Free, with premium AI writing help.',
-  keywords: ['free CV builder', 'CV maker Nigeria', 'resume builder', 'CV template Nigeria', 'cover letter builder', 'CV for electricians', 'ATS friendly CV'],
+    'Build a professional Nigerian CV in minutes on your phone. Clean templates, PDF download hiring software can read, and Job Agent ready. Free to start.',
+  keywords: [
+    'free CV builder Nigeria',
+    'CV maker Nigeria',
+    'resume builder Lagos',
+    'ATS friendly CV Nigeria',
+    'CV template Nigeria',
+    'cover letter builder',
+  ],
 });
 
 const FAQ = [

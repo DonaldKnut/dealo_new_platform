@@ -3,6 +3,7 @@
 import type { JobListing } from '@dealo/shared';
 import { motion } from 'framer-motion';
 import { Bookmark, BookmarkCheck, Clock, MapPin, Wallet, Zap } from 'lucide-react';
+import Link from 'next/link';
 
 import { JOB_TYPE_LABEL, postedAgo } from '@/lib/jobs-api';
 import { cn } from '@/lib/utils';
@@ -20,7 +21,7 @@ export function JobCard({
   job: JobListing;
   active?: boolean;
   saved?: boolean;
-  onOpen: () => void;
+  onOpen?: () => void;
   onToggleSave: () => void;
   index?: number;
 }) {
@@ -38,7 +39,7 @@ export function JobCard({
           : 'border-border hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lg',
       )}
     >
-      <button type="button" onClick={onOpen} className="absolute inset-0 z-0 rounded-2xl" aria-label={`${job.title} at ${job.company}`} />
+      <Link href={`/jobs/${job.id}`} className="absolute inset-0 z-0 rounded-2xl" aria-label={`${job.title} at ${job.company}`} />
       <div className="pointer-events-none relative z-10 flex gap-3">
         <CompanyLogo name={job.company} src={job.companyLogo} className="h-10 w-10 min-[340px]:h-12 min-[340px]:w-12" />
         <div className="min-w-0 flex-1">

@@ -133,7 +133,7 @@ export function MyApplicationsPanel() {
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <CompanyLogo name={app.company} src={null} className="h-10 w-10" />
                     <div className="min-w-0 flex-1">
-                      <Link href={`/jobs?job=${app.listingId}`} className="line-clamp-2 break-words text-sm font-semibold text-foreground hover:text-brand">
+                      <Link href={`/jobs/${app.listingId}`} className="line-clamp-2 break-words text-sm font-semibold text-foreground hover:text-brand">
                         {app.title}
                       </Link>
                       <p className="truncate text-xs text-muted">
@@ -199,7 +199,7 @@ export function MyApplicationsPanel() {
               saved.map((job) => (
                 <article key={job.id} className="flex items-center gap-3 rounded-2xl border border-border bg-surface-elevated p-3">
                   <CompanyLogo name={job.company} src={null} className="h-10 w-10" />
-                  <Link href={`/jobs?job=${job.listingId}`} className="min-w-0 flex-1">
+                  <Link href={`/jobs/${job.listingId}`} className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold text-foreground hover:text-brand">{job.title}</span>
                     <span className="block truncate text-xs text-muted">{job.company}</span>
                   </Link>

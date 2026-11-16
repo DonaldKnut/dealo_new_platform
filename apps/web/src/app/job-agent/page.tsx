@@ -6,10 +6,17 @@ import { pageMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = pageMetadata({
   path: '/job-agent',
-  title: 'Job Agent — AI that applies to jobs in Nigeria for you',
+  title: 'AI Job Agent Nigeria — auto-apply & Assist for career pages',
   description:
-    'Your own AI agent reads your CV, watches thousands of Nigerian and remote jobs around the clock, and applies to the ones that fit while you get on with your day. Free to start.',
-  keywords: ['auto apply jobs Nigeria', 'AI job application', 'job agent', 'apply to jobs automatically', 'jobs in Lagos', 'remote jobs Nigeria'],
+    'Dealo Job Agent hunts Lagos, Abuja, and remote jobs overnight. Auto-sends Easy Apply and partner ATS; Assist fills Workday-style pages — you click Submit. Free to start.',
+  keywords: [
+    'AI job agent Nigeria',
+    'auto apply jobs Nigeria',
+    'AI job application',
+    'jobs in Lagos',
+    'remote jobs Nigeria',
+    'apply to jobs automatically',
+  ],
 });
 
 export default function JobAgentPage() {

@@ -17,12 +17,20 @@ import { TalentShowcaseGrid } from '@/components/marketing/talent-showcase-grid'
 export const metadata: Metadata = {
   ...pageMetadata({
     path: '/',
-    title: 'Dealo — Hire checked office staff & skilled trades in Nigeria',
+    title: 'Dealo — Jobs in Nigeria, AI Job Agent & checked hiring',
     description:
-      'Hire checked office workers and skilled trades in Nigeria and across Africa. AI agents plus real recruiters send a shortlist in 48 hours, with a 90-day replacement.',
-    keywords: ['hire talent Nigeria', 'recruitment agency Lagos', 'skilled trades staffing', 'managed staffing Nigeria', 'AI recruitment Africa'],
+      'Find jobs in Lagos and across Nigeria, apply with one CV, or hire checked office staff and skilled trades. AI Job Agent plus real recruiters — shortlists in 48 hours.',
+    keywords: [
+      'jobs in Nigeria',
+      'jobs in Lagos',
+      'hire talent Nigeria',
+      'AI job agent Nigeria',
+      'recruitment agency Lagos',
+      'skilled trades staffing',
+      'CV builder Nigeria',
+    ],
   }),
-  title: { absolute: 'Dealo — Hire checked office staff & skilled trades in Nigeria' },
+  title: { absolute: 'Dealo — Jobs in Nigeria, AI Job Agent & checked hiring' },
 };
 
 export default function HomePage() {

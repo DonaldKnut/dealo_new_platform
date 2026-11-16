@@ -298,6 +298,14 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
         link: { label: 'Open Job Agent', href: '/dashboard/job-agent' },
       },
       {
+        q: 'Where do I browse jobs by city?',
+        a: [
+          'Use the job board hubs: Lagos, Abuja, Port Harcourt, Ibadan, and remote Nigeria.',
+          'Each listing has its own page so you can share and so Google can index it.',
+        ],
+        link: { label: 'Jobs in Lagos', href: '/jobs/in/lagos' },
+      },
+      {
         q: 'Does the agent apply for me, or only alert me?',
         a: [
           'Both, depending on the channel.',

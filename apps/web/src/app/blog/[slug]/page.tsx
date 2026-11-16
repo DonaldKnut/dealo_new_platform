@@ -8,10 +8,9 @@ import { ReadingProgress, ShareRow } from '@/components/blog/article-tools';
 import { BlogCoverArt } from '@/components/blog/blog-cover-art';
 import { readMinutes, sanitizeBlogHtml, toBlogCard } from '@/lib/blog-format';
 import { fetchPublishedPost, fetchPublishedPosts } from '@/lib/blog-public';
+import { APP_URL, pageMetadata } from '@/lib/seo';
 
 type Props = { params: Promise<{ slug: string }> };
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export async function generateStaticParams() {
   const posts = await fetchPublishedPosts();
@@ -35,9 +34,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = post.seoDescription || post.excerpt;
 
   return {
-    title,
-    description,
-    alternates: { canonical: `${APP_URL}/blog/${post.slug}` },
+    ...pageMetadata({
+      path: `/blog/${post.slug}`,
+      title,
+      description,
+      keywords: post.tags?.length ? post.tags : undefined,
+    }),
     openGraph: {
       title,
       description,
@@ -47,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       modifiedTime: post.updatedAt,
       section: post.category ?? undefined,
       tags: post.tags,
-      images: post.coverImage ? [{ url: post.coverImage }] : undefined,
+      images: post.coverImage ? [{ url: post.coverImage }] : [{ url: '/opengraph-image' }],
     },
     twitter: {
       card: 'summary_large_image',

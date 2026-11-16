@@ -21,22 +21,25 @@ const body = Manrope({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Dealo — Hire talent in Nigeria, Africa & globally',
+    default: 'Dealo — Jobs in Nigeria, AI Job Agent & checked hiring',
     template: '%s · Dealo',
   },
   description:
-    'Hire checked office staff and skilled trades in Nigeria and across Africa, or find a job and build a CV that gets interviews. Dealo shortlists talent for Lagos employers and global teams.',
+    'Find jobs in Lagos and across Nigeria, apply with one CV or Job Agent, and hire checked office staff and skilled trades. AI plus real recruiters.',
   metadataBase: new URL(APP_URL),
+  alternates: {
+    types: { 'application/rss+xml': [{ url: '/rss.xml', title: 'Dealo Journal' }] },
+  },
   keywords: [
+    'jobs in Nigeria',
+    'jobs in Lagos',
+    'remote jobs Nigeria',
+    'AI job agent Nigeria',
     'hire talent Nigeria',
     'recruitment agency Lagos',
     'staffing agency Nigeria',
-    'skilled trades staffing Africa',
-    'recruit office staff Lagos',
-    'managed staffing Nigeria',
-    'jobs in Nigeria',
-    'jobs in Lagos',
     'free CV builder Nigeria',
+    'managed staffing Nigeria',
     'ATS Nigeria',
   ],
   category: 'business',

@@ -72,6 +72,9 @@ export function JobBoardPromo() {
                 {t('jb.promo.cta')}
                 <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
               </Link>
+              <Link href="/jobs/in/lagos" className="btn-secondary">
+                Jobs in Lagos
+              </Link>
               <Link href="/dashboard/job-agent" className="btn-secondary">
                 {t('jb.promo.agent')}
               </Link>

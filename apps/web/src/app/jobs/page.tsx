@@ -1,21 +1,87 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Suspense } from 'react';
 
+import { safeJsonLd } from '@/components/ats/careers-shell';
 import { JobBoard } from '@/components/jobs/job-board';
-import { pageMetadata } from '@/lib/seo';
+import { BreadcrumbsJsonLd } from '@/components/seo/breadcrumbs-json-ld';
+import { fetchFeaturedJobs } from '@/lib/jobs-public';
+import { APP_URL, pageMetadata } from '@/lib/seo';
+import { JOB_CITY_HUBS, JOB_ROLE_HUBS } from '@/lib/seo-job-hubs';
 
 export const metadata: Metadata = pageMetadata({
   path: '/jobs',
-  title: 'Jobs in Nigeria and remote jobs — apply with your Dealo CV',
+  title: 'Jobs in Nigeria — Lagos, Abuja, remote & Easy Apply',
   description:
-    'Search fresh jobs from Dealo employers and trusted job sites. Filter by type, location and remote work, apply in one tap with the CV you built on Dealo, and track every application.',
-  keywords: ['jobs in Nigeria', 'remote jobs', 'Lagos jobs', 'job board', 'easy apply jobs', 'jobs for graduates', 'skilled trade jobs'],
+    'Search fresh jobs in Lagos, Abuja, Port Harcourt, and remote Nigeria. Easy Apply with your Dealo CV, track applications, or let Job Agent hunt overnight.',
+  keywords: [
+    'jobs in Nigeria',
+    'jobs in Lagos',
+    'jobs in Abuja',
+    'remote jobs Nigeria',
+    'Easy Apply Nigeria',
+    'job board Nigeria',
+    'vacancies Lagos',
+  ],
 });
 
-export default function JobsPage() {
+export default async function JobsPage() {
+  const featured = await fetchFeaturedJobs();
+  const teaser = [...(featured?.dealo ?? []), ...(featured?.latest ?? [])].slice(0, 12);
+  const itemList = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Jobs in Nigeria on Dealo',
+    itemListElement: teaser.map((job, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      url: `${APP_URL}/jobs/${job.id}`,
+      name: `${job.title} at ${job.company}`,
+    })),
+  };
+
   return (
-    <Suspense fallback={<div className="min-h-screen" />}>
-      <JobBoard />
-    </Suspense>
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(itemList) }} />
+      <BreadcrumbsJsonLd items={[{ name: 'Jobs', path: '/jobs' }]} />
+
+      {/* Crawlable hub links (visible, above the client board). */}
+      <nav className="container-page flex flex-wrap justify-center gap-2 pt-24 min-[340px]:pt-28" aria-label="Jobs by city and role">
+        {JOB_CITY_HUBS.map((c) => (
+          <Link
+            key={c.slug}
+            href={`/jobs/in/${c.slug}`}
+            className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted transition hover:border-brand hover:text-brand"
+          >
+            {c.name}
+          </Link>
+        ))}
+        {JOB_ROLE_HUBS.slice(0, 5).map((r) => (
+          <Link
+            key={r.slug}
+            href={`/jobs/role/${r.slug}`}
+            className="rounded-full border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:border-brand/40 hover:text-brand"
+          >
+            {r.name}
+          </Link>
+        ))}
+      </nav>
+
+      {teaser.length ? (
+        <ul className="sr-only">
+          {teaser.map((job) => (
+            <li key={job.id}>
+              <Link href={`/jobs/${job.id}`}>
+                {job.title} at {job.company}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <Suspense fallback={<div className="min-h-[50vh]" />}>
+        <JobBoard />
+      </Suspense>
+    </>
   );
 }

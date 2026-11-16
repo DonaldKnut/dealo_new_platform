@@ -1,21 +1,19 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 import { BlogExplorer } from '@/components/blog/blog-explorer';
 import { toBlogCard } from '@/lib/blog-format';
 import { fetchPublishedPosts } from '@/lib/blog-public';
 import { FURTHER_READING } from '@/lib/blog-reading';
+import { pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
-  title: 'Blog — Hiring in Nigeria & Africa, made simple',
+export const metadata: Metadata = pageMetadata({
+  path: '/blog',
+  title: 'Blog — Hiring & jobs in Nigeria and Africa',
   description:
-    'Simple guides on hiring office staff and skilled trades in Nigeria and across Africa: pay, the law, AI in hiring and managing workers on site.',
-  alternates: { canonical: '/blog' },
-  openGraph: {
-    title: 'Dealo Journal — Hiring in Nigeria & Africa, made simple',
-    description: 'Practical guides for employers and professionals, written in plain English.',
-    type: 'website',
-  },
-};
+    'Plain-English guides on jobs in Nigeria, hiring office staff and skilled trades, pay, AI in hiring, and managing workers on site.',
+  keywords: ['hiring Nigeria', 'jobs in Nigeria blog', 'recruitment Africa', 'managed staffing', 'AI hiring'],
+});
 
 export default async function BlogIndexPage() {
   const posts = (await fetchPublishedPosts()).map(toBlogCard);
@@ -35,12 +33,23 @@ export default async function BlogIndexPage() {
           <p className="mx-auto mt-4 max-w-xl text-sm text-muted min-[340px]:text-base">
             Short, clear guides on finding good people, paying them fairly, using AI safely and keeping work on track.
           </p>
+          <p className="mt-3 text-xs text-muted">
+            <a href="/rss.xml" className="font-semibold text-brand hover:underline">
+              RSS feed
+            </a>
+            {' · '}
+            <Link href="/guides/jobs-in-nigeria" className="font-semibold text-brand hover:underline">
+              Jobs in Nigeria guide
+            </Link>
+          </p>
         </div>
 
         {posts.length === 0 ? (
-          <p className="mt-12 text-center text-sm text-muted">New articles are on the way. Check back soon.</p>
+          <p className="mx-auto mt-16 max-w-md text-center text-sm text-muted">New guides are on the way. Check back soon.</p>
         ) : (
-          <BlogExplorer posts={posts} reading={FURTHER_READING} />
+          <div className="mt-12">
+            <BlogExplorer posts={posts} reading={FURTHER_READING} />
+          </div>
         )}
       </div>
     </div>
