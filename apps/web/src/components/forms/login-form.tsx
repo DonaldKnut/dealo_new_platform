@@ -149,7 +149,6 @@ export function LoginForm({
           autoComplete="email"
           placeholder="you@company.com"
           error={errors.email?.message}
-          mobileUnderline={isPage}
           {...register('email')}
         />
         <AuthField
@@ -160,7 +159,6 @@ export function LoginForm({
           autoComplete="current-password"
           placeholder="••••••••"
           error={errors.password?.message}
-          mobileUnderline={isPage}
           trailing={forgotControl}
           {...register('password')}
         />

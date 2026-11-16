@@ -144,7 +144,7 @@ export function AuthField({
         {...inputProps}
         type={inputType}
         className={cn(
-          'auth-input min-w-0 flex-1 border-0 bg-transparent px-3.5 py-3 text-[0.95rem] tracking-[0.01em] text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none placeholder:text-muted/55',
+          'auth-input min-w-0 flex-1 border-0 bg-transparent px-3.5 py-3 text-[0.95rem] tracking-[0.01em] text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none placeholder:text-muted/55',
           mobileUnderline && 'max-lg:px-0 max-lg:py-2.5 max-lg:text-[15px]',
           className,
         )}
@@ -184,7 +184,7 @@ export function AuthSelectField({
       <select
         {...selectProps}
         className={cn(
-          'auth-input min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent px-3.5 py-3 text-[0.95rem] tracking-[0.01em] text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none dark:[color-scheme:dark]',
+          'auth-input min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent px-3.5 py-3 text-[0.95rem] tracking-[0.01em] text-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-none dark:[color-scheme:dark]',
           className,
         )}
       >

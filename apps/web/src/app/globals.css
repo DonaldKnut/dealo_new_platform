@@ -333,9 +333,16 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent);
   }
 
-  /* Kill Chrome/Safari autofill gray/yellow wash on auth fields */
+  /* Kill Chrome/Safari autofill wash + global focus-visible ring on auth fields */
   .auth-input {
     background-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  .auth-input:focus,
+  .auth-input:focus-visible {
+    outline: none !important;
     box-shadow: none !important;
   }
 
