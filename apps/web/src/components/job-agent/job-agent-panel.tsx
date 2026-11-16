@@ -611,6 +611,13 @@ export function JobAgentPanel() {
             <Stat delay={0.15} icon={Clock} label={t('ja.stat.last')} value={relative(t, status.lastRunAt)} hint={fill(t('ja.stat.every'), { h: limits.runEveryHours, plan: planName })} />
           </div>
 
+          <VolumeProofCard
+            appliedWeek={stats.appliedWeek}
+            appliedTotal={stats.appliedTotal}
+            ready={stats.ready}
+            digest={overview.digest}
+          />
+
           {!premium ? <UpgradeCard onUpgrade={() => void upgrade()} busy={busy === 'upgrade'} /> : null}
           {overview.paymentsEnabled ? (
             <div data-ja-tour="credits">
@@ -630,6 +637,7 @@ export function JobAgentPanel() {
 
           <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
             <section data-ja-tour="inbox" className="min-w-0">
+              <p className="mb-3 text-xs leading-relaxed text-muted">{t('ja.channels.legend')}</p>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div role="tablist" className="scrollbar-none flex max-w-full overflow-x-auto rounded-full border border-border bg-surface p-1">
                   {(
@@ -966,6 +974,51 @@ function UpgradeCard({ onUpgrade, busy }: { onUpgrade: () => void; busy: boolean
   );
 }
 
+function VolumeProofCard({
+  appliedWeek,
+  appliedTotal,
+  ready,
+  digest,
+}: {
+  appliedWeek: number;
+  appliedTotal: number;
+  ready: number;
+  digest: JobAgentOverview['digest'];
+}) {
+  const { t } = useLocale();
+  const hasVolume = appliedWeek > 0 || appliedTotal > 0 || ready > 0 || Boolean(digest && (digest.sent > 0 || digest.ready > 0));
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border border-border bg-[linear-gradient(135deg,rgba(20,184,166,0.08),transparent_55%)] p-4 sm:p-5"
+    >
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">{t('ja.volume.title')}</p>
+      <p className="mt-1 text-sm text-muted">{t('ja.volume.body')}</p>
+      {hasVolume ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold tabular-nums text-foreground">
+            {fill(t('ja.volume.sentWeek'), { n: appliedWeek })}
+          </span>
+          <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold tabular-nums text-foreground">
+            {fill(t('ja.volume.sentTotal'), { n: appliedTotal })}
+          </span>
+          <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs font-semibold tabular-nums text-foreground">
+            {fill(t('ja.volume.ready'), { n: ready })}
+          </span>
+          {digest ? (
+            <span className="rounded-full border border-brand/30 bg-brand-soft/50 px-3 py-1 text-xs font-medium text-brand">
+              {fill(t('ja.volume.overnight'), { sent: digest.sent, ready: digest.ready })}
+            </span>
+          ) : null}
+        </div>
+      ) : (
+        <p className="mt-3 text-xs text-muted">{t('ja.volume.empty')}</p>
+      )}
+    </motion.div>
+  );
+}
+
 function CreditPacksCard({
   packs,
   freeLeft,
@@ -1004,6 +1057,7 @@ function CreditPacksCard({
               {fill(t('ja.credits.pricing'), { auto: pricing.creditCostAuto, assist: pricing.creditCostAssist })}
             </p>
           ) : null}
+          <p className="mt-2 text-[11px] leading-relaxed text-brand/90">{t('ja.credits.worth')}</p>
         </div>
         <Wallet className="h-5 w-5 shrink-0 text-brand" />
       </div>

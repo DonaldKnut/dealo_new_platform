@@ -124,7 +124,11 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
       },
       {
         q: 'Does it cost me anything?',
-        a: ['No. Dealo is free for professionals. Employers pay us, not you.', 'Never pay anyone who says they work for Dealo to get you a job.'],
+        a: [
+          'Creating an account and using core job tools is free for professionals. Employers pay Dealo for hiring services.',
+          'Optional Job Agent apply credits and Premium are pay-as-you-go if you want more auto-sends or Assist finishes — never required to join.',
+          'Never pay anyone who says they work for Dealo to get you a job.',
+        ],
       },
       {
         q: 'Who can see my profile and CV?',
@@ -280,6 +284,61 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
     ],
   },
   {
+    id: 'job-agent',
+    title: 'Job Agent & Assist',
+    blurb: 'How overnight hunting, auto-apply, and supervised Assist work.',
+    items: [
+      {
+        q: 'What is the Job Agent?',
+        a: [
+          'It hunts jobs that match your titles and locations — including overnight — and queues matches in your dashboard.',
+          'You choose Auto (send on channels Dealo can complete) or Review (approve first).',
+          'Career pages that need a browser stay in Assist — you always click Submit yourself.',
+        ],
+        link: { label: 'Open Job Agent', href: '/dashboard/job-agent' },
+      },
+      {
+        q: 'Does the agent apply for me, or only alert me?',
+        a: [
+          'Both, depending on the channel.',
+          'Easy Apply, email, and partner ATS sites (for example Greenhouse, Lever, Workable, Ashby, SmartRecruiters, BambooHR, Recruitee) can be sent when you approve — or automatically in Auto mode.',
+          'Workday, Teamtailor, and many career pages are Assist: we pack your vault, fill the form with the Copilot, and you submit. Morning digests tell you what was sent and what is ready.',
+        ],
+      },
+      {
+        q: 'Do I need the Chrome extension?',
+        a: [
+          'Only for Assist fill on employer career pages. Install Dealo Apply Copilot from the Chrome Web Store (or sideload the zip while the listing is pending).',
+          'Without the extension you can still use the prep pack: copy answers, open the listing, and mark applied when you finish.',
+          'Auto channels do not need the extension.',
+        ],
+        link: { label: 'Job Agent help', href: '/job-agent' },
+      },
+      {
+        q: 'Will Assist solve CAPTCHAs or log into Workday for me?',
+        a: [
+          'No. Assist pauses on CAPTCHA, sign-in / SSO, fee fields, and file pickers. That is intentional for your safety.',
+          'You solve the CAPTCHA or sign in yourself, then tap Fill again. Dealo never stores third-party passwords and never auto-submits.',
+        ],
+      },
+      {
+        q: 'Which CV does the agent send?',
+        a: [
+          'You can use a Dealo-built CV, an uploaded PDF/Word, or both.',
+          'Matching reads the built CV plus upload text and your apply vault.',
+          'Employers receive your upload when you have one; otherwise Dealo renders a PDF from the built CV.',
+        ],
+      },
+      {
+        q: 'How do credits work?',
+        a: [
+          'Free daily credits run first. Prepaid packs keep auto-send and Assist going when you need more the same day.',
+          'Assist may cost more credits on Free plans. High fill coverage means you are getting a guided finish worth the credit — you still click Submit.',
+        ],
+      },
+    ],
+  },
+  {
     id: 'pricing',
     title: 'Prices & payments',
     blurb: 'What it costs and how to pay.',
@@ -330,7 +389,16 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
       },
       {
         q: 'Someone asked me to pay to get a Dealo job. Is that real?',
-        a: ['No. Dealo never charges professionals. Please report it to us right away.'],
+        a: ['No. Dealo never charges professionals to get a job. Optional Job Agent credits are different — they buy apply volume, not a placement. Please report scams to us right away.'],
+      },
+      {
+        q: 'What does Assist do with my data on employer sites?',
+        a: [
+          'It loads short-lived fill hints from your Dealo Apply vault for that job only.',
+          'It does not store employer passwords, does not solve CAPTCHAs, and does not auto-submit.',
+          'Fill coverage and pause reasons may be saved on Dealo so you can see status and improve the next apply. See our Privacy Policy.',
+        ],
+        link: { label: 'Privacy Policy', href: '/privacy' },
       },
     ],
   },

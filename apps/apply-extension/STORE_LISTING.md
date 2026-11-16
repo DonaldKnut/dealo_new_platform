@@ -17,15 +17,19 @@ This file is the listing pack for Chrome Web Store review.
 Dealo Apply Copilot helps job seekers finish applications on employer career pages with supervision.
 
 - Pulls your Apply vault (identity, history, Q&A, cover notes) with a short-lived device token from the Dealo dashboard
-- Maps form fields with local rules (and optional AI for ambiguous fields)
+- Maps form fields with local rules (and optional AI for ambiguous fields), including common Workday / Teamtailor labels after you sign in
 - Supports multi-step forms, open Shadow DOM, and same-origin iframes
 - **Never auto-submits** — you review fills and click Submit yourself
-- Pauses on CAPTCHA, SSO/password walls, file pickers, and fee/payment fields
-- Does not store third-party passwords
+- Pauses on real CAPTCHA widgets, SSO/password walls, file pickers, and fee/payment fields — then **Fill again** after you unblock
+- Does not store third-party passwords or bypass security challenges
 
 Requires a Dealo account. Open Job Agent → Assist → Continue apply to hand off a listing.
 
+What Job Agent does without this extension: overnight matching, Easy Apply / email / partner ATS auto-sends you approve, and a prep pack if you prefer to apply manually.
+
 Privacy policy: https://dealonetwork.com/privacy  
+Terms: https://dealonetwork.com/terms  
+FAQ: https://dealonetwork.com/faq  
 Support: https://dealonetwork.com/contact  
 
 ## Permissions justification (reviewer notes)
@@ -40,13 +44,14 @@ We do **not** bypass CAPTCHA, scrape credentials, or submit forms without the us
 
 ## Screenshots to capture (1280×800 or 640×400)
 
+Save under `apps/apply-extension/store-assets/` (create the folder when capturing):
+
 1. Dashboard Job Agent → Assist queue with **Continue apply**
 2. Extension overlay: “Fill from vault” + disclosure
 3. Form fields filled with vault values; Submit highlighted (not auto-clicked)
-4. Pause state on CAPTCHA / fee field
+4. Pause state with **Fill again** (CAPTCHA or sign-in)
 5. Popup showing connected session / match title
-
-Save under `apps/apply-extension/store-assets/` when ready.
+6. (Optional) Volume / credits strip on Job Agent showing sent vs Assist ready
 
 ## Before submit
 
@@ -58,5 +63,6 @@ Save under `apps/apply-extension/store-assets/` when ready.
 
 ## Privacy
 
-The public site Privacy Policy (`/privacy`) covers account data, vault data, and Assist device tokens.
+The public site Privacy Policy (`/privacy`) covers account data, vault data, Assist device tokens, and fill/pause reports.
+Terms (`/terms` §7) cover Job Agent channels, no CAPTCHA/SSO bypass, and user responsibility for submissions.
 Extension-specific processing: form values are filled from vault data already stored on Dealo; the extension does not invent answers or upload passwords.

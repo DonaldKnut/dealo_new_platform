@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Dealo Apply Copilot",
-  "version": "0.1.0",
-  "description": "Supervised apply: fills career forms from your Dealo vault. Never auto-submits.",
+  "version": "0.1.1",
+  "description": "Supervised apply: fills career forms from your Dealo vault. Never auto-submits. Fill again after CAPTCHA or sign-in.",
   "action": {
     "default_title": "Dealo Apply Copilot",
     "default_popup": "popup/popup.html",

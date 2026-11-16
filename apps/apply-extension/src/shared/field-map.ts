@@ -2,21 +2,25 @@ import type { FieldDescriptor } from './types';
 
 const RULES: { re: RegExp; key: string }[] = [
   { re: /email|e-mail/i, key: 'email' },
-  { re: /phone|mobile|tel/i, key: 'phone' },
-  { re: /first.?name|given.?name/i, key: 'first_name' },
-  { re: /last.?name|family.?name|surname/i, key: 'last_name' },
-  { re: /full.?name|(^|[\s_-])name([\s_-]|$)/i, key: 'full_name' },
+  { re: /phone|mobile|tel|cell.?phone|phone.?number/i, key: 'phone' },
+  { re: /first.?name|given.?name|legal.?first/i, key: 'first_name' },
+  { re: /last.?name|family.?name|surname|legal.?last/i, key: 'last_name' },
+  // Workday / Teamtailor often use legalName / preferredName / candidateName.
+  { re: /legal.?name|preferred.?name|candidate.?name|full.?name|(^|[\s_-])name([\s_-]|$)/i, key: 'full_name' },
   { re: /linkedin/i, key: 'linkedin' },
   { re: /github/i, key: 'github' },
-  { re: /portfolio|personal.?site|website|homepage/i, key: 'website' },
-  { re: /cover|letter|message|motivation|why.?us|additional.?info/i, key: 'cover_letter' },
-  { re: /city|location|address|town/i, key: 'location' },
-  { re: /salary|compensation|expect/i, key: 'salary_min' },
-  { re: /sponsor|visa|work.?auth|authorized/i, key: 'needs_sponsorship' },
-  { re: /school|university|college/i, key: 'school' },
-  { re: /degree|qualification/i, key: 'degree' },
-  { re: /company|employer/i, key: 'current_company' },
-  { re: /title|role|position|job.?title/i, key: 'current_title' },
+  { re: /portfolio|personal.?site|website|homepage|personal.?url/i, key: 'website' },
+  { re: /cover|letter|message|motivation|why.?us|additional.?info|supporting.?statement/i, key: 'cover_letter' },
+  { re: /city|location|address|town|country.?of.?residence|where.?do.?you.?live/i, key: 'location' },
+  { re: /salary|compensation|expect|desired.?pay|pay.?expectation/i, key: 'salary_min' },
+  { re: /sponsor|visa|work.?auth|authorized.?to.?work|right.?to.?work|legally.?authorized/i, key: 'needs_sponsorship' },
+  { re: /school|university|college|institution/i, key: 'school' },
+  { re: /degree|qualification|education.?level/i, key: 'degree' },
+  { re: /company|employer|current.?employer|present.?employer|organization.?name/i, key: 'current_company' },
+  { re: /(?:job.?title|current.?title|current.?role|position.?title|role.?title)|^title$|role|position/i, key: 'current_title' },
+  { re: /notice.?period|earliest.?start|available.?from|start.?date|availability.?date/i, key: 'availability' },
+  { re: /years?.?of.?experience|total.?experience|experience.?years/i, key: 'years_experience' },
+  { re: /how.?did.?you.?hear|referral.?source|source.?of.?application/i, key: 'source' },
 ];
 
 const DANGER =

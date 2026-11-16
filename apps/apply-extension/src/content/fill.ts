@@ -3,7 +3,6 @@ import type { AssistReport, AssistSession, FieldDescriptor } from '../shared/typ
 import { highlightSubmit, hideOverlay, showOverlay } from './overlay';
 
 const FEE_RE = /application fee|registration fee|processing fee|pay (a|the|an) (fee|deposit)|credit card|card number|cvv|gift card/i;
-const CAPTCHA_RE = /captcha|recaptcha|hcaptcha|cf-turnstile|challenge-platform/i;
 
 let ranForMatch: string | null = null;
 
@@ -82,39 +81,65 @@ async function fillPage(matchId: string, session: AssistSession) {
   const pauses: string[] = [];
   if (detectCaptcha()) {
     pauses.push('captcha');
-    showOverlay({
-      title: 'CAPTCHA detected',
-      body: 'Solve the CAPTCHA yourself. Assist will not bypass it. Then click Fill again if needed.',
-      tone: 'warn',
-      actions: [{ id: 'ok', label: 'Got it' }],
-    }, () => hideOverlay());
     await sendReport(matchId, { ...baseReport('paused_captcha', session), pauses });
+    await pauseWithRetry(
+      matchId,
+      session,
+      {
+        title: 'CAPTCHA detected',
+        body: 'Solve the CAPTCHA yourself — Assist will not bypass it. When the challenge is gone, tap Fill again.',
+        tone: 'warn',
+      },
+      pauses,
+    );
     return;
   }
 
-  if (detectSso()) {
+  if (detectSsoWall()) {
     pauses.push('sso');
-    showOverlay({
-      title: 'Sign-in required',
-      body: 'Log in with your own browser account. Dealo never stores third-party passwords.',
-      tone: 'warn',
-      actions: [{ id: 'ok', label: 'Got it' }],
-    }, () => hideOverlay());
     await sendReport(matchId, { ...baseReport('paused_sso', session), pauses });
+    await pauseWithRetry(
+      matchId,
+      session,
+      {
+        title: 'Sign-in required',
+        body: 'Log in with your own browser account. Dealo never stores third-party passwords. After you are in, tap Fill again — we will fill the application form, not the login.',
+        tone: 'warn',
+      },
+      pauses,
+    );
     return;
   }
 
   if (detectFeeFields()) {
     pauses.push('fee');
-    showOverlay({
-      title: 'Fee / payment field detected',
-      body: 'Legitimate employers do not charge application fees. Stop and skip this listing if money is requested.',
-      tone: 'warn',
-      actions: [{ id: 'ok', label: 'Understood' }],
-    }, () => hideOverlay());
     await sendReport(matchId, { ...baseReport('paused_fee', session), pauses });
+    showOverlay(
+      {
+        title: 'Fee / payment field detected',
+        body: 'Legitimate employers do not charge application fees. Skip this listing if money is requested. Assist will not fill payment fields.',
+        tone: 'warn',
+        actions: [
+          { id: 'skip', label: 'Skip listing' },
+          { id: 'retry', label: 'Fill safe fields anyway' },
+        ],
+      },
+      async (id) => {
+        if (id === 'retry') {
+          // Continue into fill loop; dangerous fee fields stay skipped via isDangerousField.
+          return fillPageContinue(matchId, session, pauses);
+        }
+        hideOverlay();
+      },
+    );
     return;
   }
+
+  await fillPageContinue(matchId, session, pauses);
+}
+
+/** Shared fill body after gate checks (or after user chooses to continue past a soft pause). */
+async function fillPageContinue(matchId: string, session: AssistSession, pauses: string[]) {
 
   const fields = collectFields();
   const hints = session.fillHints;
@@ -204,12 +229,6 @@ async function fillPage(matchId: string, session: AssistSession) {
       fieldsSkipped: skipped,
       pauses,
     });
-    showOverlay({
-      title: 'Upload your CV',
-      body: `${session.cv.hint}${session.cv.fileName ? ` Suggested file: ${session.cv.fileName}.` : ''} Assist will not pick files for you. After you attach the file, click Fill again or Submit yourself.`,
-      tone: 'info',
-      actions: [{ id: 'ok', label: 'Got it' }],
-    }, () => hideOverlay());
   }
 
   const submits = findSubmitControls();
@@ -226,25 +245,41 @@ async function fillPage(matchId: string, session: AssistSession) {
   const coverage = statsBase.fieldsTotal ? Math.round((filled / statsBase.fieldsTotal) * 100) : 0;
   const nextStep = findNextStepControl();
   const actions: { id: string; label: string }[] = [
+    { id: 'retry', label: 'Fill again' },
     { id: 'mark', label: 'I submitted' },
     { id: 'dismiss', label: 'Dismiss' },
   ];
   if (nextStep) actions.unshift({ id: 'next', label: 'Fill next step' });
 
+  const fileHint = fileInputs.length
+    ? ` Attach your CV yourself${session.cv.fileName ? ` (${session.cv.fileName})` : ''} — Assist never picks files.`
+    : '';
+  const coverageHint =
+    coverage >= 70
+      ? ' High coverage — worth finishing now; Assist credits are for this guided finish.'
+      : coverage >= 40
+        ? ' Partial fill — review blanks, then Submit yourself.'
+        : ' Low coverage — use prep answers in the vault and Fill again after you advance the form.';
+
   showOverlay({
-    title: 'Fields filled — you submit',
-    body: `Filled ${filled}/${statsBase.fieldsTotal} fields (~${coverage}% coverage).${
-      nextStep ? ' This looks like a multi-step form — use Fill next step, then review and Submit yourself.' : ' Review answers, attach your CV if asked, then click the highlighted Submit yourself.'
+    title: fileInputs.length ? 'Almost there — attach CV, then submit' : 'Fields filled — you submit',
+    body: `Filled ${filled}/${statsBase.fieldsTotal} fields (~${coverage}% coverage).${fileHint}${coverageHint}${
+      nextStep ? ' Multi-step form detected — use Fill next step, then review and Submit yourself.' : ''
     } Assist never auto-submits.`,
-    tone: 'ok',
+    tone: coverage >= 70 ? 'ok' : 'info',
     actions,
   }, async (id) => {
     const editedAnswers = collectEditedAnswers(filledSnapshot);
+    if (id === 'retry') {
+      await sendReport(matchId, { ...baseReport('filled', session), ...statsBase, editedAnswers, notes: 'User requested Fill again' });
+      ranForMatch = null;
+      await fillPage(matchId, session);
+      return;
+    }
     if (id === 'next' && nextStep) {
       await sendReport(matchId, { ...baseReport('filled', session), ...statsBase, editedAnswers, notes: 'Advancing multi-step form' });
       nextStep.click();
       await waitForDomSettle(900);
-      // Allow re-run on the same match after a Next click.
       ranForMatch = null;
       await fillPage(matchId, session);
       return;
@@ -266,6 +301,32 @@ async function fillPage(matchId: string, session: AssistSession) {
       });
     }
   });
+}
+
+async function pauseWithRetry(
+  matchId: string,
+  session: AssistSession,
+  state: { title: string; body: string; tone: 'warn' | 'info' | 'ok' },
+  _pauses: string[],
+) {
+  showOverlay(
+    {
+      ...state,
+      actions: [
+        { id: 'retry', label: 'Fill again' },
+        { id: 'dismiss', label: 'Got it' },
+      ],
+    },
+    async (id) => {
+      if (id === 'retry') {
+        ranForMatch = null;
+        await waitForDomSettle(400);
+        await fillPage(matchId, session);
+        return;
+      }
+      hideOverlay();
+    },
+  );
 }
 
 const FIELD_SEL =
@@ -326,6 +387,21 @@ function labelFor(el: Element) {
       .join(' ');
     if (text) return text.slice(0, 240);
   }
+  // Workday / Teamtailor often expose machine ids instead of classic labels.
+  const automation =
+    el.getAttribute('data-automation-id') ||
+    el.getAttribute('data-testid') ||
+    el.getAttribute('data-qa') ||
+    el.getAttribute('name') ||
+    id;
+  if (automation) {
+    return automation
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/[-_./]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 240);
+  }
   return '';
 }
 
@@ -367,24 +443,45 @@ function waitForDomSettle(ms = 700) {
 }
 
 function detectCaptcha() {
-  if (document.querySelector('iframe[src*="recaptcha"], iframe[src*="hcaptcha"], iframe[src*="turnstile"], .g-recaptcha, .h-captcha')) {
+  // Prefer real widgets — body text alone caused false pauses on career pages that mention “CAPTCHA” in footers.
+  if (
+    document.querySelector(
+      'iframe[src*="recaptcha"], iframe[src*="hcaptcha"], iframe[src*="turnstile"], .g-recaptcha, .h-captcha, [data-sitekey], #cf-turnstile, [class*="cf-turnstile"]',
+    )
+  ) {
     return true;
   }
-  return CAPTCHA_RE.test(document.body?.innerText?.slice(0, 8000) ?? '');
+  const widget = document.querySelector('[class*="captcha" i], [id*="captcha" i]');
+  if (widget && (widget as HTMLElement).offsetParent !== null) return true;
+  return false;
 }
 
-function detectSso() {
-  // Only pause when a visible password field sits in a clear login / SSO wall — not every form that mentions “login”.
+/**
+ * Hard pause only for login walls. If the page already looks like an application form
+ * (several safe fields), skip the password via isDangerousField and fill the rest.
+ */
+function detectSsoWall() {
   const pwd = [...document.querySelectorAll<HTMLInputElement>('input[type="password"]')].find(
     (el) => el.offsetParent !== null || el.getClientRects().length > 0,
   );
   if (!pwd) return false;
+
+  const safeFields = collectFields().filter((f) => !isDangerousField(f) && f.type !== 'password');
+  if (safeFields.length >= 4) return false;
+
   const form = pwd.closest('form');
   const scope = (form?.innerText ?? document.body?.innerText ?? '').slice(0, 2500);
   const hasEmail =
     Boolean(form?.querySelector('input[type="email"], input[name*="email" i], input[autocomplete="username"]')) ||
     /email|username|work account/i.test(scope);
-  return hasEmail && /sign in|log in|login|sso|continue with google|continue with linkedin|single sign-?on/i.test(scope);
+  const loginCopy = /sign in|log in|login|sso|continue with google|continue with microsoft|continue with linkedin|single sign-?on|enter your password/i.test(
+    scope,
+  );
+  const workdayLogin =
+    /myworkdayjobs|workday/i.test(location.hostname) &&
+    /sign in|create account|forgot password|email address/i.test(scope) &&
+    safeFields.length <= 3;
+  return (hasEmail && loginCopy) || workdayLogin;
 }
 
 function detectFeeFields() {

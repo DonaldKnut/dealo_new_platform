@@ -1168,6 +1168,13 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
       put('degree', edu.qualification);
       put('field_of_study', edu.field);
     }
+    // Surface common Workday / Teamtailor prompts from vault Q&A / drafts when present.
+    put(
+      'availability',
+      hints.qa_availability || hints.draft_availability || hints.qa_notice_period || hints.draft_notice_period,
+    );
+    put('years_experience', hints.qa_years_experience || hints.draft_years_experience);
+    put('source', hints.qa_source || hints.draft_source || hints.qa_how_did_you_hear || hints.draft_how_did_you_hear);
     return hints;
   }
 
@@ -1177,21 +1184,24 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
   ): AssistFieldMapping[] {
     const rules: { re: RegExp; key: string }[] = [
       { re: /email|e-mail/i, key: 'email' },
-      { re: /phone|mobile|tel/i, key: 'phone' },
-      { re: /first.?name|given.?name/i, key: 'first_name' },
-      { re: /last.?name|family.?name|surname/i, key: 'last_name' },
-      { re: /full.?name|^name$/i, key: 'full_name' },
+      { re: /phone|mobile|tel|phone.?number/i, key: 'phone' },
+      { re: /first.?name|given.?name|legal.?first/i, key: 'first_name' },
+      { re: /last.?name|family.?name|surname|legal.?last/i, key: 'last_name' },
+      { re: /legal.?name|preferred.?name|candidate.?name|full.?name|^name$/i, key: 'full_name' },
       { re: /linkedin/i, key: 'linkedin' },
       { re: /github/i, key: 'github' },
       { re: /portfolio|personal.?site|website|url/i, key: 'website' },
-      { re: /cover|letter|message|motivation/i, key: 'cover_letter' },
-      { re: /city|location|address/i, key: 'location' },
-      { re: /salary|compensation|expect/i, key: 'salary_min' },
-      { re: /sponsor|visa|work.?auth/i, key: 'needs_sponsorship' },
-      { re: /school|university|college/i, key: 'school' },
-      { re: /degree|qualification/i, key: 'degree' },
-      { re: /company|employer/i, key: 'current_company' },
-      { re: /title|role|position/i, key: 'current_title' },
+      { re: /cover|letter|message|motivation|supporting.?statement/i, key: 'cover_letter' },
+      { re: /city|location|address|country.?of.?residence/i, key: 'location' },
+      { re: /salary|compensation|expect|desired.?pay/i, key: 'salary_min' },
+      { re: /sponsor|visa|work.?auth|authorized.?to.?work|right.?to.?work/i, key: 'needs_sponsorship' },
+      { re: /school|university|college|institution/i, key: 'school' },
+      { re: /degree|qualification|education.?level/i, key: 'degree' },
+      { re: /company|employer|current.?employer|present.?employer/i, key: 'current_company' },
+      { re: /job.?title|current.?title|current.?role|title|role|position/i, key: 'current_title' },
+      { re: /notice.?period|earliest.?start|available.?from|start.?date/i, key: 'availability' },
+      { re: /years?.?of.?experience|total.?experience/i, key: 'years_experience' },
+      { re: /how.?did.?you.?hear|referral.?source/i, key: 'source' },
     ];
     const qaHints = Object.entries(hints).filter(([key]) => key.startsWith('qa_') || key.startsWith('draft_'));
     const out: AssistFieldMapping[] = [];

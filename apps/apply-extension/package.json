@@ -1,6 +1,6 @@
 {
   "name": "@dealo/apply-extension",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Dealo Supervised Apply Copilot — MV3 browser extension",
   "scripts": {

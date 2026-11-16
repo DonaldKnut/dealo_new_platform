@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/privacy' },
 };
 
-const updated = '30 October 2026';
+const updated = '16 November 2026';
 
 export default function PrivacyPage() {
   return (
@@ -53,6 +53,13 @@ export default function PrivacyPage() {
             skills, documents you upload, availability, and application activity.
           </li>
           <li>
+            <strong className="text-foreground">Job Agent &amp; Assist data:</strong> target titles
+            and locations, match scores, apply channels, CVs you link or upload for the agent, Apply
+            vault contents (identity, work/education history, Q&amp;A), Assist device tokens, fill
+            coverage and pause reports from the Apply Copilot extension, credit purchases, and
+            overnight digest summaries.
+          </li>
+          <li>
             <strong className="text-foreground">Usage and device data:</strong> IP address,
             browser/device type, pages viewed, referring URLs, approximate location, cookies, and
             similar technologies.
@@ -70,10 +77,26 @@ export default function PrivacyPage() {
           <li>create and manage accounts, authenticate users, and secure the Services;</li>
           <li>process hiring requests, sourcing, screening, shortlisting, interviews, and placement workflows;</li>
           <li>operate managed staffing arrangements and related commercial follow-through;</li>
+          <li>
+            run Job Agent matching, auto-send on supported channels you enable, Assist/prep-pack
+            workflows, credit accounting, and morning digests of what was sent or is ready;
+          </li>
           <li>communicate service updates, security notices, and (where permitted) product information;</li>
           <li>improve, monitor, and protect the platform against fraud, abuse, and security incidents;</li>
           <li>comply with legal obligations and enforce our Terms of Service.</li>
         </ul>
+      </Section>
+
+      <Section title="3A. Apply Copilot extension">
+        <p>
+          When you hand off a Job Agent match to Apply Copilot, Dealo issues a short-lived device
+          token so the extension can load your vault fill hints for that match URL. The extension
+          fills fields in your browser under your control; it does not invent answers, does not
+          store employer passwords, and does not auto-submit. Pause events (CAPTCHA, SSO, fees,
+          file pickers) and fill coverage may be reported back to Dealo so we can show status in
+          your dashboard and improve mapping quality. Employer sites remain governed by their own
+          privacy policies when you apply.
+        </p>
       </Section>
 
       <Section title="4. Legal bases (where applicable)">

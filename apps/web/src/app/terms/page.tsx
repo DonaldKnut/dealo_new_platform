@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/terms' },
 };
 
-const updated = '30 October 2026';
+const updated = '16 November 2026';
 
 export default function TermsPage() {
   return (
@@ -104,25 +104,69 @@ export default function TermsPage() {
 
       <Section title="6. Fees and taxes">
         <p>
-          Paid Services are billed according to the applicable order form, invoice, or subscription
-          terms. Fees are generally non-refundable except where required by law or expressly stated
-          in writing. You are responsible for applicable taxes. Late amounts may incur suspension of
-          access and recovery costs where permitted.
+          Paid Services are billed according to the applicable order form, invoice, subscription, or
+          in-product credit pack terms. Fees are generally non-refundable except where required by
+          law or expressly stated in writing. You are responsible for applicable taxes. Late amounts
+          may incur suspension of access and recovery costs where permitted. Optional Job Agent
+          apply credits and Premium plans are pay-as-you-go or subscription features for talent
+          users; unused prepaid credits may expire as shown in the product at purchase time.
         </p>
       </Section>
 
-      <Section title="7. Acceptable use">
+      <Section title="7. Job Agent and Apply Copilot (Assist)">
+        <p>
+          Dealo may offer a Job Agent that searches and matches roles, and a supervised browser
+          extension (“Apply Copilot” / Assist) that helps fill employer application forms from your
+          Apply vault. By enabling these features you agree that:
+        </p>
+        <ul className="mt-3 list-disc space-y-2 pl-5">
+          <li>
+            <strong className="text-foreground">Channels differ.</strong> On Easy Apply, email, and
+            partner ATS integrations Dealo may transmit applications you approve (or that Auto mode
+            is configured to send). On many career pages (including Workday and Teamtailor), Assist
+            only prepares or fills fields — you must review and click Submit yourself.
+          </li>
+          <li>
+            <strong className="text-foreground">No bypass of security or payments.</strong> Assist
+            does not solve CAPTCHAs, does not store or enter third-party passwords / SSO credentials,
+            does not auto-submit forms, and does not complete fee or payment fields. Pauses on those
+            gates are intentional.
+          </li>
+          <li>
+            <strong className="text-foreground">Your responsibility.</strong> You remain responsible
+            for the accuracy of CVs, vault answers, and every application sent or submitted in your
+            name; for complying with employer site terms; and for not using the Services to spam,
+            misrepresent, or harass employers.
+          </li>
+          <li>
+            <strong className="text-foreground">No job guarantee.</strong> Matching, overnight
+            digests, fill coverage, and credit usage do not guarantee interviews or employment.
+          </li>
+          <li>
+            <strong className="text-foreground">Extension.</strong> Assist fill requires the Dealo
+            Apply Copilot extension (or an equivalent prep-pack workflow). Install only from Dealo’s
+            published store listing or official download when available.
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="8. Acceptable use">
         <p>You must not:</p>
         <ul className="mt-3 list-disc space-y-2 pl-5">
           <li>scrape, harvest, or reverse engineer the Services except as allowed by law;</li>
           <li>upload malware, unlawful content, or infringing materials;</li>
           <li>impersonate others or attempt unauthorized access;</li>
           <li>interfere with platform integrity, rate limits, or other users;</li>
-          <li>use the Services for discriminatory, fraudulent, or illegal hiring practices.</li>
+          <li>use the Services for discriminatory, fraudulent, or illegal hiring practices;</li>
+          <li>
+            attempt to bypass CAPTCHA, authentication, or payment controls on third-party sites via
+            Dealo tooling, or use Assist to submit applications without your review where the product
+            requires you to submit.
+          </li>
         </ul>
       </Section>
 
-      <Section title="8. Intellectual property">
+      <Section title="9. Intellectual property">
         <p>
           Dealo and its licensors own the Services, branding, software, and content (excluding your
           user content). You receive a limited, non-exclusive, non-transferable license to use the
@@ -132,7 +176,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="9. Confidentiality">
+      <Section title="10. Confidentiality">
         <p>
           Each party should treat non-public business and candidate information received through the
           Services as confidential and use it only for legitimate hiring/staffing purposes, except
@@ -141,7 +185,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="10. Disclaimers">
+      <Section title="11. Disclaimers">
         <p>
           THE SERVICES ARE PROVIDED “AS IS” AND “AS AVAILABLE.” TO THE MAXIMUM EXTENT PERMITTED BY
           LAW, DEALO DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING MERCHANTABILITY,
@@ -151,7 +195,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="11. Limitation of liability">
+      <Section title="12. Limitation of liability">
         <p>
           TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEALO AND ITS AFFILIATES, OFFICERS, EMPLOYEES, AND
           AGENTS WILL NOT BE LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR
@@ -164,7 +208,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="12. Indemnity">
+      <Section title="13. Indemnity">
         <p>
           You agree to defend, indemnify, and hold harmless Dealo from claims, damages, losses, and
           expenses (including reasonable legal fees) arising from your content, hiring decisions,
@@ -172,7 +216,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="13. Suspension and termination">
+      <Section title="14. Suspension and termination">
         <p>
           You may stop using the Services at any time. We may suspend or terminate access for breach,
           risk, non-payment, legal requirement, or discontinuation of the Services. Provisions that
@@ -181,7 +225,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="14. Governing law and disputes">
+      <Section title="15. Governing law and disputes">
         <p>
           These Terms are governed by the laws of the Federal Republic of Nigeria, without regard to
           conflict-of-law rules. Courts located in Nigeria shall have exclusive jurisdiction, unless
@@ -190,7 +234,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="15. Changes">
+      <Section title="16. Changes">
         <p>
           We may modify these Terms by posting an updated version with a new “Last updated” date.
           Continued use after changes constitutes acceptance. If you disagree, stop using the
@@ -198,7 +242,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="16. Contact">
+      <Section title="17. Contact">
         <p>
           Questions about these Terms: use the{' '}
           <Link href="/contact" className="font-semibold text-brand">
