@@ -1335,6 +1335,26 @@ function AssistContinueModal({
             {extInstalled ? t('ja.continue.extOn') : t('ja.continue.extOff')}
             {!extInstalled ? <span className="mt-1 block text-xs opacity-90">{t('ja.continue.extOffHint')}</span> : null}
           </div>
+          {!extInstalled ? (
+            <div className="rounded-xl border border-border bg-surface-elevated p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t('ja.continue.installTitle')}</p>
+              <ol className="mt-2 list-decimal space-y-1.5 pl-4 text-[13px] text-foreground/90">
+                <li>{t('ja.continue.install1')}</li>
+                <li>{t('ja.continue.install2')}</li>
+                <li>{t('ja.continue.install3')}</li>
+                <li>{t('ja.continue.install4')}</li>
+              </ol>
+              <button
+                type="button"
+                className="mt-3 text-xs font-semibold text-brand"
+                onClick={() => {
+                  void detectApplyExtension(1200).then((ext) => setExtInstalled(ext.installed));
+                }}
+              >
+                {t('ja.continue.installReload')}
+              </button>
+            </div>
+          ) : null}
           {!session.sitePolicy.allowed ? (
             <p className="rounded-xl bg-red-500/10 px-3 py-2 text-[13px] text-red-700 dark:text-red-300">{t('ja.continue.denied')}</p>
           ) : (

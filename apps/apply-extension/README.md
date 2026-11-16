@@ -13,11 +13,15 @@ Supervised browser assist for `site_assisted` Job Agent matches.
 ```bash
 pnpm --filter @dealo/apply-extension install
 pnpm --filter @dealo/apply-extension build
+# optional zip for sharing (still load the unzipped dist/ folder in Chrome)
+pnpm --filter @dealo/apply-extension package
 ```
 
 1. Open `chrome://extensions`
 2. Enable **Developer mode**
 3. **Load unpacked** → select `apps/apply-extension/dist`
+
+Keep that folder path stable — Chrome reloads the same unpacked path after rebuilds.
 
 ## Auth flow
 

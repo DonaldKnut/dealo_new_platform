@@ -1075,8 +1075,9 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
       }
     }
     const adapterHost = (host: string) =>
-      /(^|\.)(greenhouse|lever|workable)\.(io|co|com)$/i.test(host) ||
+      /(^|\.)(greenhouse|lever|workable|ashbyhq)\.(io|co|com)$/i.test(host) ||
       Boolean(findAtsAdapter(`https://${host}/j/ABCDEF12`)) ||
+      Boolean(findAtsAdapter(`https://${host}/acme/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee`)) ||
       Boolean(findAtsAdapter(`https://${host}/jobs/1234567`));
     return [...counts.entries()]
       .map(([host, count]) => ({

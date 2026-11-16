@@ -8,6 +8,8 @@ dist
 out
 build
 coverage
+*.zip
+apps/apply-extension/dealo-apply-copilot.zip
 
 # env
 .env

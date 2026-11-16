@@ -110,6 +110,14 @@ describe('helpers', () => {
         emailApplyAllowed: false,
       }).channel,
     ).toBe('ats_api');
+    expect(
+      classifyChannel({
+        kind: 'external',
+        url: 'https://jobs.ashbyhq.com/acme/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        applyEmail: null,
+        emailApplyAllowed: false,
+      }).channel,
+    ).toBe('ats_api');
     expect(classifyChannel({ kind: 'external', url: 'https://careers.example.com/job/1', applyEmail: null, emailApplyAllowed: true }).channel).toBe(
       'site_assisted',
     );

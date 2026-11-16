@@ -5,6 +5,7 @@
   "description": "Dealo Supervised Apply Copilot — MV3 browser extension",
   "scripts": {
     "build": "node ./scripts/make-icons.mjs && node ./scripts/build.mjs",
+    "package": "node ./scripts/package.mjs",
     "dev": "node ./scripts/make-icons.mjs && node ./scripts/build.mjs --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

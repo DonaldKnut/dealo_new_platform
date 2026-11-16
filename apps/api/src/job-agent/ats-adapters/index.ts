@@ -1,3 +1,4 @@
+import { ashbyAdapter } from './ashby.adapter';
 import { greenhouseAdapter } from './greenhouse.adapter';
 import { leverAdapter } from './lever.adapter';
 import type { AtsApplyAdapter } from './types';
@@ -11,7 +12,7 @@ export type { AtsApplicant, AtsApplyAdapter, AtsApplyResult, AtsCvFile, AtsJobMe
  * Partner/org publish trust stays in JobsService.assertCanOpen.
  * Expand next hosts using JobAgentService.externalJobHostFrequency().
  */
-export const ATS_APPLY_ADAPTERS: AtsApplyAdapter[] = [greenhouseAdapter, leverAdapter, workableAdapter];
+export const ATS_APPLY_ADAPTERS: AtsApplyAdapter[] = [greenhouseAdapter, leverAdapter, workableAdapter, ashbyAdapter];
 
 export function findAtsAdapter(url: string): AtsApplyAdapter | null {
   if (!url) return null;
