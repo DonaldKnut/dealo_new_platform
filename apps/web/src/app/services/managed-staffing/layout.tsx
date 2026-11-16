@@ -5,10 +5,10 @@ import { pageMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = pageMetadata({
   path: '/services/managed-staffing',
-  title: 'Managed staffing in Nigeria — crews and office staff, fully managed',
+  title: 'Managed staffing Nigeria — Dealo hires and runs your crew',
   description:
-    'Dealo supplies and manages office staff and skilled trade crews for you: contracts, attendance, standby cover and replacements, for one monthly fee.',
-  keywords: ['managed staffing Nigeria', 'construction labour Lagos', 'outsourced staff Nigeria', 'standby workers'],
+    'Tell Dealo the headcount. We hire, pay, and manage office staff or skilled trades. You get the work done — one clear monthly fee.',
+  keywords: ['managed staffing Nigeria', 'outsourced staff Lagos', 'construction labour Nigeria', 'Dealo managed workforce'],
 });
 
 export default function ManagedStaffingLayout({ children }: { children: React.ReactNode }) {

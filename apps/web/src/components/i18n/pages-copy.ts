@@ -179,11 +179,21 @@ export const pagesEn = {
   'direct.stat3l': 'New hires join your company',
 
   'managed.eyebrow': 'Managed staffing',
-  'managed.title': 'Workers Dealo manages for you',
+  'managed.title': 'We hire and manage your workers',
   'managed.body':
-    'Agree how many people you need and the terms. Dealo does the hiring, contracts, and paperwork. Your team just does the work.',
-  'managed.cta': 'Ask for managed staffing',
+    'Tell us the headcount. Dealo recruits, puts people on our payroll, and keeps them showing up — office or site. You focus on the work.',
+  'managed.cta': 'Request managed staffing',
   'managed.register': 'Create company account',
+  'managed.section.eyebrow': 'What you get',
+  'managed.section.title': 'Hiring, pay, and cover — one partner',
+  'managed.section.body':
+    'Not a job board. After day one we still own contracts, attendance, and standby when someone is away.',
+  'managed.1.title': 'We hire for you',
+  'managed.1.body': 'One brief. We source, check, and place office staff or skilled trades that fit.',
+  'managed.2.title': 'One monthly fee',
+  'managed.2.body': 'You pay Dealo. Worker contracts and wages stay on our side.',
+  'managed.3.title': 'Cover when someone is out',
+  'managed.3.body': 'Missed shifts get standby cover. Poor fits are replaced within 90 days.',
 
   'cover.eyebrow': 'Temp & contract cover',
   'cover.title': 'Day-rate cover when you need hands fast',
@@ -405,10 +415,21 @@ export const pagesFr: PagesDict = {
   'direct.stat3l': 'Les embauches rejoignent votre paie',
 
   'managed.eyebrow': 'Staffing géré',
-  'managed.title': 'Un staffing que Dealo gère pour vous',
+  'managed.title': 'Vous avez besoin des mains. Nous gérons les gens.',
   'managed.body':
-    'Convenez effectifs et termes. Dealo gère recrutement, contrats et admin.',
+    'Dites combien de travailleurs. Dealo les trouve, les emploie, et fait tenir l’équipe — chantier ou bureau.',
   'managed.cta': 'Demander un staffing géré',
+  'managed.register': 'Créer un compte employeur',
+  'managed.section.eyebrow': 'Ce que vous obtenez',
+  'managed.section.title': 'Recrutement, paie et couverture — un seul partenaire',
+  'managed.section.body':
+    'Pas un job board : après le jour 1, contrats, présence, et plan de remplacement si quelqu’un manque.',
+  'managed.1.title': 'Nous recrutons pour vous',
+  'managed.1.body': 'Un brief. Nous sourçons, vérifions et plaçons bureau ou métiers adaptés au poste.',
+  'managed.2.title': 'Une facture mensuelle',
+  'managed.2.body': 'Vous payez Dealo. Contrats et salaires des travailleurs sont de notre côté.',
+  'managed.3.title': 'Couverture si ça casse',
+  'managed.3.body': 'Absences → standby. Mauvais fit → remplacement sous 90 jours.',
 
   'cover.eyebrow': 'Intérim & contrats courts',
   'cover.title': 'Couverture au tarif jour, rapidement',
@@ -433,7 +454,6 @@ export const pagesFr: PagesDict = {
   'train.2.body': 'Sécurité et outils pour les métiers ; onboarding et service pour le bureau.',
   'train.3.title': 'Lié au placement',
   'train.3.body': 'Les modules suivent la mission pour un suivi simple.',
-  'managed.register': 'Créer un compte employeur',
 
   'dev.eyebrow': 'Développeurs',
   'dev.title': 'API Dealo pour produits et partenaires',
@@ -622,10 +642,19 @@ export const pagesZh: PagesDict = {
   'direct.stat3l': '录用者加入贵司薪资名册',
 
   'managed.eyebrow': '托管用工',
-  'managed.title': '由 Dealo 为您运营的用工',
-  'managed.body': '约定人数与条款。Dealo 处理招聘、合同与行政，团队专注业务。',
-  'managed.cta': '请求托管用工',
+  'managed.title': '您需要人手。我们管人。',
+  'managed.body': '告诉我们要多少人。Dealo 招聘、入职并维持出勤——工地或办公室照常运转。',
+  'managed.cta': '申请托管用工',
   'managed.register': '创建雇主账户',
+  'managed.section.eyebrow': '您将获得',
+  'managed.section.title': '招聘、发薪与替补——一个伙伴',
+  'managed.section.body': '不是招聘板：入职后我们仍负责合同、考勤，以及缺勤时的替补安排。',
+  'managed.1.title': '我们替您招人',
+  'managed.1.body': '一次需求说明。我们寻源、核查并安排合适的办公室或技工人员。',
+  'managed.2.title': '每月一笔费用',
+  'managed.2.body': '您付给 Dealo。工人的合同与工资由我们处理。',
+  'managed.3.title': '出问题时有替补',
+  'managed.3.body': '缺勤有待命人员。不合适的人在 90 天承诺内更换。',
 
   'cover.eyebrow': '临时与合同替班',
   'cover.title': '按日费率快速补人',
@@ -839,11 +868,21 @@ export const pagesKo: PagesDict = {
   'direct.stat3l': '채용자가 귀사 급여에 합류',
 
   'managed.eyebrow': '매니지드 스태핑',
-  'managed.title': 'Dealo가 운영하는 스태핑',
+  'managed.title': '손은 필요하고, 사람은 우리가 운영합니다',
   'managed.body':
-    '인원과 조건을 합의하세요. Dealo가 채용·계약·행정을 처리해 팀은 업무에 집중합니다.',
+    '필요한 인원만 알려 주세요. Dealo가 채용·고용·출근을 관리해 현장·사무실이 멈추지 않게 합니다.',
   'managed.cta': '매니지드 스태핑 요청',
   'managed.register': '고용주 계정 만들기',
+  'managed.section.eyebrow': '제공 내용',
+  'managed.section.title': '채용·급여·커버 — 파트너 하나',
+  'managed.section.body':
+    '채용 게시판이 아닙니다. 입사 후에도 계약·출근·결원 대체를 이어 갑니다.',
+  'managed.1.title': '대신 채용합니다',
+  'managed.1.body': '한 번 브리프하세요. 사무직·기술직을 찾고 검증해 배치합니다.',
+  'managed.2.title': '월 1회 비용',
+  'managed.2.body': 'Dealo에 지불하세요. 근로자 계약·급여는 저희가 처리합니다.',
+  'managed.3.title': '공백 시 커버',
+  'managed.3.body': '결근은 대기 인력으로. 맞지 않으면 90일 약속 내 교체합니다.',
 
   'cover.eyebrow': '임시·계약 커버',
   'cover.title': '일당 커버로 빠르게 인력 확보',
