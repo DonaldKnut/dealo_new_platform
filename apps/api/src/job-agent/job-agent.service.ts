@@ -1806,7 +1806,6 @@ vaultKey should be a short snake_case key. confidence 0-1. Skip fields you canno
     const links = vault?.links ? applyVaultLinksSchema.safeParse(vault.links) : null;
     const work = vault?.workHistory ? applyVaultWorkItemSchema.array().safeParse(vault.workHistory) : null;
     const education = vault?.education ? applyVaultEducationItemSchema.array().safeParse(vault.education) : null;
-    const uploadedText = extractUploadedCvText(Buffer.from(profile.cvData), profile.cvFileName);
     const skillGuess = [
       ...profile.mustHave,
       ...uploadedText
