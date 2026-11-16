@@ -35,6 +35,8 @@ export type WorkspaceSummary = {
   role: WorkspaceRole;
 };
 
+export type OrgVerificationStatus = 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+
 export type Workspace = {
   id: string;
   name: string;
@@ -47,6 +49,13 @@ export type Workspace = {
   plan: string;
   maxOpenJobs: number;
   maxSeats: number;
+  verificationStatus?: OrgVerificationStatus;
+  workEmail?: string | null;
+  workEmailVerifiedAt?: string | null;
+  cacNumber?: string | null;
+  verificationSubmittedAt?: string | null;
+  verificationReviewedAt?: string | null;
+  verificationNote?: string | null;
 };
 
 export type WorkspaceMember = {
@@ -288,6 +297,12 @@ export const atsApi = {
   createWorkspace: (input: CreateWorkspaceInput) => apiFetch<Workspace>('/ats/workspaces', { method: 'POST', json: input }),
   workspace: (orgId: string) => apiFetch<WorkspaceDetail>(W(orgId)),
   updateWorkspace: (orgId: string, input: UpdateWorkspaceInput) => apiFetch<Workspace>(W(orgId), { method: 'PATCH', json: input }),
+  submitVerification: (
+    orgId: string,
+    input: { name: string; website: string; workEmail: string; cacNumber?: string },
+  ) => apiFetch<Workspace>(`${W(orgId)}/verification`, { method: 'POST', json: input }),
+  resendWorkEmailVerification: (orgId: string) =>
+    apiFetch<{ ok: boolean; alreadyVerified?: boolean }>(`${W(orgId)}/verification/resend`, { method: 'POST' }),
   invite: (orgId: string, email: string, role: WorkspaceRole) =>
     apiFetch<WorkspaceInvite & { link: string }>(`${W(orgId)}/invites`, { method: 'POST', json: { email, role } }),
   revokeInvite: (orgId: string, inviteId: string) => apiFetch(`${W(orgId)}/invites/${inviteId}`, { method: 'DELETE' }),

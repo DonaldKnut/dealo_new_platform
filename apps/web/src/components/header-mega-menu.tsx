@@ -15,11 +15,10 @@ import {
   Kanban,
   KeyRound,
   Newspaper,
+  Plug,
   Radar,
-  Route,
   Timer,
   UserRound,
-  Users,
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -61,14 +60,14 @@ const aiDefs: MegaItemDef[] = [
   { href: '/ats', titleKey: 'mega.ai.ats.title', descKey: 'mega.ai.ats.desc', icon: Kanban, badge: 'New', staffOnly: true },
 ];
 
-/** Partner / developer API — no #anchors that duplicate the portal page. */
+/** Partner / developer API — portal + partner sync + live docs (no duplicate Job Agent naming). */
 const apiDefs: MegaItemDef[] = [
   { href: '/developers', titleKey: 'mega.api.portal.title', descKey: 'mega.api.portal.desc', icon: Code2 },
   {
     href: '/developers/job-agent',
     titleKey: 'mega.api.jobAgent.title',
     descKey: 'mega.api.jobAgent.desc',
-    icon: Radar,
+    icon: Plug,
     badge: 'New',
   },
   {
@@ -88,7 +87,7 @@ const apiDefs: MegaItemDef[] = [
   },
 ];
 
-/** Hiring services only — audience landings live under Resources. */
+/** Hiring services only. */
 const offerDefs: MegaItemDef[] = [
   {
     href: '/services/direct-recruitment',
@@ -116,7 +115,7 @@ const offerDefs: MegaItemDef[] = [
   },
 ];
 
-/** Tools, guides, and who-it's-for pages. */
+/** Job-seeker tools + guides — no duplicate “for companies” / “how it works” (covered by Offer). */
 const resourceDefs: MegaItemDef[] = [
   {
     href: '/jobs',
@@ -132,22 +131,10 @@ const resourceDefs: MegaItemDef[] = [
     icon: FileText,
   },
   {
-    href: '/for-employers',
-    titleKey: 'mega.employers.title',
-    descKey: 'mega.employers.desc',
-    icon: Users,
-  },
-  {
     href: '/for-professionals',
     titleKey: 'mega.professionals.title',
     descKey: 'mega.professionals.desc',
     icon: UserRound,
-  },
-  {
-    href: '/how-it-works',
-    titleKey: 'mega.how.title',
-    descKey: 'mega.how.desc',
-    icon: Route,
   },
   {
     href: '/blog',

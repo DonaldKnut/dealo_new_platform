@@ -227,6 +227,41 @@ export type DashboardUser = {
 export const updateDashboardUser = (id: string, body: { isActive?: boolean; isEmailVerified?: true; roles?: string[] }) =>
   apiFetch<DashboardUser | null>(`/dashboard/users/${id}`, { method: 'PATCH', json: body });
 
+export type DashboardOrganization = {
+  id: string;
+  name: string;
+  slug: string;
+  website: string | null;
+  isActive: boolean;
+  careersEnabled: boolean;
+  verificationStatus: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+  workEmail: string | null;
+  workEmailVerifiedAt: string | null;
+  cacNumber: string | null;
+  verificationSubmittedAt: string | null;
+  verificationReviewedAt: string | null;
+  verificationNote: string | null;
+  plan: string;
+  maxOpenJobs: number;
+  members: number;
+  jobs: number;
+  hasOpenJobs: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const listDashboardOrganizations = () => apiFetch<DashboardOrganization[]>('/dashboard/organizations');
+
+export const updateDashboardOrganization = (
+  id: string,
+  body: {
+    isActive?: boolean;
+    careersEnabled?: boolean;
+    verificationStatus?: 'VERIFIED' | 'REJECTED' | 'PENDING' | 'UNVERIFIED';
+    verificationNote?: string | null;
+  },
+) => apiFetch(`/dashboard/organizations/${id}`, { method: 'PATCH', json: body });
+
 export const grantResumePremium = (userId: string, days: number) =>
   apiFetch<{ userId: string; premiumUntil: string | null }>('/resumes/admin/premium', { method: 'POST', json: { userId, days } });
 

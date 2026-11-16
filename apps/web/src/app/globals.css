@@ -333,6 +333,31 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent);
   }
 
+  /* Kill Chrome/Safari autofill gray/yellow wash on auth fields */
+  .auth-input {
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .auth-input:-webkit-autofill,
+  .auth-input:-webkit-autofill:hover,
+  .auth-input:-webkit-autofill:focus,
+  .auth-input:-webkit-autofill:active {
+    -webkit-text-fill-color: var(--foreground) !important;
+    caret-color: var(--foreground);
+    /* Delay autofill paint forever so the shell background shows through */
+    transition: background-color 99999s ease-out 0s !important;
+    -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+    box-shadow: 0 0 0 1000px transparent inset !important;
+    background-color: transparent !important;
+    background-image: none !important;
+  }
+
+  .auth-input:autofill {
+    background-color: transparent !important;
+    box-shadow: 0 0 0 1000px transparent inset !important;
+  }
+
   .btn-primary,
   .btn-secondary {
     position: relative;

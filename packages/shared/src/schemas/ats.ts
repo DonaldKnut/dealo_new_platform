@@ -49,6 +49,44 @@ export const updateWorkspaceSchema = z.object({
 
 export type UpdateWorkspaceInput = z.infer<typeof updateWorkspaceSchema>;
 
+/** Company verification before the first OPEN job (name + website + work email on that domain). */
+export const submitOrgVerificationSchema = z.object({
+  name: z.string().trim().min(2, 'Enter your company name').max(120),
+  website: z
+    .string()
+    .trim()
+    .url('Enter a full website address like https://example.com')
+    .max(300),
+  workEmail: z.string().trim().email('Enter a work email').max(255),
+  cacNumber: z
+    .string()
+    .trim()
+    .max(40)
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
+});
+
+export type SubmitOrgVerificationInput = z.infer<typeof submitOrgVerificationSchema>;
+
+/** Admin: approve/reject verification, deactivate workspace, or toggle careers page. */
+export const adminUpdateOrganizationSchema = z
+  .object({
+    isActive: z.boolean().optional(),
+    careersEnabled: z.boolean().optional(),
+    verificationStatus: z.enum(['VERIFIED', 'REJECTED', 'PENDING', 'UNVERIFIED']).optional(),
+    verificationNote: z.string().trim().max(500).optional().nullable(),
+  })
+  .refine(
+    (v) =>
+      v.isActive !== undefined ||
+      v.careersEnabled !== undefined ||
+      v.verificationStatus !== undefined ||
+      v.verificationNote !== undefined,
+    'Nothing to change',
+  );
+
+export type AdminUpdateOrganizationInput = z.infer<typeof adminUpdateOrganizationSchema>;
+
 const workspaceRoleEnum = z.enum([WorkspaceRole.ADMIN, WorkspaceRole.RECRUITER, WorkspaceRole.HIRING_MANAGER]);
 
 export const inviteMemberSchema = z.object({

@@ -6,8 +6,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { CreateWorkspaceInput, InviteMemberInput, UpdateWorkspaceInput } from '@dealo/shared';
-import { JobStatus, UserRole, WorkspaceRole } from '@prisma/client';
+import type {
+  CreateWorkspaceInput,
+  InviteMemberInput,
+  SubmitOrgVerificationInput,
+  UpdateWorkspaceInput,
+} from '@dealo/shared';
+import { JobStatus, OrgVerificationStatus, UserRole, WorkspaceRole } from '@prisma/client';
 import { createHash, randomBytes } from 'crypto';
 
 import type { AuthUser } from '../auth/auth.types';
@@ -18,7 +23,7 @@ import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AtsAccessService } from './ats-access.service';
-import { workspaceInviteEmail } from './ats-emails';
+import { workEmailVerifyEmail, workspaceInviteEmail } from './ats-emails';
 
 const INVITE_TTL_MS = 7 * 24 * 3_600_000;
 const MAX_OWNED_WORKSPACES = 3;
@@ -79,6 +84,8 @@ export class WorkspacesService {
         slug: input.slug.toLowerCase(),
         website: input.website,
         logoUrl: input.logoUrl,
+        // Partners start UNVERIFIED; staff approve (or publish with staff override) after verification.
+        verificationStatus: OrgVerificationStatus.UNVERIFIED,
         members: { create: { userId: user.id, role: WorkspaceRole.OWNER, isOwner: true } },
       },
     });
@@ -89,7 +96,7 @@ export class WorkspacesService {
       actorId: user.id,
       metadata: { slug: organization.slug },
     });
-    return organization;
+    return this.publicWorkspace(organization);
   }
 
   async mine(user: AuthUser) {
@@ -128,7 +135,7 @@ export class WorkspacesService {
     ]);
 
     return {
-      workspace: access.organization,
+      workspace: this.publicWorkspace(access.organization),
       myRole: access.role,
       support: access.support,
       members: members.map((m) => ({
@@ -150,9 +157,124 @@ export class WorkspacesService {
     };
   }
 
+  /** Never expose the work-email verify token to clients. */
+  private publicWorkspace<T extends { workEmailVerifyToken?: string | null }>(organization: T) {
+    const { workEmailVerifyToken: _token, ...safe } = organization;
+    return safe;
+  }
+
   async update(orgId: string, input: UpdateWorkspaceInput, user: AuthUser) {
     await this.access.require(orgId, user, WorkspaceRole.ADMIN);
-    return this.prisma.organization.update({ where: { id: orgId }, data: input });
+    return this.publicWorkspace(await this.prisma.organization.update({ where: { id: orgId }, data: input }));
+  }
+
+  /**
+   * Submit company verification: name + website + work email on that domain (CAC optional).
+   * Sends a work-email confirm link; status becomes PENDING until Dealo approves.
+   */
+  async submitVerification(orgId: string, input: SubmitOrgVerificationInput, user: AuthUser) {
+    await this.access.require(orgId, user, WorkspaceRole.ADMIN);
+    const workEmail = normalizeEmail(input.workEmail);
+    const website = input.website.trim();
+    if (!this.workEmailMatchesWebsite(workEmail, website)) {
+      throw new BadRequestException(
+        'Your work email must use the same domain as your company website (for example @acme.com for https://acme.com).',
+      );
+    }
+
+    const token = randomBytes(24).toString('base64url');
+    const organization = await this.prisma.organization.update({
+      where: { id: orgId },
+      data: {
+        name: input.name.trim(),
+        website,
+        workEmail,
+        workEmailVerifiedAt: null,
+        workEmailVerifyToken: hash(token),
+        cacNumber: input.cacNumber?.trim() || null,
+        verificationStatus: OrgVerificationStatus.PENDING,
+        verificationSubmittedAt: new Date(),
+        verificationReviewedAt: null,
+        verificationNote: null,
+      },
+    });
+
+    const link = `${this.appUrl}/auth/verify-work-email?token=${token}`;
+    await this.email.send(workEmailVerifyEmail({ to: workEmail, orgName: organization.name, link })).catch(() => undefined);
+    await this.audit.record({
+      action: 'ATS_ORG_VERIFICATION_SUBMITTED',
+      entityType: 'Organization',
+      entityId: orgId,
+      actorId: user.id,
+      metadata: { workEmail, website, cacNumber: input.cacNumber ?? null },
+    });
+    return this.publicWorkspace(organization);
+  }
+
+  async resendWorkEmailVerification(orgId: string, user: AuthUser) {
+    const access = await this.access.require(orgId, user, WorkspaceRole.ADMIN);
+    const org = access.organization;
+    if (!org.workEmail) throw new BadRequestException('Submit company verification first');
+    if (org.workEmailVerifiedAt) return { ok: true, alreadyVerified: true };
+    if (org.verificationStatus === OrgVerificationStatus.VERIFIED) {
+      return { ok: true, alreadyVerified: true };
+    }
+
+    const token = randomBytes(24).toString('base64url');
+    await this.prisma.organization.update({
+      where: { id: orgId },
+      data: { workEmailVerifyToken: hash(token) },
+    });
+    const link = `${this.appUrl}/auth/verify-work-email?token=${token}`;
+    await this.email.send(workEmailVerifyEmail({ to: org.workEmail, orgName: org.name, link })).catch(() => undefined);
+    return { ok: true, alreadyVerified: false };
+  }
+
+  async verifyWorkEmail(token: string) {
+    const organization = await this.prisma.organization.findFirst({
+      where: { workEmailVerifyToken: hash(token) },
+    });
+    if (!organization) throw new NotFoundException('This confirmation link is invalid or has already been used');
+
+    const updated = await this.prisma.organization.update({
+      where: { id: organization.id },
+      data: {
+        workEmailVerifiedAt: new Date(),
+        workEmailVerifyToken: null,
+        verificationStatus:
+          organization.verificationStatus === OrgVerificationStatus.UNVERIFIED
+            ? OrgVerificationStatus.PENDING
+            : organization.verificationStatus,
+      },
+    });
+    return {
+      ok: true,
+      organizationId: updated.id,
+      name: updated.name,
+      verificationStatus: updated.verificationStatus,
+    };
+  }
+
+  /** Work email domain must match the website host (www/mail/subdomain rules allowed carefully). */
+  workEmailMatchesWebsite(workEmail: string, website: string) {
+    const emailDomain = workEmail.split('@')[1]?.toLowerCase();
+    const host = this.websiteHost(website);
+    if (!emailDomain || !host) return false;
+    if (emailDomain === host) return true;
+    // mail.acme.com / hr.acme.com when the site is acme.com
+    if (emailDomain.endsWith(`.${host}`) && emailDomain.split('.').length <= host.split('.').length + 1) return true;
+    // careers.acme.com site when email is @acme.com
+    if (host.endsWith(`.${emailDomain}`)) return true;
+    return false;
+  }
+
+  private websiteHost(website: string) {
+    try {
+      const url = new URL(website.includes('://') ? website : `https://${website}`);
+      return url.hostname.replace(/^www\./i, '').toLowerCase();
+    } catch {
+      return '';
+    }
   }
 
   async invite(orgId: string, input: InviteMemberInput, user: AuthUser) {

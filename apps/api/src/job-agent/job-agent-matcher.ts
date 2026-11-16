@@ -1,6 +1,7 @@
-import type { JobAgentRemote, ResumeData } from '@dealo/shared';
+import type { JobAgentChannel, JobAgentRemote, ResumeData } from '@dealo/shared';
 
 import { NIGERIA_PLACES } from '../job-board/nigeria-places';
+import { findAtsAdapter } from './ats-adapters';
 
 export type SeekerProfile = {
   titles: string[];
@@ -246,4 +247,35 @@ export function findApplyEmail(text: string): string | null {
     if (email && EMAIL.test(email) && !NOT_FOR_APPLYING.test(email)) return email.toLowerCase().replace(/\.$/, '');
   }
   return null;
+}
+
+export type ChannelDecision = {
+  channel: Exclude<JobAgentChannel, 'site'>;
+  reason: string;
+  applyEmail: string | null;
+};
+
+/**
+ * Picks the most autonomous legitimate apply channel for a match.
+ * Dealo → easy_apply; apply email (when allowed) → email; known ATS host → ats_api; else site_assisted.
+ * Publish trust (org verification / staff override) is enforced when jobs go OPEN in JobsService —
+ * this classifier must not re-open listings or re-check partner verification.
+ */
+export function classifyChannel(input: {
+  kind: 'dealo' | 'external';
+  url: string;
+  applyEmail: string | null;
+  emailApplyAllowed: boolean;
+}): ChannelDecision {
+  if (input.kind === 'dealo') {
+    return { channel: 'easy_apply', reason: 'Dealo Easy Apply listing', applyEmail: null };
+  }
+  if (input.emailApplyAllowed && input.applyEmail) {
+    return { channel: 'email', reason: `Apply-by-email address found (${input.applyEmail})`, applyEmail: input.applyEmail };
+  }
+  const adapter = findAtsAdapter(input.url);
+  if (adapter) {
+    return { channel: 'ats_api', reason: `Supported ATS host via ${adapter.id} adapter`, applyEmail: null };
+  }
+  return { channel: 'site_assisted', reason: 'External career/board URL — supervised Assist', applyEmail: null };
 }

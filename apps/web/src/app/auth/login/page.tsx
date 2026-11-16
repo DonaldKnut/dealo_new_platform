@@ -14,9 +14,9 @@ export default function LoginPage() {
   return (
     <>
       <AuthPageHeader
-        eyebrow="Sign in"
+        eyebrow="Onboarding & Sign in"
         title="Welcome back"
-        subtitle="Hiring? Pick up your requests and candidates. Looking for work? See your profile, applications and job matches."
+        subtitle="Sign in to your Dealo workspace. Whether you're hiring verified talent or finding your next role, pick up right where you left off."
       />
       <LoginForm variant="page" />
     </>

@@ -13,25 +13,29 @@ import { CreateWorkspaceForm } from '@/components/ats/create-workspace-form';
 import { DashHero, DashPanel } from '@/components/dashboard/dashboard-ui';
 import { WorkspaceSwitcher } from '@/components/ats/workspace-switcher';
 import { FormModal } from '@/components/ui/form-modal';
+import { isStaffRole, useAuthSession } from '@/hooks/use-auth-session';
 import { ROLE_LABEL } from '@/lib/ats-api';
 import { cn } from '@/lib/utils';
 
 const TABS = [
   { href: '/dashboard/ats', label: 'Jobs', icon: Kanban },
-  { href: '/dashboard/ats/agents', label: 'AI agents', icon: Bot },
+  { href: '/dashboard/ats/agents', label: 'AI agents', icon: Bot, staffOnly: true },
   { href: '/dashboard/ats/interviews', label: 'Interviews', icon: CalendarClock },
   { href: '/dashboard/ats/reports', label: 'Reports', icon: ChartColumn },
   { href: '/dashboard/ats/team', label: 'Team', icon: Users },
   { href: '/dashboard/ats/settings', label: 'Careers page', icon: Globe },
-];
+] as const;
 
 function Frame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuthSession();
+  const staff = Boolean(user && isStaffRole(user.roles));
   const { loading, error, workspaces, current, orgId, select, reload } = useAtsWorkspace();
   const [creating, setCreating] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [highlight, setHighlight] = useState<string | null>(null);
+  const tabs = TABS.filter((tab) => !('staffOnly' in tab && tab.staffOnly) || staff);
 
   if (loading) {
     return (
@@ -120,7 +124,7 @@ function Frame({ children }: { children: ReactNode }) {
       </div>
 
       <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1" aria-label="Hiring sections">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const active = isTab(tab.href);
           const Icon = tab.icon;
           return (

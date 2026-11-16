@@ -7,12 +7,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
+import { PublishGateNotice, errorPublishBlock, publishBlockReason } from '@/components/ats/publish-gate';
 import { useAtsWorkspace } from '@/components/ats/ats-workspace';
 import { JobDescription } from '@/components/ats/job-description';
 import { FormField } from '@/components/forms/form-field';
 import { DashPanel } from '@/components/dashboard/dashboard-ui';
 import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
+import { isStaffRole, useAuthSession } from '@/hooks/use-auth-session';
 import { ApiError } from '@/lib/api';
 import { EMPLOYMENT_LABEL, atsApi, type AtsJob } from '@/lib/ats-api';
 import { cn } from '@/lib/utils';
@@ -90,6 +92,7 @@ export function AtsJobEditor({
   const modal = variant === 'modal';
   const router = useRouter();
   const toast = useToast();
+  const { user } = useAuthSession();
   const { orgId, current, reloadDetail } = useAtsWorkspace();
   const [draft, setDraft] = useState<Draft | null>(jobId ? null : EMPTY);
   const [mustHave, setMustHave] = useState('');
@@ -98,6 +101,11 @@ export function AtsJobEditor({
   const [saving, setSaving] = useState<false | 'draft' | 'publish'>(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<AtsJob['status']>('DRAFT');
+  const publishBlock = publishBlockReason({
+    isEmailVerified: user?.isEmailVerified,
+    workspace: current?.workspace,
+    staffOverride: Boolean(user && isStaffRole(user.roles)) || current?.support,
+  });
   const textRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -158,8 +166,12 @@ export function AtsJobEditor({
   };
 
   const save = async (publish: boolean) => {
-    if (!orgId) return;
+    if (!orgId || !draft) return;
     setError(null);
+    if (publish && publishBlock) {
+      setError(publishBlock.message);
+      return;
+    }
     const toMinor = (v: string) => (v.trim() ? Math.round(Number(v.replace(/,/g, '')) * 100) : null);
     const parsed = jobInputSchema.safeParse({
       title: draft.title,
@@ -188,7 +200,8 @@ export function AtsJobEditor({
       if (onSaved) onSaved(job, publish);
       else router.push(`/dashboard/ats/jobs/${job.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not save the job');
+      const gate = errorPublishBlock(err);
+      setError(gate?.message ?? (err instanceof ApiError ? err.message : 'Could not save the job'));
     } finally {
       setSaving(false);
     }
@@ -393,14 +406,21 @@ export function AtsJobEditor({
 
           {modal ? null : (
             <DashPanel>
+              {status !== 'OPEN' && publishBlock ? <PublishGateNotice block={publishBlock} /> : null}
               {error ? <p className="mb-3 text-sm text-danger">{error}</p> : null}
               <div className="grid gap-2">
                 {status !== 'OPEN' ? (
-                  <button type="button" className="btn-primary w-full" disabled={Boolean(saving)} onClick={() => save(true)}>
-                    {saving === 'publish' ? 'Publishing…' : 'Save and publish'}
+                  <button
+                    type="button"
+                    className="btn-primary w-full"
+                    disabled={Boolean(saving) || Boolean(publishBlock)}
+                    onClick={() => void save(true)}
+                    title={publishBlock?.message}
+                  >
+                    {saving === 'publish' ? 'Publishing…' : publishBlock ? 'Publish locked' : 'Save and publish'}
                   </button>
                 ) : null}
-                <button type="button" className={cn(status === 'OPEN' ? 'btn-primary' : 'btn-secondary', 'w-full')} disabled={Boolean(saving)} onClick={() => save(false)}>
+                <button type="button" className={cn(status === 'OPEN' ? 'btn-primary' : 'btn-secondary', 'w-full')} disabled={Boolean(saving)} onClick={() => void save(false)}>
                   {saving === 'draft' ? 'Saving…' : status === 'OPEN' ? 'Save changes' : 'Save as draft'}
                 </button>
               </div>
@@ -424,6 +444,7 @@ export function AtsJobEditor({
           void save(intent === 'publish');
         }}
       >
+        {status !== 'OPEN' && publishBlock ? <PublishGateNotice block={publishBlock} /> : null}
         {error ? <p className="mb-4 rounded-xl bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p> : null}
         {body}
       </form>
@@ -472,7 +493,13 @@ export function JobEditorModal({
               {state.saving === 'draft' ? 'Saving…' : 'Save as draft'}
             </button>
           ) : null}
-          <button type="submit" form={formId} value={state.status === 'OPEN' ? 'draft' : 'publish'} className="btn-primary" disabled={Boolean(state.saving) || !state.loaded}>
+          <button
+            type="submit"
+            form={formId}
+            value={state.status === 'OPEN' ? 'draft' : 'publish'}
+            className="btn-primary"
+            disabled={Boolean(state.saving) || !state.loaded}
+          >
             {state.saving ? 'Saving…' : state.status === 'OPEN' ? 'Save changes' : 'Save and publish'}
           </button>
         </>

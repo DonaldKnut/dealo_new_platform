@@ -27,7 +27,7 @@ type TourStep = {
   placement?: 'auto' | 'bottom' | 'top' | 'right' | 'left';
 };
 
-const STEPS: TourStep[] = [
+const DESKTOP_STEPS: TourStep[] = [
   {
     titleKey: 'tour.1.title',
     bodyKey: 'tour.1.body',
@@ -78,15 +78,62 @@ const STEPS: TourStep[] = [
   },
 ];
 
+/** Sidebar is hidden below lg — spotlight bottom tabs + header instead. */
+const MOBILE_STEPS: TourStep[] = [
+  {
+    titleKey: 'tour.1.title',
+    bodyKey: 'tour.1.body',
+    accentKey: 'tour.1.accent',
+    targets: ['[data-tour="mobile-nav"]'],
+    pad: 6,
+    placement: 'top',
+  },
+  {
+    titleKey: 'tour.2.title',
+    bodyKey: 'tour.2.body',
+    accentKey: 'tour.2.accent',
+    targets: ['[data-tour="mobile-more"]'],
+    pad: 8,
+    placement: 'top',
+  },
+  {
+    titleKey: 'tour.3.title',
+    bodyKey: 'tour.3.body',
+    accentKey: 'tour.3.accent',
+    targets: ['[data-tour="main-content"]'],
+    pad: 6,
+    placement: 'top',
+  },
+  {
+    titleKey: 'tour.5.title',
+    bodyKey: 'tour.5.body',
+    accentKey: 'tour.5.accent',
+    targets: ['[data-tour="header-helpers"]', '[data-tour="support-help"]'],
+    pad: 8,
+    placement: 'bottom',
+  },
+];
+
 const STORAGE_KEY = 'dealo.dashboard.tour.seen';
 const CARD_WIDTH = 360;
 const CARD_GAP = 14;
+const LG = 1024;
+
+function isMobileViewport() {
+  return typeof window !== 'undefined' && window.innerWidth < LG;
+}
 
 function measureTarget(selector: string, pad = 8): SpotlightRect | null {
   const el = document.querySelector(selector) as HTMLElement | null;
   if (!el) return null;
+  const style = window.getComputedStyle(el);
+  if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return null;
   const rect = el.getBoundingClientRect();
-  if (rect.width < 2 && rect.height < 2) return null;
+  if (rect.width < 4 || rect.height < 4) return null;
+  // Off-screen / collapsed sidebar leftovers
+  if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
+    return null;
+  }
   return {
     top: Math.max(8, rect.top - pad),
     left: Math.max(8, rect.left - pad),
@@ -98,13 +145,22 @@ function measureTarget(selector: string, pad = 8): SpotlightRect | null {
 function placeCard(
   spots: SpotlightRect[],
   placement: TourStep['placement'] = 'auto',
+  mobile: boolean,
 ): { top: number; left: number } {
-  const spot = spots[0];
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const cardH = 220;
+  const cardH = mobile ? 200 : 220;
   const width = Math.min(CARD_WIDTH, vw - 24);
 
+  // On phones, keep the card docked so it never fights a moving spotlight.
+  if (mobile) {
+    return {
+      top: Math.max(12, vh - cardH - 88),
+      left: Math.max(12, (vw - width) / 2),
+    };
+  }
+
+  const spot = spots[0];
   if (!spot) {
     return { top: Math.max(24, vh / 2 - 110), left: Math.max(12, (vw - width) / 2) };
   }
@@ -152,11 +208,18 @@ export function DashboardTour({ autoStart = true }: { autoStart?: boolean }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [mobile, setMobile] = useState(false);
   const [spots, setSpots] = useState<SpotlightRect[]>([]);
   const [cardPos, setCardPos] = useState({ top: 80, left: 24 });
 
+  const steps = mobile ? MOBILE_STEPS : DESKTOP_STEPS;
+
   useEffect(() => {
     setMounted(true);
+    const sync = () => setMobile(isMobileViewport());
+    sync();
+    window.addEventListener('resize', sync);
+    return () => window.removeEventListener('resize', sync);
   }, []);
 
   useEffect(() => {
@@ -165,44 +228,72 @@ export function DashboardTour({ autoStart = true }: { autoStart?: boolean }) {
     if (!seen) setOpen(true);
   }, [autoStart]);
 
+  // When switching between mobile/desktop mid-tour, clamp the step index.
+  useEffect(() => {
+    setStep((s) => Math.min(s, Math.max(0, steps.length - 1)));
+  }, [steps.length]);
+
   const syncSpotlight = useCallback(() => {
-    const current = STEPS[step];
+    const current = steps[step];
     if (!current) return;
+    const narrow = isMobileViewport();
 
     let measured = current.targets
       .map((selector) => measureTarget(selector, current.pad))
       .filter((rect): rect is SpotlightRect => Boolean(rect));
 
-    if (measured.length === 0 && current.targets.some((t) => t.includes('nav-admin'))) {
-      const fallback = measureTarget('[data-tour="sidebar"]', 10);
-      if (fallback) measured = [fallback];
+    if (!narrow) {
+      if (measured.length === 0 && current.targets.some((t) => t.includes('nav-admin'))) {
+        const fallback = measureTarget('[data-tour="sidebar"]', 10);
+        if (fallback) measured = [fallback];
+      }
+      if (measured.length === 0 && current.targets.some((t) => t.includes('nav-hiring'))) {
+        const fallback = measureTarget('[data-tour="sidebar"]', 10);
+        if (fallback) measured = [fallback];
+      }
     }
-    if (measured.length === 0 && current.targets.some((t) => t.includes('nav-hiring'))) {
-      const fallback = measureTarget('[data-tour="sidebar"]', 10);
-      if (fallback) measured = [fallback];
+
+    // Prefer a real target; never invent a floating box on mobile — use header helpers as last resort.
+    if (measured.length === 0) {
+      const rescue = narrow
+        ? measureTarget('[data-tour="mobile-nav"]', 6) ||
+          measureTarget('[data-tour="header-helpers"]', 8) ||
+          measureTarget('[data-tour="main-content"]', 6)
+        : measureTarget('[data-tour="sidebar"]', 10) || measureTarget('[data-tour="main-content"]', 8);
+      if (rescue) measured = [rescue];
     }
+
     if (measured.length === 0) {
       measured = [
         {
-          top: window.innerHeight * 0.2,
-          left: window.innerWidth * 0.2,
-          width: Math.min(420, window.innerWidth * 0.6),
-          height: Math.min(240, window.innerHeight * 0.35),
+          top: Math.max(72, window.innerHeight * 0.12),
+          left: 16,
+          width: window.innerWidth - 32,
+          height: Math.min(160, window.innerHeight * 0.22),
         },
       ];
     }
 
     setSpots(measured);
-    setCardPos(placeCard(measured, current.placement));
+    setCardPos(placeCard(measured, current.placement, narrow));
 
     const el = document.querySelector(current.targets[0]) as HTMLElement | null;
-    el?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-  }, [step]);
+    if (el && !narrow) {
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    }
+  }, [step, steps]);
 
   useLayoutEffect(() => {
     if (!open) return;
     syncSpotlight();
-  }, [open, step, syncSpotlight]);
+    // Remeasure after layout settles (fonts, safe-area, bottom nav).
+    const t1 = window.setTimeout(syncSpotlight, 80);
+    const t2 = window.setTimeout(syncSpotlight, 220);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [open, step, mobile, syncSpotlight]);
 
   useEffect(() => {
     if (!open) return;
@@ -224,7 +315,7 @@ export function DashboardTour({ autoStart = true }: { autoStart?: boolean }) {
     logClientAudit({ action: 'DASHBOARD_TOUR_CLOSED', entityType: 'Dashboard' });
   };
 
-  const current = STEPS[step];
+  const current = steps[step];
   const cardWidth =
     Math.min(CARD_WIDTH, typeof window !== 'undefined' ? window.innerWidth - 24 : CARD_WIDTH);
 
@@ -277,7 +368,7 @@ export function DashboardTour({ autoStart = true }: { autoStart?: boolean }) {
                     width: spot.width,
                     height: spot.height,
                   }}
-                  transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+                  transition={{ type: 'tween', duration: 0.2, ease: 'easeOut' }}
                 />
               ))}
 
@@ -302,7 +393,7 @@ export function DashboardTour({ autoStart = true }: { autoStart?: boolean }) {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#0f766e] dark:text-[#7cff4d]">
-                        {t(current.accentKey)} · {step + 1}/{STEPS.length}
+                        {t(current.accentKey)} · {step + 1}/{steps.length}
                       </p>
                       <h2
                         id="dashboard-tour-title"
@@ -349,11 +440,11 @@ export function DashboardTour({ autoStart = true }: { autoStart?: boolean }) {
                       type="button"
                       className="btn-primary cursor-pointer px-4 py-1.5 text-xs"
                       onClick={() => {
-                        if (step >= STEPS.length - 1) close();
+                        if (step >= steps.length - 1) close();
                         else setStep((s) => s + 1);
                       }}
                     >
-                      {step >= STEPS.length - 1 ? t('dash.finish') : t('dash.next')}
+                      {step >= steps.length - 1 ? t('dash.finish') : t('dash.next')}
                     </button>
                   </div>
                 </div>

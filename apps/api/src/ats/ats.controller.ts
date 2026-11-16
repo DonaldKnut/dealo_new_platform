@@ -33,6 +33,7 @@ import {
   rejectApplicationsSchema,
   scheduleInterviewSchema,
   scorecardSchema,
+  submitOrgVerificationSchema,
   updateApplicationSchema,
   updateInterviewSchema,
   updateMemberRoleSchema,
@@ -44,6 +45,7 @@ import {
   type OfferInput,
   type ScheduleInterviewInput,
   type ScorecardInput,
+  type SubmitOrgVerificationInput,
   type UpdateWorkspaceInput,
   ApiScope,
   apiApplicationSchema,
@@ -67,12 +69,14 @@ import { memoryStorage } from 'multer';
 
 import type { AuthUser } from '../auth/auth.types';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { assertEmailVerified } from '../auth/verified-email';
 import { CurrentUser } from '../common/current-user.decorator';
 import { Public } from '../common/public.decorator';
 import { Roles } from '../common/roles.decorator';
 import { RequireScopes } from '../common/scopes.decorator';
 import { RequireVerifiedEmail } from '../common/verified-email.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { PrismaService } from '../prisma/prisma.service';
 import { ApplicationsService, CV_MAX_BYTES } from './applications.service';
 import { AtsToolsService } from './ats-tools.service';
 import { HiringService } from './hiring.service';
@@ -101,6 +105,7 @@ export class AtsController {
     private readonly applications: ApplicationsService,
     private readonly hiring: HiringService,
     private readonly tools: AtsToolsService,
+    private readonly prisma: PrismaService,
   ) {}
 
   // -------------------------------------------------------------- workspaces
@@ -135,6 +140,36 @@ export class AtsController {
     @Body(new ZodValidationPipe(updateWorkspaceSchema)) body: UpdateWorkspaceInput,
   ) {
     return this.workspaces.update(orgId, body, user);
+  }
+
+  @Post('workspaces/:orgId/verification')
+  @RequireVerifiedEmail()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Submit company verification (website + work email on that domain)' })
+  submitVerification(
+    @CurrentUser() user: AuthUser,
+    @Param('orgId') orgId: string,
+    @Body(new ZodValidationPipe(submitOrgVerificationSchema)) body: SubmitOrgVerificationInput,
+  ) {
+    return this.workspaces.submitVerification(orgId, body, user);
+  }
+
+  @Post('workspaces/:orgId/verification/resend')
+  @RequireVerifiedEmail()
+  @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Resend the work-email confirmation link' })
+  resendWorkEmail(@CurrentUser() user: AuthUser, @Param('orgId') orgId: string) {
+    return this.workspaces.resendWorkEmailVerification(orgId, user);
+  }
+
+  @Public()
+  @Post('verify-work-email')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Public: confirm a company work email from the email link' })
+  verifyWorkEmail(@Query('token') token = '') {
+    return this.workspaces.verifyWorkEmail(token);
   }
 
   @Post('workspaces/:orgId/invites')
@@ -217,12 +252,20 @@ export class AtsController {
 
   @Post('workspaces/:orgId/jobs/:jobId/status')
   @HttpCode(200)
-  setJobStatus(
+  @ApiOperation({
+    summary: 'Open, pause, or close a job',
+    description: 'OPEN requires a verified actor email (guard below + JobsService) and a VERIFIED org (staff override allowed).',
+  })
+  async setJobStatus(
     @CurrentUser() user: AuthUser,
     @Param('orgId') orgId: string,
     @Param('jobId') jobId: string,
     @Body(new ZodValidationPipe(jobStatusSchema)) body: { status: JobStatus },
   ) {
+    // Belt-and-suspenders with JobsService.assertCanOpen: only OPEN needs a verified email (CLOSE/PAUSE stay available).
+    if (body.status === JobStatus.OPEN) {
+      await assertEmailVerified(this.prisma, user);
+    }
     return this.jobs.setStatus(orgId, jobId, body.status, user);
   }
 

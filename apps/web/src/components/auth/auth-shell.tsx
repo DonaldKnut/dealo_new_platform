@@ -141,11 +141,11 @@ export function AuthPageHeader({
       <div className="mb-5 flex justify-center lg:hidden">
         <BrandLogo href="/" />
       </div>
-      <p className="eyebrow hidden lg:block">{eyebrow}</p>
-      <h1 className="font-display text-[1.85rem] leading-tight tracking-tight text-foreground min-[340px]:text-3xl sm:text-4xl lg:display-title lg:mt-2">
+      <p className="eyebrow text-xs font-bold uppercase tracking-wider text-brand">{eyebrow}</p>
+      <h1 className="font-display text-2xl font-bold leading-tight tracking-tight text-foreground min-[360px]:text-3xl sm:text-4xl lg:display-title lg:mt-2">
         {title}
       </h1>
-      <p className="mt-3 hidden text-sm leading-relaxed text-muted sm:text-base lg:block">{subtitle}</p>
+      <p className="mt-2.5 text-sm leading-relaxed text-muted sm:text-base">{subtitle}</p>
     </div>
   );
 }

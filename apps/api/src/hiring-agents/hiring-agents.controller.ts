@@ -22,9 +22,13 @@ import { HiringAgentsService } from './hiring-agents.service';
 const verifySchema = z.object({ reference: z.string().trim().min(8).max(80) });
 const planSchema = z.object({ days: z.coerce.number().int().min(0).max(3650) });
 
+/** Hiring Agents stay Dealo-staff-only until the product is ready for employers. */
+const STAFF = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.RECRUITER, UserRole.OPERATIONS, UserRole.FINANCE] as const;
+
 @ApiTags('hiring-agents')
 @Controller('ats')
 @UseGuards(JwtAuthGuard)
+@Roles(...STAFF)
 @ApiCookieAuth()
 export class HiringAgentsController {
   constructor(private readonly agents: HiringAgentsService) {}

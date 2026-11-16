@@ -1,10 +1,31 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { DEFAULT_JOB_STAGES, type ApiJobSyncInput, type JobInput } from '@dealo/shared';
-import { ApplicationStatus, JobStatus, WorkspaceRole, type Job } from '@prisma/client';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  DEFAULT_JOB_STAGES,
+  EMAIL_NOT_VERIFIED,
+  ORG_NOT_VERIFIED,
+  type ApiJobSyncInput,
+  type JobInput,
+} from '@dealo/shared';
+import {
+  ApplicationStatus,
+  JobStatus,
+  OrgVerificationStatus,
+  UserRole,
+  WorkspaceRole,
+  type Job,
+  type Organization,
+} from '@prisma/client';
 
 import type { AuthUser } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
-import { AtsAccessService, isObjectId } from './ats-access.service';
+import { AtsAccessService, isObjectId, type WorkspaceAccess } from './ats-access.service';
+
+const STAFF_PUBLISH_OVERRIDE: UserRole[] = [
+  UserRole.SUPER_ADMIN,
+  UserRole.ADMIN,
+  UserRole.RECRUITER,
+  UserRole.OPERATIONS,
+];
 
 function slugify(value: string) {
   return (
@@ -141,6 +162,7 @@ export class JobsService {
     const access = await this.access.require(orgId, user, WorkspaceRole.RECRUITER);
     const job = await this.requireJob(orgId, jobId);
     if (status === JobStatus.OPEN && job.status !== JobStatus.OPEN) {
+      await this.assertCanOpen(access, user);
       const open = await this.prisma.job.count({ where: { organizationId: orgId, status: JobStatus.OPEN } });
       if (open >= access.organization.maxOpenJobs) {
         throw new BadRequestException(`Your plan allows ${access.organization.maxOpenJobs} open jobs. Close one first.`);
@@ -158,20 +180,33 @@ export class JobsService {
 
   /**
    * Partner sync: creates or updates each job by the partner's own id and opens or closes it.
-   * Opening respects the workspace's open-job limit; jobs over the limit are reported, not dropped silently.
+   * Opening respects publish trust (email + org verification / staff override) and the open-job limit;
+   * OPEN requests that fail those gates are SKIPPED (same pattern as the limit). CLOSED sync still runs.
    */
   async syncFromPartner(orgId: string, items: ApiJobSyncInput['jobs'], user: AuthUser) {
     const access = await this.access.require(orgId, user, WorkspaceRole.RECRUITER);
     let open = await this.prisma.job.count({ where: { organizationId: orgId, status: JobStatus.OPEN } });
     const results: { externalId: string; jobId: string | null; status: string; error?: string }[] = [];
+    let openGateError: string | null = null;
+    try {
+      await this.assertCanOpen(access, user);
+    } catch (error) {
+      openGateError = this.exceptionMessage(error, 'Cannot publish jobs yet');
+    }
     for (const item of items) {
       try {
         this.checkSalary(item);
         const existing = await this.prisma.job.findFirst({ where: { organizationId: orgId, externalRef: item.externalId } });
         const wantsOpen = item.status === 'OPEN';
-        if (wantsOpen && existing?.status !== JobStatus.OPEN && open >= access.organization.maxOpenJobs) {
-          results.push({ externalId: item.externalId, jobId: existing?.id ?? null, status: 'SKIPPED', error: `Open-job limit (${access.organization.maxOpenJobs}) reached` });
-          continue;
+        if (wantsOpen && existing?.status !== JobStatus.OPEN) {
+          if (openGateError) {
+            results.push({ externalId: item.externalId, jobId: existing?.id ?? null, status: 'SKIPPED', error: openGateError });
+            continue;
+          }
+          if (open >= access.organization.maxOpenJobs) {
+            results.push({ externalId: item.externalId, jobId: existing?.id ?? null, status: 'SKIPPED', error: `Open-job limit (${access.organization.maxOpenJobs}) reached` });
+            continue;
+          }
         }
         const data = {
           title: item.title,
@@ -281,5 +316,62 @@ export class JobsService {
     if (input.salaryMinMinor && input.salaryMaxMinor && input.salaryMaxMinor < input.salaryMinMinor) {
       throw new BadRequestException('Highest pay must be the same as or more than lowest pay');
     }
+  }
+
+  /**
+   * Publishing requires a confirmed actor email (JWT user or API-key owner) and a VERIFIED org.
+   * Dealo staff can override the org verification gate; JOB_PARTNER eligibility stays elsewhere.
+   */
+  private async assertCanOpen(access: WorkspaceAccess, user: AuthUser) {
+    const emailUserId = user.authType === 'api_key' ? access.userId : user.id;
+    const account = await this.prisma.user.findUnique({
+      where: { id: emailUserId },
+      select: { isEmailVerified: true },
+    });
+    if (!account?.isEmailVerified) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: EMAIL_NOT_VERIFIED,
+        message:
+          'Confirm your email address before publishing a job. Use the link we sent you, or resend it from your dashboard.',
+      });
+    }
+
+    const staffOverride =
+      access.support || user.roles.some((role) => STAFF_PUBLISH_OVERRIDE.includes(role));
+    if (!staffOverride && access.organization.verificationStatus !== OrgVerificationStatus.VERIFIED) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: ORG_NOT_VERIFIED,
+        message: this.orgVerifyMessage(access.organization),
+      });
+    }
+  }
+
+  private orgVerifyMessage(org: Organization) {
+    if (org.verificationStatus === OrgVerificationStatus.PENDING) {
+      return org.workEmailVerifiedAt
+        ? 'Dealo is still reviewing your company. You can save drafts meanwhile.'
+        : 'Confirm your work email, then wait for Dealo to approve your company before publishing.';
+    }
+    if (org.verificationStatus === OrgVerificationStatus.REJECTED) {
+      return org.verificationNote
+        ? `Company verification was declined: ${org.verificationNote}`
+        : 'Company verification was declined. Update your details in ATS settings and submit again.';
+    }
+    return 'Verify your company in ATS settings (website + work email) before publishing a job.';
+  }
+
+  private exceptionMessage(error: unknown, fallback: string) {
+    if (error instanceof ForbiddenException || error instanceof BadRequestException) {
+      const body = error.getResponse();
+      if (typeof body === 'string') return body;
+      if (typeof body === 'object' && body && 'message' in body) {
+        const message = (body as { message: unknown }).message;
+        if (typeof message === 'string') return message;
+        if (Array.isArray(message)) return message.join(', ');
+      }
+    }
+    return error instanceof Error ? error.message : fallback;
   }
 }

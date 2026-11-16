@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { type LoginInput } from '@dealo/shared';
-import { LockKeyhole, Mail } from 'lucide-react';
+import { LockKeyhole, Mail, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -254,6 +254,24 @@ export function LoginForm({
           )}
         </AuthNavLink>
       </p>
+
+      {/* Onboarding Welcome Callout */}
+      <div
+        className={cn(
+          'rounded-2xl border border-border/80 bg-surface/50 p-3.5 text-xs text-muted backdrop-blur-xs dark:bg-white/[0.03]',
+          isPage && 'order-6 mt-1 lg:order-5',
+        )}
+      >
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand dark:bg-brand/20">
+            <Sparkles className="h-3 w-3" />
+          </span>
+          <p className="leading-relaxed">
+            <span className="font-semibold text-foreground">Getting started with Dealo?</span>{' '}
+            Employers can post roles and receive AI-screened shortlists in 48 hours. Professionals can build a free ATS-optimized CV and apply to verified jobs.
+          </p>
+        </div>
+      </div>
     </form>
   );
 }

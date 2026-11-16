@@ -1,4 +1,6 @@
-import { findApplyEmail, isScam, scoreJob, tokens, type JobCandidate, type SeekerProfile } from './job-agent-matcher';
+import { assistSitePolicyForUrl } from '@dealo/shared';
+
+import { classifyChannel, findApplyEmail, isScam, scoreJob, tokens, type JobCandidate, type SeekerProfile } from './job-agent-matcher';
 
 const seeker: SeekerProfile = {
   titles: ['Accountant', 'Finance Officer'],
@@ -77,5 +79,47 @@ describe('helpers', () => {
   it('spots scam wording', () => {
     expect(isScam('Kindly pay the processing fee to secure your slot')).toBe(true);
     expect(isScam('Competitive salary and HMO')).toBe(false);
+  });
+
+  it('classifies apply channels', () => {
+    expect(classifyChannel({ kind: 'dealo', url: 'https://dealo.example/careers/x', applyEmail: null, emailApplyAllowed: false }).channel).toBe('easy_apply');
+    expect(
+      classifyChannel({ kind: 'external', url: 'https://example.org/job', applyEmail: 'hr@acme.ng', emailApplyAllowed: true }).channel,
+    ).toBe('email');
+    expect(
+      classifyChannel({
+        kind: 'external',
+        url: 'https://boards.greenhouse.io/acme/jobs/1234567',
+        applyEmail: null,
+        emailApplyAllowed: false,
+      }).channel,
+    ).toBe('ats_api');
+    expect(
+      classifyChannel({
+        kind: 'external',
+        url: 'https://jobs.lever.co/acme/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        applyEmail: null,
+        emailApplyAllowed: false,
+      }).channel,
+    ).toBe('ats_api');
+    expect(
+      classifyChannel({
+        kind: 'external',
+        url: 'https://apply.workable.com/acme/j/ABCDEF1234',
+        applyEmail: null,
+        emailApplyAllowed: false,
+      }).channel,
+    ).toBe('ats_api');
+    expect(classifyChannel({ kind: 'external', url: 'https://careers.example.com/job/1', applyEmail: null, emailApplyAllowed: true }).channel).toBe(
+      'site_assisted',
+    );
+  });
+});
+
+describe('assistSitePolicyForUrl', () => {
+  it('denies credential-walled boards and allows career pages', () => {
+    expect(assistSitePolicyForUrl('https://www.linkedin.com/jobs/view/1').allowed).toBe(false);
+    expect(assistSitePolicyForUrl('https://indeed.com/viewjob?jk=1').allowed).toBe(false);
+    expect(assistSitePolicyForUrl('https://careers.example.com/apply/123').allowed).toBe(true);
   });
 });

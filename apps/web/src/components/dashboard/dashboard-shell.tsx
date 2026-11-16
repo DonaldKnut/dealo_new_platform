@@ -176,6 +176,13 @@ const adminNav: NavItem[] = [
     help: 'People with accounts on Dealo and their roles.',
   },
   {
+    href: '/dashboard/organizations',
+    labelKey: 'dash.nav.organizations',
+    icon: Building2,
+    help: 'Approve company verification and deactivate hiring workspaces.',
+    tour: 'admin',
+  },
+  {
     href: '/dashboard/settings',
     labelKey: 'dash.nav.settings',
     icon: Settings,
@@ -736,6 +743,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
         <nav
           aria-label="Primary"
+          data-tour="mobile-nav"
           className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 pb-[var(--safe-bottom)] backdrop-blur-md lg:hidden"
         >
           <div className="mx-auto flex max-w-lg items-stretch px-0.5 min-[340px]:px-2">
@@ -770,6 +778,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             })}
             <button
               type="button"
+              data-tour="mobile-more"
               onClick={() => setMobileOpen(true)}
               className="flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium text-muted transition-colors hover:text-foreground"
             >

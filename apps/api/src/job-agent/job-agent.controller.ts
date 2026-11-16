@@ -1,4 +1,16 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -56,10 +68,45 @@ export class JobAgentController {
     return this.agent.runNow(user);
   }
 
+  @Get('vault')
+  @ApiOperation({ summary: 'Apply vault: structured identity, history, Q&A and preferred CV' })
+  getVault(@CurrentUser() user: AuthUser) {
+    return this.agent.getVault(user);
+  }
+
+  @Put('vault')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Apply vault: update identity, work history, education, links, work-auth, salary, Q&A' })
+  updateVault(@Body() body: unknown, @CurrentUser() user: AuthUser) {
+    return this.agent.updateVault(body, user);
+  }
+
+  @Post('vault/regenerate-drafts')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Apply vault: regenerate AI draft answers from preferred resume + saved Q&A' })
+  regenerateDrafts(@CurrentUser() user: AuthUser) {
+    return this.agent.regenerateVaultDrafts(user);
+  }
+
   @Get('matches')
-  @ApiOperation({ summary: 'Job Agent: jobs it found ("inbox", or a status such as APPLIED)' })
+  @ApiOperation({ summary: 'Job Agent: jobs it found (inbox | auto | assist | APPLIED | SKIPPED | FAILED)' })
   matches(@Query('status') status: string | undefined, @CurrentUser() user: AuthUser) {
     return this.agent.listMatches(user, status && /^[A-Za-z_]{3,20}$/.test(status) ? status : undefined);
+  }
+
+  @Get('assist')
+  @ApiOperation({ summary: 'Job Agent: pending site_assisted matches ready for supervised Assist' })
+  assistQueue(@CurrentUser() user: AuthUser) {
+    return this.agent.listPendingAssisted(user);
+  }
+
+  @Post('matches/batch-approve')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Job Agent: approve and send multiple SUGGESTED auto-channel matches' })
+  batchApprove(@Body() body: unknown, @CurrentUser() user: AuthUser) {
+    return this.agent.batchApprove(body, user);
   }
 
   @Post('matches/:id/approve')
@@ -78,8 +125,68 @@ export class JobAgentController {
 
   @Post('matches/:id/applied')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Job Agent: the person finished an outside application on the employer site' })
+  @ApiOperation({ summary: 'Job Agent: the person finished an Assist / outside application' })
   applied(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.agent.markApplied(id, user);
+  }
+
+  @Get('assist/:id/session')
+  @ApiOperation({
+    summary: 'Supervised Apply: vault + drafts + fill hints + site policy for one assisted match',
+  })
+  assistSession(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.agent.getAssistSession(id, user);
+  }
+
+  @Post('assist/:id/map-fields')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Supervised Apply: LLM/rules mapping for ambiguous form fields' })
+  mapFields(@Param('id') id: string, @Body() body: unknown, @CurrentUser() user: AuthUser) {
+    return this.agent.mapAssistFields(id, body, user);
+  }
+
+  @Post('matches/:id/assist-report')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Supervised Apply: extension reports fill outcome / field coverage; may mark applied',
+  })
+  assistReport(@Param('id') id: string, @Body() body: unknown, @CurrentUser() user: AuthUser) {
+    return this.agent.reportAssist(id, body, user);
+  }
+
+  @Post('device-token')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Short-lived device token (dja_…) for the browser Assist extension' })
+  deviceToken(@CurrentUser() user: AuthUser) {
+    return this.agent.createDeviceToken(user);
+  }
+
+  @Post('credits/checkout')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 8, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Job Agent: buy a pay-as-you-go apply credit pack (Paystack)' })
+  checkoutCredits(@Body() body: unknown, @CurrentUser() user: AuthUser) {
+    return this.agent.checkoutCreditPack(body, user);
+  }
+
+  @Post('credits/verify')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Job Agent: verify a credit-pack payment after Paystack return' })
+  verifyCredits(@Body() body: { reference?: string }, @CurrentUser() user: AuthUser) {
+    if (!body.reference?.trim()) throw new BadRequestException('Missing payment reference');
+    return this.agent.verifyCreditPack(user, body.reference.trim());
+  }
+
+  @Get('ops/host-frequency')
+  @ApiOperation({
+    summary: 'Staff/debug: ExternalJob URL host frequency to prioritize next ATS adapters',
+  })
+  hostFrequency(@Query('limit') limit: string | undefined) {
+    const n = limit ? Number(limit) : 25;
+    return this.agent.externalJobHostFrequency(Number.isFinite(n) ? n : 25);
   }
 }

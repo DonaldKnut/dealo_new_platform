@@ -155,6 +155,18 @@ export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
 /** Error `code` the API returns when an action needs a confirmed email address. */
 export const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED' as const;
 
+/** Error `code` when publishing needs a verified company (org verification). */
+export const ORG_NOT_VERIFIED = 'ORG_NOT_VERIFIED' as const;
+
+export const OrgVerificationStatus = {
+  UNVERIFIED: 'UNVERIFIED',
+  PENDING: 'PENDING',
+  VERIFIED: 'VERIFIED',
+  REJECTED: 'REJECTED',
+} as const;
+
+export type OrgVerificationStatus = (typeof OrgVerificationStatus)[keyof typeof OrgVerificationStatus];
+
 /** Stable auth issue codes. The website maps these to a toast + modal — never raw exception text. */
 export const AuthIssue = {
   NO_ACCOUNT: 'NO_ACCOUNT',

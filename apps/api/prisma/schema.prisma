@@ -120,8 +120,10 @@ model User {
   /// Optional so accounts created before lockouts still load.
   failedLoginCount     Int?
   lockedUntil          DateTime?
-  /// Job-seeker premium (resume builder). Granted by admins until Paystack plans launch.
+  /// Job-seeker premium (resume builder + higher Job Agent daily allowance).
   premiumUntil         DateTime?
+  /// Prepaid Job Agent apply credits (pay-as-you-go packs). Spent after the daily free allowance.
+  applyCreditBalance   Int       @default(0)
   /// True for a new Google/LinkedIn account until the person confirms their role and name.
   onboardingPending    Boolean?
   createdAt            DateTime  @default(now())
@@ -223,6 +225,13 @@ model RefreshToken {
   @@index([userId])
 }
 
+enum OrgVerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 model Organization {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   name           String
@@ -239,6 +248,15 @@ model Organization {
   /// Hiring Agents plan: FREE or PRO (PRO lapses back to FREE after agentPlanUntil).
   agentPlan      String    @default("FREE")
   agentPlanUntil DateTime?
+  /// Company verification before jobs can go OPEN (staff can override).
+  verificationStatus      OrgVerificationStatus @default(UNVERIFIED)
+  workEmail               String?
+  workEmailVerifiedAt     DateTime?
+  workEmailVerifyToken    String?
+  cacNumber               String?
+  verificationSubmittedAt DateTime?
+  verificationReviewedAt  DateTime?
+  verificationNote        String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -248,6 +266,9 @@ model Organization {
   invites       WorkspaceInvite[]
   jobs          Job[]
   applications  Application[]
+
+  @@index([verificationStatus])
+  @@index([workEmailVerifyToken])
 }
 
 enum WorkspaceRole {
@@ -980,30 +1001,79 @@ model JobAgentProfile {
 
 /// One job the agent found for one person. `listingId` uses the job board ids ("dealo_…" / "ext_…").
 model JobAgentMatch {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String    @db.ObjectId
-  listingId     String
-  kind          String
-  channel       String
-  title         String
-  company       String
-  location      String
-  url           String
-  applyEmail    String?
-  score         Int
-  reasons       String[]
-  gaps          String[]
-  coverNote     String?
-  status        String    @default("SUGGESTED")
-  error         String?
-  applicationId String?   @db.ObjectId
-  appliedAt     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String    @db.ObjectId
+  listingId      String
+  kind           String
+  /// easy_apply | email | ats_api | site_assisted (legacy rows may still say "site")
+  channel        String
+  /// Why the classifier picked this channel (for UI/debug).
+  channelReason  String?
+  title          String
+  company        String
+  location       String
+  url            String
+  applyEmail     String?
+  score          Int
+  reasons        String[]
+  gaps           String[]
+  coverNote      String?
+  /// 0–1 how ready a site_assisted match is for a ~60-second Assist (drafts + vault).
+  assistConfidence Float?
+  /// Last Assist fill coverage (0–100) from the extension report.
+  assistCoveragePct Int?
+  /// Last Assist pause reasons (captcha, sso, file, fee, …).
+  assistPauses     String[]
+  /// Last Assist report outcome (filled, submitted_by_user, paused_*, …).
+  assistLastOutcome String?
+  status         String    @default("SUGGESTED")
+  error          String?
+  applicationId  String?   @db.ObjectId
+  appliedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@unique([userId, listingId])
   @@index([userId, status, createdAt])
   @@index([userId, appliedAt])
+  @@index([userId, channel, status])
+}
+
+/// Pay-as-you-go Job Agent credit pack purchase (Paystack).
+model ApplyCreditInvoice {
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  reference        String    @unique
+  userId           String    @db.ObjectId
+  packId           String
+  credits          Int
+  amountMinor      Int
+  currency         String
+  status           String    @default("PENDING")
+  authorizationUrl String?
+  providerTxnId    String?
+  failureReason    String?
+  paidAt           DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+/// Structured apply pack the agent / browser assist uses to fill applications.
+model ApplyVault {
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String    @unique @db.ObjectId
+  identity          Json?
+  workHistory       Json?
+  education         Json?
+  links             Json?
+  workAuth          Json?
+  salaryExpectation Json?
+  qaPairs           Json?
+  preferredResumeId String?   @db.ObjectId
+  drafts            Json?
+  draftsUpdatedAt   DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 model JobAgentRun {

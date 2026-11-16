@@ -34,7 +34,7 @@ export function ModalHost() {
         open={openModal === 'login'}
         onClose={close}
         title="Welcome back"
-        subtitle="Hiring or looking for work, pick up where you left off."
+        subtitle="Sign in to your Dealo workspace. Whether you're hiring verified talent or finding your next role, pick up right where you left off."
         promoFill
         illustration={<AuthIllustration />}
       >

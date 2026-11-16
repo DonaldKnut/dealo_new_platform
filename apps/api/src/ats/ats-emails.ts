@@ -121,3 +121,16 @@ export function offerResponseEmail(p: { to: string; candidateName: string; jobTi
     text: `${p.candidateName} ${accepted ? 'accepted' : 'declined'} the offer for ${p.jobTitle}.`,
   };
 }
+
+export function workEmailVerifyEmail(p: { to: string; orgName: string; link: string }): SendEmailInput {
+  return {
+    to: p.to,
+    subject: `Confirm your work email for ${p.orgName} on Dealo`,
+    html: layout(
+      'Confirm your company email',
+      `<p>Confirm that <strong>${esc(p.to)}</strong> belongs to <strong>${esc(p.orgName)}</strong>. After you confirm, Dealo can review your company so you can publish jobs.</p>`,
+      { label: 'Confirm work email', href: p.link },
+    ),
+    text: `Confirm your work email for ${p.orgName} on Dealo: ${p.link}`,
+  };
+}

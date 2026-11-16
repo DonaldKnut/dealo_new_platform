@@ -34,13 +34,13 @@ import { AGENT_LOOK, formatNaira } from './agent-meta';
 
 const STAFF_START = '/dashboard/ats/agents';
 
-function PrimaryCta({ className, children }: { className?: string; children: ReactNode }) {
+function PrimaryCta({ className, children, staffLabel }: { className?: string; children: ReactNode; staffLabel?: ReactNode }) {
   const { open } = useModal();
   const { user } = useAuthSession();
   if (user && isStaffRole(user.roles)) {
     return (
       <Link href={STAFF_START} className={className}>
-        {children}
+        {staffLabel ?? children}
       </Link>
     );
   }
@@ -89,7 +89,14 @@ function Hero() {
             Seven specialist agents that screen CVs, write job posts, find candidates, follow up, book interviews and brief your team every morning. Built for hiring in Nigeria. A person approves every step.
           </p>
           <div className="mt-8 flex flex-col gap-3 min-[400px]:flex-row">
-            <PrimaryCta className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 px-6 py-3 text-sm font-semibold text-[#042016] shadow-[0_18px_40px_-12px_rgba(16,185,129,0.7)] transition hover:brightness-110">
+            <PrimaryCta
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 px-6 py-3 text-sm font-semibold text-[#042016] shadow-[0_18px_40px_-12px_rgba(16,185,129,0.7)] transition hover:brightness-110"
+              staffLabel={
+                <>
+                  Open my agents <ArrowRight className="h-4 w-4" />
+                </>
+              }
+            >
               Request talent <ArrowRight className="h-4 w-4" />
             </PrimaryCta>
             <a href="#demo" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
@@ -575,7 +582,14 @@ function FinalCta() {
         <h2 className="relative mx-auto mt-4 max-w-2xl font-display text-3xl sm:text-4xl">Let Dealo’s team put the agents to work for you.</h2>
         <p className="relative mx-auto mt-3 max-w-xl text-white/75">Request talent and our recruiters use these agents behind the scenes. You get a checked shortlist.</p>
         <div className="relative mt-8 flex flex-col justify-center gap-3 min-[400px]:flex-row">
-          <PrimaryCta className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#04140f] transition hover:bg-emerald-50">
+          <PrimaryCta
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#04140f] transition hover:bg-emerald-50"
+            staffLabel={
+              <>
+                <Bot className="h-4 w-4" /> Open my agents
+              </>
+            }
+          >
             <Bot className="h-4 w-4" /> Request talent
           </PrimaryCta>
           <button type="button" onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })} className="inline-flex items-center justify-center gap-2 rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10">

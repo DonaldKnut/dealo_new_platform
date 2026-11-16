@@ -1,9 +1,11 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { AdminUpdateUserInput } from '@dealo/shared';
+import type { AdminUpdateOrganizationInput, AdminUpdateUserInput } from '@dealo/shared';
 import {
   CandidateScreenStatus,
   HireInquiryStatus,
+  JobStatus,
+  OrgVerificationStatus,
   UserRole,
 } from '@prisma/client';
 
@@ -670,6 +672,103 @@ export class DashboardService {
         isOwner: member.isOwner,
       })),
     }));
+  }
+
+  /** Staff list of hiring workspaces for verification review and kill switches. */
+  async organizations(actor: AuthUser) {
+    if (!this.canManageAll(actor)) throw new ForbiddenException('Staff only');
+    const rows = await this.prisma.organization.findMany({
+      orderBy: [{ verificationStatus: 'asc' }, { updatedAt: 'desc' }],
+      take: 500,
+      include: {
+        _count: { select: { members: true, jobs: true } },
+        jobs: { where: { status: JobStatus.OPEN }, select: { id: true }, take: 1 },
+      },
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      website: row.website,
+      isActive: row.isActive,
+      careersEnabled: row.careersEnabled,
+      verificationStatus: row.verificationStatus,
+      workEmail: row.workEmail,
+      workEmailVerifiedAt: row.workEmailVerifiedAt,
+      cacNumber: row.cacNumber,
+      verificationSubmittedAt: row.verificationSubmittedAt,
+      verificationReviewedAt: row.verificationReviewedAt,
+      verificationNote: row.verificationNote,
+      plan: row.plan,
+      maxOpenJobs: row.maxOpenJobs,
+      members: row._count.members,
+      jobs: row._count.jobs,
+      hasOpenJobs: row.jobs.length > 0,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
+  }
+
+  async updateOrganization(id: string, input: AdminUpdateOrganizationInput, actor: AuthUser) {
+    if (!actor.roles.includes(UserRole.SUPER_ADMIN) && !actor.roles.includes(UserRole.ADMIN)) {
+      throw new ForbiddenException('Only admins can change organizations');
+    }
+    if (!/^[a-f0-9]{24}$/i.test(id)) throw new NotFoundException('Organization not found');
+    const existing = await this.prisma.organization.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Organization not found');
+
+    if (input.verificationStatus === OrgVerificationStatus.VERIFIED && !existing.workEmailVerifiedAt) {
+      throw new BadRequestException('Confirm the company work email before approving verification');
+    }
+
+    const reviewing =
+      input.verificationStatus === OrgVerificationStatus.VERIFIED ||
+      input.verificationStatus === OrgVerificationStatus.REJECTED;
+
+    const updated = await this.prisma.organization.update({
+      where: { id },
+      data: {
+        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        ...(input.careersEnabled !== undefined ? { careersEnabled: input.careersEnabled } : {}),
+        ...(input.verificationStatus !== undefined ? { verificationStatus: input.verificationStatus } : {}),
+        ...(input.verificationNote !== undefined ? { verificationNote: input.verificationNote } : {}),
+        ...(reviewing ? { verificationReviewedAt: new Date() } : {}),
+      },
+    });
+
+    // Deactivating closes the workspace for members and stops careers/job board exposure.
+    if (input.isActive === false && existing.isActive) {
+      await this.prisma.job.updateMany({
+        where: { organizationId: id, status: JobStatus.OPEN },
+        data: { status: JobStatus.PAUSED },
+      });
+    }
+
+    await this.auditLog.record({
+      action: 'ADMIN_ORGANIZATION_UPDATED',
+      entityType: 'Organization',
+      entityId: id,
+      actorId: actor.id,
+      metadata: { ...input, previousStatus: existing.verificationStatus, previousActive: existing.isActive },
+    });
+
+    return {
+      id: updated.id,
+      name: updated.name,
+      slug: updated.slug,
+      website: updated.website,
+      isActive: updated.isActive,
+      careersEnabled: updated.careersEnabled,
+      verificationStatus: updated.verificationStatus,
+      workEmail: updated.workEmail,
+      workEmailVerifiedAt: updated.workEmailVerifiedAt,
+      cacNumber: updated.cacNumber,
+      verificationSubmittedAt: updated.verificationSubmittedAt,
+      verificationReviewedAt: updated.verificationReviewedAt,
+      verificationNote: updated.verificationNote,
+      plan: updated.plan,
+      maxOpenJobs: updated.maxOpenJobs,
+    };
   }
 
   private mapRequest(item: {

@@ -101,14 +101,16 @@ export function FormModalShell({
             <div className="flex max-h-[96dvh] min-w-0 flex-col sm:max-h-[94dvh]">
               <div className="flex items-start justify-between gap-2 border-b border-border px-2.5 py-2.5 min-[340px]:gap-3 min-[340px]:px-4 min-[340px]:py-4 sm:gap-4 sm:px-7">
                 <div className="min-w-0 pr-1 min-[340px]:pr-2">
-                  <p className="eyebrow hidden min-[340px]:block">Dealo</p>
+                  <p className="eyebrow text-[11px] font-bold uppercase tracking-wider text-brand">
+                    Dealo
+                  </p>
                   <h2
                     id="dealo-modal-title"
-                    className="font-display text-[1.05rem] leading-tight text-foreground min-[340px]:mt-1 min-[340px]:text-2xl sm:text-3xl"
+                    className="font-display text-[1.15rem] font-bold leading-tight text-foreground min-[340px]:mt-0.5 min-[340px]:text-2xl sm:text-3xl"
                   >
                     {title}
                   </h2>
-                  <p className="mt-1.5 hidden text-[11px] leading-relaxed text-muted min-[340px]:mt-2 min-[340px]:block min-[340px]:text-xs lg:hidden">
+                  <p className="mt-1 text-xs leading-relaxed text-muted sm:text-sm">
                     {subtitle}
                   </p>
                 </div>

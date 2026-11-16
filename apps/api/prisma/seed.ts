@@ -370,8 +370,26 @@ async function main(): Promise<void> {
         brandColor: '#0f766e',
         maxOpenJobs: 200,
         maxSeats: 100,
+        verificationStatus: 'VERIFIED',
+        workEmail: 'hello@dealonetwork.com',
+        workEmailVerifiedAt: new Date(),
+        verificationReviewedAt: new Date(),
+        verificationNote: 'In-house Dealo workspace',
       },
     }));
+  if (dealo.verificationStatus !== 'VERIFIED') {
+    await prisma.organization.update({
+      where: { id: dealo.id },
+      data: {
+        verificationStatus: 'VERIFIED',
+        workEmail: dealo.workEmail ?? 'hello@dealonetwork.com',
+        workEmailVerifiedAt: dealo.workEmailVerifiedAt ?? new Date(),
+        workEmailVerifyToken: null,
+        verificationReviewedAt: dealo.verificationReviewedAt ?? new Date(),
+        verificationNote: dealo.verificationNote ?? 'In-house Dealo workspace',
+      },
+    });
+  }
   const staffRoleCodes: Record<string, 'OWNER' | 'ADMIN' | 'RECRUITER'> = {
     [UserRole.SUPER_ADMIN]: 'OWNER',
     [UserRole.ADMIN]: 'ADMIN',

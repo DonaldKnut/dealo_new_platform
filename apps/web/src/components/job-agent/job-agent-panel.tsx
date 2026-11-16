@@ -4,11 +4,15 @@ import {
   JOB_AGENT_PLANS,
   JOB_BOARD_TYPES,
   RESUME_COLORS,
+  isAssistedChannel,
+  isAutoChannel,
   isPremiumColor,
   isPremiumFont,
   isPremiumTemplate,
   resumeDataSchema,
   resumeStyleSchema,
+  type ApplyVaultDto,
+  type AssistSessionDto,
   type JobAgentMatchDto,
   type JobAgentOverview,
   type JobAgentSettings,
@@ -41,6 +45,7 @@ import {
   ShieldCheck,
   Sparkles,
   Target,
+  Wallet,
   X,
   Zap,
 } from 'lucide-react';
@@ -53,12 +58,13 @@ import { useLocale } from '@/components/i18n/locale-context';
 import { FormModal } from '@/components/ui/form-modal';
 import { useToast } from '@/components/ui/toast';
 import { ApiError } from '@/lib/api';
-import { jobAgentApi } from '@/lib/job-agent-api';
+import { connectApplyExtension, detectApplyExtension } from '@/lib/apply-extension';
+import { jobAgentApi, type JobAgentMatchTab } from '@/lib/job-agent-api';
 import { JOB_TYPE_LABEL } from '@/lib/jobs-api';
 import { resumeApi, type SavedResume } from '@/lib/resume-api';
 import { cn } from '@/lib/utils';
 
-type Tab = 'inbox' | 'APPLIED' | 'SKIPPED';
+type Tab = JobAgentMatchTab;
 type T = (key: TranslationKey) => string;
 
 const DEFAULT_SETTINGS: JobAgentSettings = {
@@ -285,9 +291,12 @@ export function JobAgentPanel() {
   const { t } = useLocale();
   const [overview, setOverview] = useState<JobAgentOverview | null>(null);
   const [matches, setMatches] = useState<JobAgentMatchDto[] | null>(null);
-  const [tab, setTab] = useState<Tab>('inbox');
+  const [tab, setTab] = useState<Tab>('auto');
   const [setupOpen, setSetupOpen] = useState(false);
   const [consentOpen, setConsentOpen] = useState(false);
+  const [vaultOpen, setVaultOpen] = useState(false);
+  const [assistMatch, setAssistMatch] = useState<JobAgentMatchDto | null>(null);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [, setNow] = useState(0);
@@ -303,6 +312,7 @@ export function JobAgentPanel() {
 
   const loadMatches = useCallback(async (which: Tab) => {
     setMatches(null);
+    setSelected({});
     setMatches(await jobAgentApi.matches(which).catch(() => []));
   }, []);
 
@@ -335,6 +345,41 @@ export function JobAgentPanel() {
       })
       .catch((err) => toast.error(t('ja.toast.payFail'), err instanceof ApiError ? err.message : ''));
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Back from Paystack: confirm pay-as-you-go apply credit pack.
+  useEffect(() => {
+    const reference = new URLSearchParams(window.location.search).get('credits');
+    if (!reference) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    void jobAgentApi
+      .verifyCredits(reference)
+      .then((result) => {
+        if (result.status === 'PAID') {
+          toast.success(t('ja.toast.creditsPaid'), fill(t('ja.toast.creditsPaidBody'), { n: result.credits }));
+        } else if (result.status === 'FAILED') {
+          toast.error(t('ja.toast.payFail'), result.failureReason ?? t('ja.toast.payFailBody'));
+        } else {
+          toast.success(t('ja.toast.payPending'), t('ja.toast.payPendingBody'));
+        }
+        return load();
+      })
+      .catch((err) => toast.error(t('ja.toast.payFail'), err instanceof ApiError ? err.message : ''));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Deep-link: /dashboard/job-agent?assist=<matchId>
+  useEffect(() => {
+    const assistId = new URLSearchParams(window.location.search).get('assist');
+    if (!assistId || !/^[a-f0-9]{24}$/.test(assistId)) return;
+    setTab('assist');
+    void jobAgentApi
+      .assistSession(assistId)
+      .then((session) => {
+        setAssistMatch(session.match);
+        window.history.replaceState(null, '', window.location.pathname);
+      })
+      .catch(() => undefined);
   }, []);
 
   const premium = overview?.plan === 'PREMIUM';
@@ -384,9 +429,11 @@ export function JobAgentPanel() {
     setBusy(`${action}:${match.id}`);
     try {
       const updated = action === 'approve' ? await jobAgentApi.approve(match.id) : action === 'skip' ? await jobAgentApi.skip(match.id) : await jobAgentApi.markApplied(match.id);
-      setMatches((list) => (tab === 'inbox' ? list?.filter((m) => m.id !== match.id) : list?.map((m) => (m.id === match.id ? updated : m))) ?? null);
+      const dropFromQueue = tab === 'inbox' || tab === 'auto' || tab === 'assist';
+      setMatches((list) => (dropFromQueue ? list?.filter((m) => m.id !== match.id) : list?.map((m) => (m.id === match.id ? updated : m))) ?? null);
       if (action === 'approve') {
         if (updated.status === 'APPLIED') toast.success(t('ja.toast.sent'), `${match.title} · ${match.company}`);
+        else if (updated.status === 'READY') toast.success(t('ja.card.readyAssist'), updated.channelReason ?? match.company);
         else toast.error(t('ja.toast.notSent'), updated.error ?? t('ja.toast.tryLater'));
       }
       if (action === 'applied') toast.success(t('ja.toast.marked'), t('ja.toast.markedBody'));
@@ -398,10 +445,36 @@ export function JobAgentPanel() {
     }
   };
 
+  const batchApprove = async (ids: string[]) => {
+    if (!ids.length) return toast.error(t('ja.batch.none'));
+    setBusy('batch');
+    try {
+      const result = await jobAgentApi.batchApprove(ids);
+      toast.success(t('ja.toast.sent'), fill(t('ja.batch.done'), { n: result.sent, f: result.failed }));
+      void load();
+      void loadMatches(tab);
+    } catch (err) {
+      toast.error(t('ja.toast.actFail'), err instanceof ApiError ? err.message : '');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const upgrade = async () => {
     setBusy('upgrade');
     try {
       const { authorizationUrl } = await resumeApi.checkoutPremium('job-agent');
+      window.location.assign(authorizationUrl);
+    } catch (err) {
+      toast.error(t('ja.toast.payFail'), err instanceof ApiError ? err.message : t('ja.toast.payFailBody'));
+      setBusy(null);
+    }
+  };
+
+  const buyCredits = async (packId: string) => {
+    setBusy(`pack:${packId}`);
+    try {
+      const { authorizationUrl } = await jobAgentApi.checkoutCredits(packId);
       window.location.assign(authorizationUrl);
     } catch (err) {
       toast.error(t('ja.toast.payFail'), err instanceof ApiError ? err.message : t('ja.toast.payFailBody'));
@@ -500,6 +573,22 @@ export function JobAgentPanel() {
         {status.lastError ? <Banner key="err" tone="warn" icon={AlertTriangle} text={status.lastError} action={t('ja.warn.fix')} onAction={() => setSetupOpen(true)} /> : null}
         {overview.cv?.stale ? <Banner key="stale" tone="info" icon={RefreshCw} text={t('ja.warn.stale')} action={t('ja.warn.refresh')} onAction={() => setSetupOpen(true)} /> : null}
         {configured && !overview.cv ? <Banner key="nocv" tone="warn" icon={FileText} text={t('ja.warn.noCv')} action={t('ja.warn.attach')} onAction={() => setSetupOpen(true)} /> : null}
+        {overview.digest && (overview.digest.sent > 0 || overview.digest.ready > 0) ? (
+          <Banner
+            key="digest"
+            tone="info"
+            icon={Zap}
+            text={
+              overview.digest.sent && overview.digest.ready
+                ? fill(t('ja.digest.banner'), { sent: overview.digest.sent, ready: overview.digest.ready })
+                : overview.digest.sent
+                  ? fill(t('ja.digest.bannerSent'), { sent: overview.digest.sent })
+                  : fill(t('ja.digest.bannerReady'), { ready: overview.digest.ready })
+            }
+            action={overview.digest.ready ? t('ja.tab.assist') : undefined}
+            onAction={overview.digest.ready ? () => setTab('assist') : undefined}
+          />
+        ) : null}
       </AnimatePresence>
 
       {!configured ? (
@@ -507,13 +596,28 @@ export function JobAgentPanel() {
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 min-[300px]:grid-cols-2 lg:grid-cols-4">
-            <Stat delay={0} icon={Send} label={t('ja.stat.sentToday')} value={`${stats.appliedToday}/${stats.dailyAllowance}`} hint={t('ja.stat.resets')} />
+            <Stat
+              delay={0}
+              icon={Send}
+              label={t('ja.stat.sentToday')}
+              value={`${stats.appliedToday}/${stats.dailyAllowance}`}
+              hint={fill(t('ja.credits.total'), { n: stats.totalCreditsAvailable ?? stats.creditsRemaining })}
+            />
             <Stat delay={0.05} icon={Zap} label={t('ja.stat.week')} value={String(stats.appliedWeek)} hint={fill(t('ja.stat.total'), { n: stats.appliedTotal })} />
             <Stat delay={0.1} icon={Inbox} label={t('ja.stat.waiting')} value={String(stats.suggested + stats.ready)} hint={fill(t('ja.stat.waitingHint'), { a: stats.suggested, b: stats.ready })} />
             <Stat delay={0.15} icon={Clock} label={t('ja.stat.last')} value={relative(t, status.lastRunAt)} hint={fill(t('ja.stat.every'), { h: limits.runEveryHours, plan: planName })} />
           </div>
 
           {!premium ? <UpgradeCard onUpgrade={() => void upgrade()} busy={busy === 'upgrade'} /> : null}
+          {overview.paymentsEnabled ? (
+            <CreditPacksCard
+              packs={[...(overview.creditPacks ?? [])]}
+              freeLeft={stats.creditsRemaining}
+              wallet={stats.creditBalance ?? 0}
+              busy={busy?.startsWith('pack:') ? busy : null}
+              onBuy={(packId) => void buyCredits(packId)}
+            />
+          ) : null}
 
           <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
             <section className="min-w-0">
@@ -521,11 +625,12 @@ export function JobAgentPanel() {
                 <div role="tablist" className="scrollbar-none flex max-w-full overflow-x-auto rounded-full border border-border bg-surface p-1">
                   {(
                     [
-                      ['inbox', 'ja.tab.inbox'],
-                      ['APPLIED', 'ja.tab.sent'],
-                      ['SKIPPED', 'ja.tab.skipped'],
+                      ['auto', 'ja.tab.auto', stats.suggested],
+                      ['assist', 'ja.tab.assist', stats.ready],
+                      ['APPLIED', 'ja.tab.sent', 0],
+                      ['SKIPPED', 'ja.tab.skipped', 0],
                     ] as const
-                  ).map(([id, label]) => (
+                  ).map(([id, label, count]) => (
                     <button
                       key={id}
                       role="tab"
@@ -537,15 +642,40 @@ export function JobAgentPanel() {
                       {tab === id ? <motion.span layoutId="ja-tab" className="absolute inset-0 rounded-full bg-brand shadow" transition={{ type: 'spring', stiffness: 400, damping: 32 }} /> : null}
                       <span className={cn('relative', tab === id ? 'text-white dark:text-[#071f14]' : 'text-muted hover:text-foreground')}>
                         {t(label)}
-                        {id === 'inbox' && stats.suggested + stats.ready ? <span className="ml-1.5 rounded-full bg-white/25 px-1.5 text-[10px]">{stats.suggested + stats.ready}</span> : null}
+                        {count ? <span className="ml-1.5 rounded-full bg-white/25 px-1.5 text-[10px]">{count}</span> : null}
                       </span>
                     </button>
                   ))}
                 </div>
-                <Link href="/dashboard/applications" className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
-                  {t('ja.allApps')} <ArrowUpRight className="h-4 w-4" />
-                </Link>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button type="button" onClick={() => setVaultOpen(true)} className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
+                    <Wallet className="h-4 w-4" /> {t('ja.vault.open')}
+                  </button>
+                  <Link href="/dashboard/applications" className="inline-flex items-center gap-1 text-sm font-semibold text-brand">
+                    {t('ja.allApps')} <ArrowUpRight className="h-4 w-4" />
+                  </Link>
+                </div>
               </div>
+
+              {tab === 'auto' && matches?.some((m) => m.status === 'SUGGESTED' && isAutoChannel(m.channel)) ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busy === 'batch'}
+                    onClick={() => {
+                      const ids = Object.entries(selected)
+                        .filter(([, on]) => on)
+                        .map(([id]) => id);
+                      void batchApprove(ids.length ? ids : (matches ?? []).filter((m) => m.status === 'SUGGESTED' && isAutoChannel(m.channel)).map((m) => m.id));
+                    }}
+                    className="btn-primary justify-center text-sm"
+                  >
+                    {busy === 'batch' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {Object.values(selected).some(Boolean) ? t('ja.batch.approve') : t('ja.batch.approveAll')}
+                  </button>
+                  <p className="text-xs text-muted">{fill(t('ja.credits'), { n: stats.creditsRemaining })}</p>
+                </div>
+              ) : null}
 
               <div className="mt-4 space-y-3">
                 {matches === null ? (
@@ -553,7 +683,17 @@ export function JobAgentPanel() {
                 ) : matches.length ? (
                   <AnimatePresence initial={false}>
                     {matches.map((m, i) => (
-                      <MatchCard key={m.id} index={i} match={m} busy={busy} onAct={(a) => void act(m, a)} />
+                      <MatchCard
+                        key={m.id}
+                        index={i}
+                        match={m}
+                        busy={busy}
+                        selectable={tab === 'auto' && m.status === 'SUGGESTED' && isAutoChannel(m.channel)}
+                        selected={Boolean(selected[m.id])}
+                        onSelect={(on) => setSelected((prev) => ({ ...prev, [m.id]: on }))}
+                        onAct={(a) => void act(m, a)}
+                        onContinue={() => setAssistMatch(m)}
+                      />
                     ))}
                   </AnimatePresence>
                 ) : (
@@ -563,6 +703,14 @@ export function JobAgentPanel() {
             </section>
 
             <aside className="min-w-0 space-y-4">
+              <div className="rounded-2xl border border-border bg-surface-elevated p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t('ja.vault.title')}</p>
+                <p className="mt-2 text-sm text-foreground">{t(overview.vaultReady ? 'ja.vault.ready' : 'ja.vault.empty')}</p>
+                <button type="button" onClick={() => setVaultOpen(true)} className="btn-secondary mt-3 w-full justify-center text-sm">
+                  <Wallet className="h-4 w-4" /> {t('ja.vault.open')}
+                </button>
+              </div>
+
               <div className="rounded-2xl border border-border bg-surface-elevated p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t('ja.side.hunts')}</p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -644,6 +792,25 @@ export function JobAgentPanel() {
         }}
       />
 
+      <VaultEditor
+        open={vaultOpen}
+        onClose={() => setVaultOpen(false)}
+        onChanged={() => {
+          void load();
+        }}
+      />
+
+      <AssistContinueModal
+        match={assistMatch}
+        onClose={() => setAssistMatch(null)}
+        onMarked={(updated) => {
+          setMatches((list) => list?.filter((m) => m.id !== updated.id) ?? null);
+          setAssistMatch(null);
+          void load();
+          toast.success(t('ja.toast.marked'), t('ja.toast.markedBody'));
+        }}
+      />
+
       <FormModal
         open={consentOpen}
         onClose={() => setConsentOpen(false)}
@@ -685,7 +852,19 @@ export function JobAgentPanel() {
 
 // ----------------------------------------------------------------- pieces
 
-function Banner({ tone, icon: Icon, text, action, onAction }: { tone: 'warn' | 'info'; icon: typeof AlertTriangle; text: string; action: string; onAction: () => void }) {
+function Banner({
+  tone,
+  icon: Icon,
+  text,
+  action,
+  onAction,
+}: {
+  tone: 'warn' | 'info';
+  icon: typeof AlertTriangle;
+  text: string;
+  action?: string;
+  onAction?: () => void;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, height: 0 }}
@@ -695,9 +874,11 @@ function Banner({ tone, icon: Icon, text, action, onAction }: { tone: 'warn' | '
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
       <p className="min-w-0 flex-1">{text}</p>
-      <button type="button" className="self-start font-semibold underline" onClick={onAction}>
-        {action}
-      </button>
+      {action && onAction ? (
+        <button type="button" className="self-start font-semibold underline" onClick={onAction}>
+          {action}
+        </button>
+      ) : null}
     </motion.div>
   );
 }
@@ -753,6 +934,55 @@ function UpgradeCard({ onUpgrade, busy }: { onUpgrade: () => void; busy: boolean
   );
 }
 
+function CreditPacksCard({
+  packs,
+  freeLeft,
+  wallet,
+  busy,
+  onBuy,
+}: {
+  packs: { id: string; credits: number; priceMinor: number; label: string }[];
+  freeLeft: number;
+  wallet: number;
+  busy: string | null;
+  onBuy: (packId: string) => void;
+}) {
+  const { t } = useLocale();
+  if (!packs.length) return null;
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-border bg-surface-elevated p-4 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold text-foreground">{t('ja.pack.title')}</p>
+          <p className="mt-0.5 text-xs text-muted">{t('ja.pack.body')}</p>
+          <p className="mt-2 text-[11px] text-muted">
+            {fill(t('ja.credits'), { n: freeLeft })} · {fill(t('ja.credits.wallet'), { n: wallet })}
+          </p>
+        </div>
+        <Wallet className="h-5 w-5 shrink-0 text-brand" />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {packs.map((pack) => {
+          const naira = Math.round(pack.priceMinor / 100).toLocaleString();
+          const packing = busy === `pack:${pack.id}`;
+          return (
+            <button
+              key={pack.id}
+              type="button"
+              disabled={Boolean(busy)}
+              onClick={() => onBuy(pack.id)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground transition hover:border-brand/40 hover:text-brand disabled:opacity-60"
+            >
+              {packing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {packing ? t('ja.pack.busy') : fill(t('ja.pack.cta'), { label: `${pack.label} · ₦${naira}` })}
+            </button>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
 export function JobAgentSteps({ className }: { className?: string }) {
   const { t } = useLocale();
   const steps = [
@@ -798,11 +1028,14 @@ function Onboarding({ onStart }: { onStart: () => void }) {
 
 function EmptyInbox({ tab, enabled }: { tab: Tab; enabled: boolean }) {
   const { t } = useLocale();
+  const title =
+    tab === 'auto' ? 'ja.empty.auto' : tab === 'assist' ? 'ja.empty.assist' : tab === 'inbox' ? 'ja.empty.inbox' : tab === 'APPLIED' ? 'ja.empty.sent' : 'ja.empty.skipped';
+  const queueTab = tab === 'inbox' || tab === 'auto' || tab === 'assist';
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-2xl border border-dashed border-border px-4 py-10 text-center sm:px-6 sm:py-12">
       <Inbox className="mx-auto h-8 w-8 text-muted" />
-      <p className="mt-3 font-semibold text-foreground">{t(tab === 'inbox' ? 'ja.empty.inbox' : tab === 'APPLIED' ? 'ja.empty.sent' : 'ja.empty.skipped')}</p>
-      <p className="mt-1 text-sm text-muted">{t(tab === 'inbox' ? (enabled ? 'ja.empty.on' : 'ja.empty.off') : 'ja.empty.later')}</p>
+      <p className="mt-3 font-semibold text-foreground">{t(title)}</p>
+      <p className="mt-1 text-sm text-muted">{t(queueTab ? (enabled ? 'ja.empty.on' : 'ja.empty.off') : 'ja.empty.later')}</p>
     </motion.div>
   );
 }
@@ -810,15 +1043,37 @@ function EmptyInbox({ tab, enabled }: { tab: Tab; enabled: boolean }) {
 const CHANNEL: Record<JobAgentMatchDto['channel'], { label: TranslationKey; icon: typeof Zap; tone: string }> = {
   easy_apply: { label: 'ja.ch.easy', icon: Zap, tone: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' },
   email: { label: 'ja.ch.email', icon: Mail, tone: 'bg-violet-500/10 text-violet-700 dark:text-violet-300' },
+  ats_api: { label: 'ja.ch.ats', icon: Bot, tone: 'bg-teal-500/10 text-teal-700 dark:text-teal-300' },
+  site_assisted: { label: 'ja.ch.assist', icon: ArrowUpRight, tone: 'bg-sky-500/10 text-sky-700 dark:text-sky-300' },
   site: { label: 'ja.ch.site', icon: ArrowUpRight, tone: 'bg-sky-500/10 text-sky-700 dark:text-sky-300' },
 };
 
-function MatchCard({ match, busy, index, onAct }: { match: JobAgentMatchDto; busy: string | null; index: number; onAct: (a: 'approve' | 'skip' | 'applied') => void }) {
+function MatchCard({
+  match,
+  busy,
+  index,
+  selectable,
+  selected,
+  onSelect,
+  onAct,
+  onContinue,
+}: {
+  match: JobAgentMatchDto;
+  busy: string | null;
+  index: number;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (on: boolean) => void;
+  onAct: (a: 'approve' | 'skip' | 'applied') => void;
+  onContinue?: () => void;
+}) {
   const { t } = useLocale();
   const [showNote, setShowNote] = useState(false);
   const [copied, setCopied] = useState(false);
-  const channel = CHANNEL[match.channel];
+  const channel = CHANNEL[match.channel] ?? CHANNEL.site_assisted;
   const working = busy?.endsWith(match.id);
+  const assisted = isAssistedChannel(match.channel) || match.status === 'READY';
+  const auto = isAutoChannel(match.channel);
 
   const copyNote = () => {
     if (!match.coverNote) return;
@@ -841,16 +1096,48 @@ function MatchCard({ match, busy, index, onAct }: { match: JobAgentMatchDto; bus
         <ScoreRing score={match.score} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
+            {selectable ? (
+              <label className="inline-flex cursor-pointer items-center">
+                <input type="checkbox" className="h-4 w-4 rounded border-border" checked={Boolean(selected)} onChange={(e) => onSelect?.(e.target.checked)} />
+              </label>
+            ) : null}
             <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold min-[300px]:text-[10.5px]', channel.tone)}>
               <channel.icon className="h-3 w-3" /> {t(channel.label)}
             </span>
             {match.status === 'APPLIED' ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-300">
-                <CheckCircle2 className="h-3 w-3" /> {fill(t('ja.card.sentAgo'), { when: relative(t, match.appliedAt) })}
+                <CheckCircle2 className="h-3 w-3" /> {auto ? t('ja.card.sentByAgent') : fill(t('ja.card.sentAgo'), { when: relative(t, match.appliedAt) })}
+              </span>
+            ) : null}
+            {match.status === 'READY' ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-sky-700 dark:text-sky-300">
+                {t('ja.card.readyAssist')}
+              </span>
+            ) : null}
+            {assisted && match.status === 'READY' && typeof match.assistConfidence === 'number' ? (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-emerald-700 dark:text-emerald-300"
+                title={t('ja.card.assistConfidenceHint')}
+              >
+                {fill(t('ja.card.assistConfidence'), { pct: Math.round(match.assistConfidence * 100) })}
+              </span>
+            ) : null}
+            {typeof match.assistCoveragePct === 'number' ? (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-teal-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-teal-700 dark:text-teal-300"
+                title={t('ja.card.coverageHint')}
+              >
+                {fill(t('ja.card.coverage'), { pct: match.assistCoveragePct })}
+              </span>
+            ) : null}
+            {match.assistPauses?.length ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-amber-800 dark:text-amber-200">
+                {fill(t('ja.card.pause'), { reason: match.assistPauses.slice(0, 2).join(', ') })}
               </span>
             ) : null}
             {match.status === 'FAILED' ? <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-[10.5px] font-semibold text-red-600">{t('ja.card.failed')}</span> : null}
           </div>
+          {match.channelReason ? <p className="mt-1 text-[11px] text-muted">{match.channelReason}</p> : null}
           <h3 className="mt-1.5 break-words font-semibold leading-snug text-foreground">{match.title}</h3>
           <p className="break-words text-[13px] text-muted min-[300px]:text-sm">
             {match.company} · {match.location}
@@ -899,22 +1186,16 @@ function MatchCard({ match, busy, index, onAct }: { match: JobAgentMatchDto; bus
       ) : null}
 
       <div className="mt-4 flex flex-col gap-2 min-[300px]:flex-row min-[300px]:flex-wrap min-[300px]:items-center">
-        {match.status === 'SUGGESTED' ? (
+        {match.status === 'SUGGESTED' && auto ? (
           <button type="button" disabled={working} onClick={() => onAct('approve')} className="btn-primary justify-center text-sm">
             {busy === `approve:${match.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} {t('ja.card.send')}
           </button>
         ) : null}
-        {match.status === 'READY' ? (
+        {assisted && match.status !== 'APPLIED' && match.status !== 'SKIPPED' ? (
           <>
-            <a
-              href={match.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => match.coverNote && navigator.clipboard?.writeText(match.coverNote).catch(() => undefined)}
-              className="btn-primary justify-center text-sm"
-            >
-              <ArrowUpRight className="h-4 w-4" /> {t('ja.card.open')}
-            </a>
+            <button type="button" onClick={() => onContinue?.()} className="btn-primary justify-center text-sm">
+              <ArrowUpRight className="h-4 w-4" /> {t('ja.continue')}
+            </button>
             <button type="button" disabled={working} onClick={() => onAct('applied')} className="btn-secondary justify-center text-sm">
               {busy === `applied:${match.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {t('ja.card.applied')}
             </button>
@@ -931,8 +1212,343 @@ function MatchCard({ match, busy, index, onAct }: { match: JobAgentMatchDto; bus
           </button>
         ) : null}
       </div>
-      {match.status === 'READY' && match.coverNote ? <p className="mt-2 text-[11px] text-muted">{t('ja.card.copyHint')}</p> : null}
+      {assisted && match.coverNote ? <p className="mt-2 text-[11px] text-muted">{t('ja.card.copyHint')}</p> : null}
     </motion.article>
+  );
+}
+
+function AssistContinueModal({
+  match,
+  onClose,
+  onMarked,
+}: {
+  match: JobAgentMatchDto | null;
+  onClose: () => void;
+  onMarked: (m: JobAgentMatchDto) => void;
+}) {
+  const toast = useToast();
+  const { t } = useLocale();
+  const [session, setSession] = useState<AssistSessionDto | null>(null);
+  const [extInstalled, setExtInstalled] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!match) {
+      setSession(null);
+      return;
+    }
+    setSession(null);
+    void Promise.all([jobAgentApi.assistSession(match.id), detectApplyExtension()])
+      .then(([s, ext]) => {
+        setSession(s);
+        setExtInstalled(ext.installed);
+      })
+      .catch((err) => toast.error(t('ja.toast.actFail'), err instanceof ApiError ? err.message : ''));
+  }, [match, toast, t]);
+
+  const handOff = async () => {
+    if (!match || !session) return;
+    setBusy('handoff');
+    try {
+      const token = await jobAgentApi.deviceToken();
+      const result = await connectApplyExtension({
+        apiBase: jobAgentApi.extensionApiBase(),
+        deviceToken: token.token,
+        expiresAt: token.expiresAt,
+        matchId: match.id,
+        jobUrl: match.url,
+      });
+      if (!result.ok) throw new Error(result.error ?? t('ja.continue.connectFail'));
+      toast.success(t('ja.continue.connected'), t('ja.continue.connectedBody'));
+      onClose();
+    } catch (err) {
+      toast.error(t('ja.continue.connectFail'), err instanceof Error ? err.message : '');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const markDone = async () => {
+    if (!match) return;
+    setBusy('mark');
+    try {
+      const updated = await jobAgentApi.markApplied(match.id);
+      onMarked(updated);
+    } catch (err) {
+      toast.error(t('ja.toast.actFail'), err instanceof ApiError ? err.message : '');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const copyText = (text: string) => {
+    void navigator.clipboard?.writeText(text).then(() => toast.success(t('ja.toast.copiedAnswer')));
+  };
+
+  const prepAnswers = session
+    ? [
+        session.coverNote ? { label: 'Cover note', value: session.coverNote } : null,
+        ...Object.entries(session.fillHints)
+          .filter(([k]) => k.startsWith('qa_') || k.startsWith('draft_') || k === 'cover_blurb')
+          .slice(0, 8)
+          .map(([k, v]) => ({ label: k.replace(/^(qa_|draft_)/, ''), value: v })),
+      ].filter(Boolean)
+    : [];
+
+  return (
+    <FormModal
+      open={Boolean(match)}
+      onClose={onClose}
+      title={t('ja.continue.title')}
+      description={match ? `${match.title} · ${match.company}` : t('ja.continue.desc')}
+      icon={ArrowUpRight}
+      size="lg"
+      mobile="full"
+      footer={
+        <>
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            {t('ja.wz.cancel')}
+          </button>
+          {extInstalled && session?.sitePolicy.allowed ? (
+            <button type="button" className="btn-primary" disabled={busy === 'handoff' || !session} onClick={() => void handOff()}>
+              {busy === 'handoff' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{' '}
+              {busy === 'handoff' ? t('ja.continue.handOffBusy') : t('ja.continue.handOff')}
+            </button>
+          ) : (
+            <a href={match?.url} target="_blank" rel="noopener noreferrer" className="btn-primary justify-center text-sm">
+              <ArrowUpRight className="h-4 w-4" /> {t('ja.continue.openListing')}
+            </a>
+          )}
+          <button type="button" className="btn-secondary" disabled={busy === 'mark'} onClick={() => void markDone()}>
+            {busy === 'mark' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {t('ja.continue.mark')}
+          </button>
+        </>
+      }
+    >
+      {!session ? (
+        <div className="h-40 animate-pulse rounded-2xl bg-surface" />
+      ) : (
+        <div className="space-y-4 text-sm">
+          <p className="rounded-xl bg-surface px-3 py-2 text-[13px] leading-relaxed text-foreground/90">{t('ja.continue.disclosure')}</p>
+          <p className="text-xs text-muted">{fill(t('ja.continue.credits'), { n: session.creditsRemaining })}</p>
+          <div className={cn('rounded-xl px-3 py-2 text-[13px]', extInstalled ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200' : 'bg-amber-500/10 text-amber-900 dark:text-amber-200')}>
+            {extInstalled ? t('ja.continue.extOn') : t('ja.continue.extOff')}
+            {!extInstalled ? <span className="mt-1 block text-xs opacity-90">{t('ja.continue.extOffHint')}</span> : null}
+          </div>
+          {!session.sitePolicy.allowed ? (
+            <p className="rounded-xl bg-red-500/10 px-3 py-2 text-[13px] text-red-700 dark:text-red-300">{t('ja.continue.denied')}</p>
+          ) : (
+            <p className="text-xs text-muted">{session.sitePolicy.reason}</p>
+          )}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t('ja.continue.prep')}</p>
+            <p className="mt-1 text-xs text-muted">{t('ja.continue.prepHint')}</p>
+            {session.cv.fileName ? <p className="mt-2 text-xs text-foreground">CV: {session.cv.fileName}</p> : null}
+            <ul className="mt-3 space-y-2">
+              {prepAnswers.map((row) =>
+                row ? (
+                  <li key={row.label} className="rounded-xl border border-border bg-surface-elevated p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs font-semibold text-foreground">{row.label}</p>
+                      <button type="button" className="text-xs font-semibold text-brand" onClick={() => copyText(row.value)}>
+                        <Copy className="mr-1 inline h-3 w-3" /> {t('ja.card.copy')}
+                      </button>
+                    </div>
+                    <p className="mt-1 whitespace-pre-line text-[13px] text-foreground/90">{row.value}</p>
+                  </li>
+                ) : null,
+              )}
+            </ul>
+          </div>
+        </div>
+      )}
+    </FormModal>
+  );
+}
+
+function VaultEditor({ open, onClose, onChanged }: { open: boolean; onClose: () => void; onChanged: () => void }) {
+  const toast = useToast();
+  const { t } = useLocale();
+  const [vault, setVault] = useState<ApplyVaultDto | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [drafting, setDrafting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setVault(null);
+    void jobAgentApi
+      .getVault()
+      .then(setVault)
+      .catch((err) => toast.error(t('ja.toast.loadFail'), err instanceof ApiError ? err.message : ''));
+  }, [open, toast, t]);
+
+  const save = async () => {
+    if (!vault) return;
+    setSaving(true);
+    try {
+      const updated = await jobAgentApi.updateVault({
+        identity: vault.identity,
+        workHistory: vault.workHistory,
+        education: vault.education,
+        links: vault.links,
+        workAuth: vault.workAuth,
+        salaryExpectation: vault.salaryExpectation,
+        qaPairs: vault.qaPairs,
+        preferredResumeId: vault.preferredResumeId,
+      });
+      setVault(updated);
+      toast.success(t('ja.vault.saved'));
+      onChanged();
+    } catch (err) {
+      toast.error(t('ja.toast.saveFail'), err instanceof ApiError ? err.message : '');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const regenerate = async () => {
+    setDrafting(true);
+    try {
+      const updated = await jobAgentApi.regenerateDrafts();
+      setVault(updated);
+      toast.success(t('ja.vault.drafted'));
+    } catch (err) {
+      toast.error(t('ja.toast.actFail'), err instanceof ApiError ? err.message : '');
+    } finally {
+      setDrafting(false);
+    }
+  };
+
+  return (
+    <FormModal
+      open={open}
+      onClose={onClose}
+      title={t('ja.vault.title')}
+      description={t('ja.vault.ready')}
+      icon={Wallet}
+      size="lg"
+      mobile="full"
+      footer={
+        <>
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            {t('ja.wz.cancel')}
+          </button>
+          <button type="button" className="btn-secondary" disabled={!vault || drafting} onClick={() => void regenerate()}>
+            {drafting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {t('ja.vault.drafts')}
+          </button>
+          <button type="button" className="btn-primary" disabled={!vault || saving} onClick={() => void save()}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} {t('ja.wz.save')}
+          </button>
+        </>
+      }
+    >
+      {!vault ? (
+        <div className="h-40 animate-pulse rounded-2xl bg-surface" />
+      ) : (
+        <div className="space-y-4">
+          <p className="rounded-xl bg-surface px-3 py-2 text-[12.5px] leading-relaxed text-muted">{t('ja.vault.safety')}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(
+              [
+                ['fullName', vault.identity.fullName],
+                ['email', vault.identity.email],
+                ['phone', vault.identity.phone],
+                ['location', vault.identity.location],
+              ] as const
+            ).map(([key, value]) => (
+              <label key={key} className="block text-xs font-semibold text-muted">
+                {key}
+                <input
+                  className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  value={value}
+                  onChange={(e) => setVault({ ...vault, identity: { ...vault.identity, [key]: e.target.value } })}
+                />
+              </label>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(
+              [
+                ['linkedin', vault.links.linkedin],
+                ['website', vault.links.website],
+                ['portfolio', vault.links.portfolio],
+                ['github', vault.links.github],
+              ] as const
+            ).map(([key, value]) => (
+              <label key={key} className="block text-xs font-semibold text-muted">
+                {key}
+                <input
+                  className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  value={value}
+                  onChange={(e) => setVault({ ...vault, links: { ...vault.links, [key]: e.target.value } })}
+                />
+              </label>
+            ))}
+          </div>
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={vault.workAuth.needsSponsorship}
+              onChange={(e) => setVault({ ...vault, workAuth: { ...vault.workAuth, needsSponsorship: e.target.checked } })}
+            />
+            Needs sponsorship
+          </label>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="block text-xs font-semibold text-muted">
+              Salary min
+              <input
+                type="number"
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                value={vault.salaryExpectation.min ?? ''}
+                onChange={(e) =>
+                  setVault({
+                    ...vault,
+                    salaryExpectation: { ...vault.salaryExpectation, min: e.target.value === '' ? null : Number(e.target.value) },
+                  })
+                }
+              />
+            </label>
+            <label className="block text-xs font-semibold text-muted">
+              Salary max
+              <input
+                type="number"
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                value={vault.salaryExpectation.max ?? ''}
+                onChange={(e) =>
+                  setVault({
+                    ...vault,
+                    salaryExpectation: { ...vault.salaryExpectation, max: e.target.value === '' ? null : Number(e.target.value) },
+                  })
+                }
+              />
+            </label>
+            <label className="block text-xs font-semibold text-muted">
+              Currency
+              <input
+                className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                value={vault.salaryExpectation.currency}
+                onChange={(e) => setVault({ ...vault, salaryExpectation: { ...vault.salaryExpectation, currency: e.target.value } })}
+              />
+            </label>
+          </div>
+          {vault.drafts.coverBlurb || vault.drafts.commonAnswers.length ? (
+            <div className="rounded-2xl bg-surface p-3 text-sm text-foreground/90">
+              {vault.drafts.coverBlurb ? <p className="whitespace-pre-line">{vault.drafts.coverBlurb}</p> : null}
+              {vault.drafts.commonAnswers.length ? (
+                <ul className="mt-2 space-y-1 text-xs text-muted">
+                  {vault.drafts.commonAnswers.slice(0, 6).map((a) => (
+                    <li key={a.questionKey}>
+                      <span className="font-semibold text-foreground">{a.question}</span> — {a.answer.slice(0, 120)}
+                      {a.answer.length > 120 ? '…' : ''}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      )}
+    </FormModal>
   );
 }
 

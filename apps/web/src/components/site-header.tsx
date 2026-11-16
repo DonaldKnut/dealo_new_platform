@@ -35,7 +35,7 @@ import { apiFetch } from '@/lib/api';
 
 import { ThemeToggle } from './theme-toggle';
 
-const DARK_HERO_PATHS = new Set(['/hiring-agents']);
+const DARK_HERO_PATHS = new Set(['/hiring-agents', '/for-professionals']);
 
 export function SiteHeader() {
   const { open } = useModal();

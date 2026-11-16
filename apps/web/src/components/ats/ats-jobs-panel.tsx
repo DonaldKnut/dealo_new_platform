@@ -10,10 +10,12 @@ import { JOB_STATUS_HELP } from '@/components/ats/ats-guide';
 import { JobEditorModal } from '@/components/ats/ats-job-editor';
 import { AtsLimitBanner } from '@/components/ats/ats-usage';
 import { useAtsWorkspace } from '@/components/ats/ats-workspace';
+import { PublishGateNotice, errorPublishBlock, publishBlockReason } from '@/components/ats/publish-gate';
 import { DashPanel, StatusChip } from '@/components/dashboard/dashboard-ui';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip } from '@/components/ui/tooltip';
+import { isStaffRole, useAuthSession } from '@/hooks/use-auth-session';
 import { ApiError } from '@/lib/api';
 import { ARRANGEMENT_LABEL, atsApi, canManage, formatPay, type AtsJob, type JobStatus } from '@/lib/ats-api';
 import { cn } from '@/lib/utils';
@@ -27,6 +29,7 @@ const FILTERS: Array<{ id: 'ALL' | JobStatus; label: string; help: string }> = [
 ];
 export function AtsJobsPanel() {
   const toast = useToast();
+  const { user } = useAuthSession();
   const { orgId, current, reloadDetail } = useAtsWorkspace();
   const [jobs, setJobs] = useState<AtsJob[] | null>(null);
   const [filter, setFilter] = useState<'ALL' | JobStatus>('OPEN');
@@ -34,6 +37,11 @@ export function AtsJobsPanel() {
   const [editor, setEditor] = useState<{ jobId: string | null } | null>(null);
   const router = useRouter();
   const manage = canManage(current?.myRole);
+  const publishBlock = publishBlockReason({
+    isEmailVerified: user?.isEmailVerified,
+    workspace: current?.workspace,
+    staffOverride: Boolean(user && isStaffRole(user.roles)) || current?.support,
+  });
 
   const load = useCallback(async () => {
     if (!orgId) return;
@@ -53,14 +61,19 @@ export function AtsJobsPanel() {
 
   const visible = useMemo(() => (jobs ?? []).filter((job) => filter === 'ALL' || job.status === filter), [jobs, filter]);
 
-  const run = async (label: string, action: () => Promise<unknown>) => {
+  const run = async (label: string, action: () => Promise<unknown>, opts?: { publishing?: boolean }) => {
+    if (opts?.publishing && publishBlock) {
+      toast.error(publishBlock.code === 'EMAIL_NOT_VERIFIED' ? 'Confirm your email first' : 'Company not verified', publishBlock.message);
+      return;
+    }
     setMenuJob(null);
     try {
       await action();
       toast.success(label);
       await Promise.all([load(), reloadDetail()]);
     } catch (err) {
-      toast.error('That did not work', err instanceof ApiError ? err.message : '');
+      const gate = errorPublishBlock(err);
+      toast.error(gate ? (gate.code === 'EMAIL_NOT_VERIFIED' ? 'Confirm your email first' : 'Company not verified') : 'That did not work', gate?.message ?? (err instanceof ApiError ? err.message : ''));
     }
   };
 
@@ -74,6 +87,7 @@ export function AtsJobsPanel() {
   return (
     <div className="space-y-4">
       {current ? <AtsLimitBanner detail={current} /> : null}
+      {manage && publishBlock ? <PublishGateNotice block={publishBlock} /> : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="-mx-1 flex gap-1 overflow-x-auto px-1">
           {FILTERS.map((f) => {
@@ -217,8 +231,16 @@ export function AtsJobsPanel() {
             {menuJob.status !== 'OPEN' ? (
               <SheetAction
                 icon={Play}
-                label={menuJob.status === 'DRAFT' ? 'Publish job' : 'Re-open job'}
-                onClick={() => run('Job is live', () => atsApi.setJobStatus(orgId, menuJob.id, 'OPEN'))}
+                label={
+                  publishBlock
+                    ? publishBlock.code === 'EMAIL_NOT_VERIFIED'
+                      ? 'Confirm email to publish'
+                      : 'Verify company to publish'
+                    : menuJob.status === 'DRAFT'
+                      ? 'Publish job'
+                      : 'Re-open job'
+                }
+                onClick={() => run('Job is live', () => atsApi.setJobStatus(orgId, menuJob.id, 'OPEN'), { publishing: true })}
               />
             ) : (
               <>

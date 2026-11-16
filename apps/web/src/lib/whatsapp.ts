@@ -1,6 +1,10 @@
-/** Digits only, e.g. 2348012345678. Empty when NEXT_PUBLIC_WHATSAPP_NUMBER is not set. */
+/** Nigeria hotline 08157062795 → international digits for wa.me */
+const DEFAULT_WHATSAPP = '2348157062795';
+
+/** Digits only, e.g. 2348157062795. Falls back to the public Dealo hotline. */
 export function whatsappNumber() {
-  return (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '').replace(/[^\d]/g, '');
+  const fromEnv = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '').replace(/[^\d]/g, '');
+  return fromEnv || DEFAULT_WHATSAPP;
 }
 
 export function whatsappHref(message: string) {
@@ -13,6 +17,7 @@ export function whatsappMessageFor(pathname: string, fallback: string) {
   if (pathname.startsWith('/jobs')) return 'Hi Dealo, I need help with a job on your job board.';
   if (pathname.startsWith('/resume-builder') || pathname.startsWith('/dashboard/resumes')) return 'Hi Dealo, I need help with my CV.';
   if (pathname.startsWith('/dashboard/ats') || pathname.startsWith('/ats')) return 'Hi Dealo, I have a question about Dealo ATS.';
+  if (pathname.startsWith('/hiring-agents')) return 'Hi Dealo, I want help hiring faster with your team.';
   if (pathname.startsWith('/careers')) return 'Hi Dealo, I have a question about a job I saw on a careers page.';
   return fallback;
 }

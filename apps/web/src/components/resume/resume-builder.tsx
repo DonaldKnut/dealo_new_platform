@@ -54,6 +54,7 @@ import { DRAFT_KEY, LETTER_DRAFT_KEY, rememberReturnTo, resumeApi, type ResumeKi
 import { cn } from '@/lib/utils';
 
 import { CoverLetterEditor } from './cover-letter-editor';
+import { CvDidYouKnow } from './cv-did-you-know';
 import { DesignPanel } from './design-panel';
 import { DEFAULT_STYLE, completeness, emptyResume } from './resume-content';
 import { CSS_FAMILY } from './resume-fonts';
@@ -487,6 +488,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
                 <p className="text-xs text-muted">{current.hint}</p>
               </div>
             </div>
+            <CvDidYouKnow step={current.id} />
             <AnimatePresence mode="wait">
               <motion.div key={step} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }}>
                 {step === 'details' ? <DetailsEditor data={data} update={update} /> : null}

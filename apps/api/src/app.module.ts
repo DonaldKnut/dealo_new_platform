@@ -6,6 +6,7 @@ import { LoggerModule } from 'nestjs-pino';
 
 import { AiModule } from './ai/ai.module';
 import { AssistantModule } from './assistant/assistant.module';
+import { DeviceTokenModule } from './job-agent/device-token.module';
 import { JobAgentModule } from './job-agent/job-agent.module';
 import { AtsModule } from './ats/ats.module';
 import { HiringAgentsModule } from './hiring-agents/hiring-agents.module';
@@ -62,6 +63,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     ]),
     PrismaModule,
     CommonModule,
+    DeviceTokenModule,
     NotificationsModule,
     EmailModule,
     PaymentsModule,

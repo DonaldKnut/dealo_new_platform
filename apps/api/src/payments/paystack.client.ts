@@ -32,6 +32,7 @@ export const PAYMENT_PREFIX = {
   api: 'dealo_api_',
   agents: 'dealo_agents_',
   cvPremium: 'dealo_cv_',
+  applyCredits: 'dealo_ja_credits_',
 } as const;
 
 export function newReference(prefix: string) {

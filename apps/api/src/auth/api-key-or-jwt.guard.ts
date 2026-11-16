@@ -9,6 +9,7 @@ import { AuthGuard } from '@nestjs/passport';
 
 import { ApiKeysService } from '../api-keys/api-keys.service';
 import { IS_PUBLIC_KEY } from '../common/public.decorator';
+import { DeviceTokenService } from '../job-agent/device-token.service';
 import { OAuthService } from '../oauth/oauth.service';
 import type { AuthUser } from './auth.types';
 
@@ -18,6 +19,7 @@ export class ApiKeyOrJwtGuard extends AuthGuard('jwt') implements CanActivate {
     private readonly reflector: Reflector,
     private readonly apiKeysService: ApiKeysService,
     private readonly oauthService: OAuthService,
+    private readonly deviceTokens: DeviceTokenService,
   ) {
     super();
   }
@@ -83,6 +85,11 @@ export class ApiKeyOrJwtGuard extends AuthGuard('jwt') implements CanActivate {
     let principal: AuthUser;
     if (token.startsWith('dk_live_') || token.startsWith('dk_test_')) {
       principal = await this.apiKeysService.authenticateBearer(token);
+    } else if (token.startsWith('dja_')) {
+      // Supervised Apply Copilot extension device token (short-lived, in-memory).
+      principal = await this.deviceTokens.authenticateBearer(token);
+      request.user = principal;
+      return true;
     } else if (this.oauthService.isOAuthToken(token)) {
       principal = await this.oauthService.authenticateAccessToken(token);
     } else {

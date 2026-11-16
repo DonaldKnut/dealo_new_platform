@@ -7,6 +7,7 @@ import { PassportModule } from '@nestjs/passport';
 import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { CandidatesModule } from '../candidates/candidates.module';
 import type { AppEnv } from '../config/env.validation';
+import { DeviceTokenModule } from '../job-agent/device-token.module';
 import { OAuthModule } from '../oauth/oauth.module';
 import { UsersModule } from '../users/users.module';
 import { ApiKeyOrJwtGuard } from './api-key-or-jwt.guard';
@@ -26,6 +27,7 @@ import { VerifiedEmailGuard } from './verified-email';
     CandidatesModule,
     ApiKeysModule,
     OAuthModule,
+    DeviceTokenModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

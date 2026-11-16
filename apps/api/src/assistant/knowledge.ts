@@ -65,6 +65,30 @@ export const TOPICS: Topic[] = [
     suggestions: ['Direct hiring or managed staffing?', 'How much does it cost?', 'Request talent'],
   },
   {
+    id: 'hire-faster',
+    title: 'Hire faster: Agents vs ATS vs recruiters',
+    keywords: [
+      'hire faster',
+      'hiring faster',
+      'compare hiring',
+      'hiring agents vs',
+      'ats vs',
+      'recruiters vs',
+      'which is better',
+      'help me hire',
+      'speed up hiring',
+      'faster hiring',
+    ],
+    answer:
+      'Three ways Dealo helps you hire faster:\n\n1. **Dealo recruiters** — You share the role; our team screens, shortlists and coordinates interviews. Best when you want speed without running a pipeline yourself. Start at Request talent or WhatsApp.\n2. **Dealo ATS** — Your hiring workspace: jobs, careers page, pipeline, interviews and offers. Best when your team wants to own the process. Open Dashboard → ATS (staff and approved job partners).\n3. **Hiring Agents** — Seven AI helpers (screening, job post writer, sourcing, follow-ups, scheduling, interview kits, daily digest) that suggest actions a person must approve. They run inside the ATS and are a **Dealo staff tool for now** — employers get the benefit when our recruiters use them on your brief, not as a self-serve product yet.\n\n**Practical pick:** need people soon → Request talent / WhatsApp. Want to run your own board → ATS. Curious how agents work → /hiring-agents (demo); ask a person to put them to work on your roles.',
+    links: [
+      { label: 'Request talent', href: '/hire' },
+      { label: 'About the ATS', href: '/ats' },
+      { label: 'About Hiring Agents', href: '/hiring-agents' },
+    ],
+    suggestions: ['Request talent', 'What is the ATS?', 'Talk to a person'],
+  },
+  {
     id: 'services',
     title: 'Direct hiring vs managed staffing',
     keywords: [
@@ -100,7 +124,7 @@ export const TOPICS: Topic[] = [
     title: 'Prices for hiring services',
     keywords: ['price', 'prices', 'pricing', 'cost', 'how much', 'fee', 'fees', 'quote', 'charge', 'expensive', 'cheap'],
     answer:
-      'Direct hiring is priced per job and you pay when someone joins your team. Managed staffing is a monthly fee. Temp/contract cover and post-hire training are quote-based (day rate + mark-up; modules after placement) — we do not publish list prices. Dealo gives an exact quote once we understand the brief, before you agree. Fixed-price products: Hiring Agents ({{agentPlans}}) and Dealo Premium for CV + Job Agent ({{cvPremium}}). Job seekers never pay to get a job.',
+      'Direct hiring is priced per job and you pay when someone joins your team. Managed staffing is a monthly fee. Temp/contract cover and post-hire training are quote-based (day rate + mark-up; modules after placement) — we do not publish list prices. Dealo gives an exact quote once we understand the brief, before you agree. Fixed-price product for job seekers: Dealo Premium for CV + Job Agent ({{cvPremium}}). Hiring Agents plans ({{agentPlans}}) are internal for Dealo staff for now — employers get agent-powered screening when they request talent. Job seekers never pay to get a job.',
     links: [
       { label: 'Get a price', href: '/hire' },
       { label: 'Compare services', href: '/services' },
@@ -339,21 +363,24 @@ export const TOPICS: Topic[] = [
     title: 'Hiring Agents',
     keywords: ['agent', 'agents', 'hiring agents', 'automation', 'automate', 'screening', 'screen candidates', 'sourcing', 'interview kit', 'follow up', 'digest'],
     answer:
-      'Hiring Agents are seven AI helpers inside the ATS: screening, job post writer, sourcing, candidate follow-ups, interview scheduling, interview kits and a daily pipeline digest. They suggest actions and you approve them in one inbox, so nothing goes out without a person. Plans: {{agentPlans}}.',
+      'Hiring Agents are seven AI helpers inside the Dealo ATS: screening, job post writer, sourcing, candidate follow-ups, interview scheduling, interview kits and a daily pipeline digest. They suggest actions and a person must approve every step. Right now they are a **Dealo staff tool** — our recruiters use them on client roles so you get faster, checked shortlists. Employers who want that outcome should Request talent or WhatsApp us rather than expecting a self-serve Agents login. Staff plans: {{agentPlans}}.',
     links: [
       { label: 'About Hiring Agents', href: '/hiring-agents' },
-      { label: 'Open my agents', href: '/dashboard/ats/agents' },
+      { label: 'Request talent', href: '/hire' },
     ],
-    suggestions: ['How do I upgrade to Pro?', 'Is AI screening fair?', 'How do I post a job?'],
+    suggestions: ['How can Dealo help me hire faster?', 'Is AI screening fair?', 'Request talent'],
   },
   {
     id: 'agents-pro',
     title: 'Upgrading Hiring Agents to Pro',
     keywords: ['upgrade to pro', 'pay for pro', 'pro plan', 'agents pro', 'buy pro', 'more runs', 'run out of runs', 'limit reached', 'agent limit'],
     answer:
-      'Open the Agents hub in the ATS and tap Upgrade ({{agentPlans}}). Pay securely with Paystack and the Pro runs start as soon as payment is confirmed. When Free runs are used up, agents pause until next month or until you upgrade.',
-    links: [{ label: 'Open my agents', href: '/dashboard/ats/agents' }],
-    suggestions: ['What are Hiring Agents?', 'I paid but Pro is not active'],
+      'Hiring Agents Pro is for Dealo staff workspaces only for now ({{agentPlans}}). Staff open the Agents hub in the ATS and tap Upgrade, then pay with Paystack. Employers: you do not need to buy Agents — Request talent and our team runs the agents behind the scenes.',
+    links: [
+      { label: 'Request talent', href: '/hire' },
+      { label: 'About Hiring Agents', href: '/hiring-agents' },
+    ],
+    suggestions: ['What are Hiring Agents?', 'How can Dealo help me hire faster?'],
   },
   {
     id: 'ai-fairness',
@@ -512,9 +539,18 @@ export const GREETING_SUGGESTIONS = ['How do I build a CV?', 'Tips for a strong 
 
 const FALLBACK: Pick<Topic, 'answer' | 'links' | 'suggestions'> = {
   answer:
-    'I focus on Dealo hiring, CVs, jobs and your account. Ask me that — or say if you want WhatsApp / a person. If it is outside office roles and skilled trades (for example drivers, chefs or domestic work), we do not recruit for that.',
-  links: [{ label: 'Contact', href: '/contact' }],
-  suggestions: GREETING_SUGGESTIONS,
+    'I can help you hire faster, build a strong CV, find jobs, or use your Dealo account — ask anything in those areas and I will give a clear next step.\n\n**Quick paths**\n- Hire office staff or skilled trades → Request talent or message us on WhatsApp\n- Job seeker → free CV builder, job board, or Job Agent\n- Compare options → Hiring Agents (used by Dealo recruiters), ATS (your pipeline), or our recruiters (we run the search)\n\nWe do not recruit for drivers, chefs/cooks, or domestic work. Prefer a person? Tap **Chat with us on WhatsApp** or **Talk to a person**.',
+  links: [
+    { label: 'Request talent', href: '/hire' },
+    { label: 'CV builder', href: '/resume-builder' },
+    { label: 'Contact', href: '/contact' },
+  ],
+  suggestions: [
+    'How can Dealo help me hire faster?',
+    'How do I build a strong CV?',
+    'Find jobs in Nigeria',
+    'Talk to a person',
+  ],
 };
 
 const GREETING = /^(hi|hello|hey|good (morning|afternoon|evening)|yo|sup|howdy)\b/i;

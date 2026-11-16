@@ -1,0 +1,16 @@
+{
+  "name": "@dealo/apply-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dealo Supervised Apply Copilot — MV3 browser extension",
+  "scripts": {
+    "build": "node ./scripts/make-icons.mjs && node ./scripts/build.mjs",
+    "dev": "node ./scripts/make-icons.mjs && node ./scripts/build.mjs --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.3"
+  }
+}

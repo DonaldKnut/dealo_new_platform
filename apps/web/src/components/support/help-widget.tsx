@@ -51,6 +51,7 @@ import { useAuthSession } from '@/hooks/use-auth-session';
 import { ApiError, apiFetch } from '@/lib/api';
 import { OPEN_ASSISTANT_EVENT, streamAssistant } from '@/lib/assistant-client';
 import { DARK_LOGO, LIGHT_LOGO } from '@/lib/brand';
+import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { prepareChatImage, type ChatImagePayload } from '@/lib/chat-image';
 import { cn } from '@/lib/utils';
 import { whatsappHref, whatsappMessageFor } from '@/lib/whatsapp';
@@ -1078,6 +1079,18 @@ function EmptyState({
           ))}
         </div>
       ) : null}
+
+      {whatsapp ? (
+        <a
+          href={whatsapp}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3.5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#25D366]/40 bg-[#25D366]/10 px-3 py-2.5 text-xs font-semibold text-[#128C7E] transition hover:bg-[#25D366]/18 dark:text-[#6ef3a8]"
+        >
+          <WhatsAppIcon className="h-4 w-4" />
+          {t('wa.cta')} · Chat with us on WhatsApp
+        </a>
+      ) : null}
     </div>
   );
 }
@@ -1467,15 +1480,28 @@ function Composer({
           </div>
         </div>
 
-        <div className="mt-2 flex items-center justify-between gap-2 px-1 text-[11px] text-muted">
-          <button
-            type="button"
-            onClick={onPerson}
-            className="inline-flex items-center gap-1.5 font-semibold text-foreground transition hover:text-brand"
-          >
-            <UserRound className="h-3.5 w-3.5" />
-            {t('chat.person')}
-          </button>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1 text-[11px] text-muted">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <button
+              type="button"
+              onClick={onPerson}
+              className="inline-flex items-center gap-1.5 font-semibold text-foreground transition hover:text-brand"
+            >
+              <UserRound className="h-3.5 w-3.5" />
+              {t('chat.person')}
+            </button>
+            {whatsapp ? (
+              <a
+                href={whatsapp}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 font-semibold text-[#128C7E] transition hover:text-[#0b6b5c] dark:text-[#6ef3a8]"
+              >
+                <WhatsAppIcon className="h-3.5 w-3.5" />
+                WhatsApp
+              </a>
+            ) : null}
+          </div>
           {near ? (
             <span className={cn('tabular-nums', input.length >= MAX_INPUT && 'font-bold text-danger')}>
               {input.length}/{MAX_INPUT}
@@ -1642,7 +1668,20 @@ function PersonForm({
         {error ? <p className="text-xs font-medium text-danger">{error}</p> : null}
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-background px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border bg-background px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+        {whatsapp ? (
+          <a
+            href={whatsapp}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#128C7E] dark:text-[#6ef3a8]"
+          >
+            <WhatsAppIcon className="h-3.5 w-3.5" />
+            Chat with us on WhatsApp
+          </a>
+        ) : (
+          <span />
+        )}
         <button
           type="submit"
           disabled={sending}

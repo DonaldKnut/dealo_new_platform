@@ -44,7 +44,7 @@ export function VerifyEmailBanner({ email, onVerified }: { email: string; onVeri
         <span className="break-words text-muted">
           {sent
             ? `We sent a new link to ${email}.`
-            : `Until you confirm ${email}, you can't create a hiring workspace, invite people or email candidates.`}
+            : `Until you confirm ${email}, you can't create a hiring workspace, publish jobs, invite people or email candidates.`}
         </span>
       </p>
       <button

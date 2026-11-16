@@ -14,45 +14,28 @@ import { useLocale } from '@/components/i18n/locale-context';
 import { CtaBanner } from '@/components/marketing/cta-banner';
 import { FeatureAdGrid } from '@/components/marketing/feature-ad-grid';
 import { IllustrationBand } from '@/components/marketing/illustration-band';
-import { PageHero } from '@/components/marketing/page-hero';
+import { ProfessionalsHero } from '@/components/marketing/professionals-hero';
 import { StatAdvert } from '@/components/marketing/stat-advert';
-
-/** Distinct from /for-employers slider — no repeated assets. */
-const PROFESSIONAL_HERO_SLIDER = [
-  {
-    src: 'https://res.cloudinary.com/dyaetoldv/image/upload/v1793441258/Professionals_standing_together___406b9a05_2K_1_r9fxzc.jpg',
-    alt: 'Professionals across office and skilled trade roles',
-  },
-  {
-    src: 'https://res.cloudinary.com/dyaetoldv/image/upload/v1793439562/Professionals_standing_together___8db5883f_2K_ghskpu.jpg',
-    alt: 'Diverse professionals ready for placement',
-  },
-  {
-    src: 'https://res.cloudinary.com/dyaetoldv/image/upload/v1793439563/Professionals_standing_in_modern__6ae13ee8_2K_joqlbm.jpg',
-    alt: 'Office professionals in a modern workplace',
-  },
-] as const;
 
 export default function ForProfessionalsPage() {
   const { t } = useLocale();
 
   return (
     <div>
-      <PageHero
-        eyebrow={t('pro.eyebrow')}
-        title={t('pro.title')}
-        description={t('pro.body')}
+      <ProfessionalsHero
         actions={
           <>
-            <Link href="/auth/register" className="btn-primary">
+            <Link href="/auth/register" className="btn-primary justify-center shadow-lg shadow-black/30">
               {t('pro.register')}
             </Link>
-            <Link href="/auth/login" className="btn-secondary">
+            <Link
+              href="/auth/login"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/25 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/15"
+            >
               {t('pro.signIn')}
             </Link>
           </>
         }
-        sliderImages={[...PROFESSIONAL_HERO_SLIDER]}
       />
 
       <StatAdvert
