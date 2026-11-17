@@ -27,8 +27,13 @@ Skip giants that will not partner (e.g. LinkedIn). Prefer teams that already int
 
 - More jobs Job Agents can actually submit (not just “open link”)
 - Later: monthly or per-apply partner billing (architecture ready; early partners free)
-- Stronger reason for job seekers to use Dealo
-- Adjacent money lines for employers: temp/contract cover (day rate + mark-up) and post-hire training modules
+- Stronger reason for job seekers to use Dealo — **native Easy Apply** on partner/Dealo posts keeps seekers on Dealo (vs redirecting to aggregators)
+- Retention metric to grow: share of board inventory + completed applies that stay on Dealo (admin `GET /jobs/admin/retention`). For the last 30 UTC days it reports successful job-detail requests and completed-on-Dealo applies per 100 detail requests as an aggregate proxy, not a unique-visitor conversion rate.
+- Board ranking already prefers Dealo → Email apply → Remotive/Jobicy/Arbeitnow over thin aggregator snippets
+- We do **not** scrape Jooble/Indeed/LinkedIn career pages for HR emails (ToS + deliverability)
+- Adjacent money lines for employers: day-rate temps (clear daily rate) and post-hire training modules
+
+Email-provider bounce/complaint events and replies are not tracked yet. Assist never submits third-party forms; users review the form and submit themselves.
 
 ## Offer for the first partners
 

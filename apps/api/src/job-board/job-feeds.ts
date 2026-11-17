@@ -2,6 +2,8 @@ import type { JobBoardSource, JobBoardType } from '@dealo/shared';
 import { createHash } from 'crypto';
 import sanitizeHtml from 'sanitize-html';
 
+import { findApplyEmail } from './apply-email';
+
 export type FeedSource = Exclude<JobBoardSource, 'dealo'>;
 
 export type FeedJob = {
@@ -18,6 +20,8 @@ export type FeedJob = {
   salaryText: string | null;
   description: string;
   summary: string;
+  /** Recruiter inbox named in the listing text, if any. Never returned raw to the board UI. */
+  applyEmail: string | null;
   url: string;
   publishedAt: Date;
 };
@@ -80,6 +84,65 @@ export function safeHtml(raw: string) {
     },
     exclusiveFilter: (frame) => ['p', 'li', 'h3', 'h4'].includes(frame.tag) && !frame.text.trim() && !frame.mediaChildren.length,
   }).slice(0, 60_000);
+}
+
+const SECTION_TITLES =
+  /^(about the (?:role|company|job|opportunity)|about us|who we are(?: looking for)?|what (?:you.?ll|you will|we) (?:do|offer|need)|the role|job description|key responsibilities|responsibilities|requirements|qualifications|must[- ]?haves?|nice to haves?|your profile|benefits|what we offer|how to apply|to apply|compensation|salary|location)$/i;
+
+/** Turn run-on feed snippets into readable paragraphs, headings, and bullet lists. */
+export function normalizeJobDescription(raw: string): string {
+  const decoded = decodeEntities(String(raw ?? ''));
+  const tagCount = (decoded.match(/<\/(p|li|h[1-6]|ul|ol)>/gi) ?? []).length;
+  if (tagCount >= 2) return safeHtml(decoded);
+
+  let text = plainText(decoded)
+    .replace(/\u00a0/g, ' ')
+    .replace(/[.]{3,}|…+/g, '…')
+    .replace(/\s*[~|]{2,}\s*/g, ' — ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!text) return '';
+
+  // Insert breaks before known section titles stuck mid-sentence ("…role Responsibilities Lead…").
+  text = text.replace(
+    /\s+(About the (?:role|company|job|opportunity)|About us|Who we are(?: looking for)?|What (?:you'll|you will|we) (?:do|offer|need)|The role|Job description|Key responsibilities|Responsibilities|Requirements|Qualifications|Must[- ]?haves?|Nice to haves?|Your profile|Benefits|What we offer|How to apply|To apply)\b/gi,
+    '\n\n$1\n',
+  );
+
+  const blocks: string[] = [];
+  for (const chunk of text.split(/\n+/).map((c) => c.trim()).filter(Boolean)) {
+    if (SECTION_TITLES.test(chunk)) {
+      blocks.push(`<h3>${escapeXml(chunk.replace(/:$/, ''))}</h3>`);
+      continue;
+    }
+    // Duty-like lines: "• Foo" / "- Foo" / "1. Foo"
+    const lines = chunk.split(/(?<=[.!?])\s+(?=[A-Z•\-*]|\d+\.)/);
+    const dutyish =
+      lines.length >= 3 &&
+      lines.every((line) => line.length < 180) &&
+      lines.filter((line) => /^(?:[-*•]|\d+[.)])\s/.test(line) || /^(?:Lead|Manage|Ensure|Develop|Support|Coordinate|Prepare|Handle|Provide|Maintain|Work|Drive|Build|Create|Oversee)\b/i.test(line)).length >=
+        Math.ceil(lines.length * 0.6);
+    if (dutyish) {
+      blocks.push(`<ul>${lines.map((line) => `<li>${escapeXml(line.replace(/^(?:[-*•]|\d+[.)])\s*/, ''))}</li>`).join('')}</ul>`);
+      continue;
+    }
+    if (/^(?:[-*•]|\d+[.)])\s/.test(chunk) || chunk.includes(' • ')) {
+      const items = chunk
+        .split(/\s*[•]\s*|(?=[-*]\s+)|(?=\d+[.)]\s+)/)
+        .map((item) => item.replace(/^(?:[-*•]|\d+[.)])\s*/, '').trim())
+        .filter(Boolean);
+      if (items.length >= 2) {
+        blocks.push(`<ul>${items.map((item) => `<li>${escapeXml(item)}</li>`).join('')}</ul>`);
+        continue;
+      }
+    }
+    blocks.push(`<p>${escapeXml(chunk)}</p>`);
+  }
+  return safeHtml(blocks.join(''));
+}
+
+function escapeXml(value: string) {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 export function mapJobType(raw: string | undefined | null): JobBoardType {
@@ -145,7 +208,8 @@ type RemotiveJob = {
 export async function fetchRemotive(): Promise<FeedJob[]> {
   const body = await getJson<{ jobs?: RemotiveJob[] }>('https://remotive.com/api/remote-jobs');
   return (body.jobs ?? []).map((job) => {
-    const text = plainText(job.description);
+    const description = normalizeJobDescription(job.description);
+    const text = plainText(description || job.description);
     return {
       source: 'remotive' as const,
       sourceId: String(job.id),
@@ -158,8 +222,9 @@ export async function fetchRemotive(): Promise<FeedJob[]> {
       category: clean(job.category, 80) || null,
       tags: (job.tags ?? []).slice(0, 8).map((t) => clean(t, 40)).filter(Boolean),
       salaryText: clean(job.salary, 80) || null,
-      description: safeHtml(job.description),
+      description,
       summary: summarise(text),
+      applyEmail: findApplyEmail(`${job.description} ${text}`),
       url: job.url,
       publishedAt: validDate(new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(job.publication_date) ? job.publication_date : `${job.publication_date}Z`)),
     };
@@ -190,7 +255,8 @@ type JobicyJob = {
 export async function fetchJobicy(): Promise<FeedJob[]> {
   const body = await getJson<{ jobs?: JobicyJob[] }>('https://jobicy.com/api/v2/remote-jobs?count=100');
   return (body.jobs ?? []).map((job) => {
-    const text = plainText(job.jobDescription);
+    const description = normalizeJobDescription(job.jobDescription);
+    const text = plainText(description || job.jobDescription);
     return {
       source: 'jobicy' as const,
       sourceId: String(job.id),
@@ -203,8 +269,9 @@ export async function fetchJobicy(): Promise<FeedJob[]> {
       category: clean(job.jobIndustry?.[0], 80) || null,
       tags: [job.jobLevel, ...(job.jobIndustry ?? []).slice(1)].filter(Boolean).slice(0, 6).map((t) => clean(t, 40)),
       salaryText: salaryRange(job.salaryMin, job.salaryMax, job.salaryCurrency ?? 'USD', job.salaryPeriod),
-      description: safeHtml(job.jobDescription),
+      description,
       summary: summarise(text || clean(job.jobExcerpt, 400)),
+      applyEmail: findApplyEmail(`${job.jobDescription} ${text}`),
       url: job.url,
       publishedAt: validDate(new Date(job.pubDate)),
     };
@@ -231,7 +298,8 @@ export async function fetchArbeitnow(pages = 2): Promise<FeedJob[]> {
   for (let page = 1; page <= pages; page += 1) {
     const body = await getJson<{ data?: ArbeitnowJob[] }>(`https://www.arbeitnow.com/api/job-board-api?page=${page}`);
     for (const job of body.data ?? []) {
-      const text = plainText(job.description);
+      const description = normalizeJobDescription(job.description);
+      const text = plainText(description || job.description);
       if (!looksEnglish(text)) continue;
       const place = /^remote/i.test(clean(job.location)) ? '' : clean(job.location, 100);
       out.push({
@@ -246,8 +314,9 @@ export async function fetchArbeitnow(pages = 2): Promise<FeedJob[]> {
         category: clean(job.tags?.find((t) => !/remote/i.test(t)), 80) || null,
         tags: (job.tags ?? []).slice(0, 6).map((t) => clean(t, 40)),
         salaryText: null,
-        description: safeHtml(job.description),
+        description,
         summary: summarise(text),
+        applyEmail: findApplyEmail(`${job.description} ${text}`),
         url: job.url,
         publishedAt: validDate(new Date(job.created_at * 1000)),
       });
@@ -345,7 +414,8 @@ export async function fetchJooble(key: string): Promise<FeedJob[]> {
   for (const keywords of JOOBLE_SEARCHES) {
     const { jobs } = await joobleSearch(key, route, keywords);
     for (const job of jobs) {
-      const text = plainText(job.snippet ?? '');
+      const description = normalizeJobDescription(job.snippet ?? '');
+      const text = plainText(description || job.snippet || '');
       out.push({
         source: 'jooble',
         sourceId: String(job.id),
@@ -358,8 +428,9 @@ export async function fetchJooble(key: string): Promise<FeedJob[]> {
         category: null,
         tags: [],
         salaryText: clean(job.salary, 80) || null,
-        description: safeHtml(`<p>${job.snippet ?? ''}</p>`),
+        description,
         summary: summarise(text),
+        applyEmail: findApplyEmail(`${job.snippet ?? ''} ${text}`),
         url: job.link,
         publishedAt: validDate(new Date(job.updated ?? Date.now())),
       });
@@ -404,7 +475,8 @@ export async function fetchCareerjet(affid: string, pages = 2): Promise<FeedJob[
     if (body.error) throw new Error(`Careerjet: ${body.error}`);
     const jobs = body.jobs ?? [];
     for (const job of jobs) {
-      const text = plainText(job.description ?? '');
+      const description = normalizeJobDescription(job.description ?? '');
+      const text = plainText(description || job.description || '');
       out.push({
         source: 'careerjet',
         sourceId: createHash('sha1').update(job.url).digest('hex'),
@@ -417,8 +489,9 @@ export async function fetchCareerjet(affid: string, pages = 2): Promise<FeedJob[
         category: null,
         tags: [],
         salaryText: clean(job.salary, 80) || null,
-        description: safeHtml(`<p>${job.description ?? ''}</p>`),
+        description,
         summary: summarise(text),
+        applyEmail: findApplyEmail(`${job.description ?? ''} ${text}`),
         url: job.url,
         publishedAt: validDate(new Date(job.date ?? Date.now())),
       });

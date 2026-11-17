@@ -152,10 +152,13 @@ export function ApplyModal({
     return app;
   };
 
-  // ------------------------------------------------------------- easy apply
+  const onDealo = job.easyApply || job.emailApply;
+
+  // ------------------------------------------------------------- easy apply / email apply
 
   const sendEasyApply = async () => {
-    if (!job.careers) return;
+    if (!job.careers && !job.emailApply) return;
+    if (!me && job.emailApply) return signIn();
     const parsed = applySchema.safeParse(values);
     const next: Record<string, string> = {};
     if (!parsed.success) for (const issue of parsed.error.issues) next[String(issue.path[0])] ??= issue.message;
@@ -166,8 +169,23 @@ export function ApplyModal({
     setBusy('send');
     try {
       const file = choice.kind === 'file' ? choice.file : await makePdf(selected!);
-      await atsApi.apply(job.careers.orgSlug, job.careers.jobSlug, parsed.data, file);
-      if (me) await track(choice.kind === 'dealo' ? choice.id : undefined).catch(() => undefined);
+      if (job.emailApply && !job.careers) {
+        const app = await jobsApi.applyEmail(
+          job.id,
+          {
+            name: parsed.data.name,
+            email: parsed.data.email,
+            phone: parsed.data.phone,
+            coverNote: parsed.data.coverNote,
+            resumeId: choice.kind === 'dealo' ? choice.id : undefined,
+          },
+          file,
+        );
+        onTracked(app);
+      } else if (job.careers) {
+        await atsApi.apply(job.careers.orgSlug, job.careers.jobSlug, parsed.data, file);
+        if (me) await track(choice.kind === 'dealo' ? choice.id : undefined).catch(() => undefined);
+      }
       setDone(true);
     } catch (err) {
       toast.error('Could not send your application', err instanceof ApiError ? err.message : 'Please try again.');
@@ -295,9 +313,9 @@ export function ApplyModal({
   );
 
   const uploadOption =
-    job.easyApply ? (
+    onDealo ? (
       <div>
-        <input ref={fileRef} type="file" accept={ACCEPT} className="sr-only" onChange={(e) => pickFile(e.target.files?.[0] ?? null)} />
+        <input ref={fileRef} type="file" accept={job.emailApply ? 'application/pdf,.pdf' : ACCEPT} className="sr-only" onChange={(e) => pickFile(e.target.files?.[0] ?? null)} />
         {choice?.kind === 'file' ? (
           <div className="flex items-center gap-2 rounded-xl border border-brand/40 bg-brand-soft px-3 py-2.5 text-sm">
             <FileUp className="h-4 w-4 shrink-0 text-brand" />
@@ -316,7 +334,7 @@ export function ApplyModal({
           </div>
         ) : (
           <button type="button" onClick={() => fileRef.current?.click()} className="text-xs font-semibold text-brand hover:underline">
-            Or upload a PDF / Word file instead
+            {job.emailApply ? 'Or upload a PDF instead' : 'Or upload a PDF / Word file instead'}
           </button>
         )}
       </div>
@@ -332,11 +350,13 @@ export function ApplyModal({
       >
         <CheckCircle2 className="h-8 w-8" />
       </motion.span>
-      <h3 className="mt-4 font-display text-2xl text-foreground">{job.easyApply ? 'Application sent' : 'Saved to your applications'}</h3>
+      <h3 className="mt-4 font-display text-2xl text-foreground">{onDealo ? 'Application sent' : 'Saved to your applications'}</h3>
       <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-        {job.easyApply
-          ? `${job.company} has your CV. We emailed you a copy. Good luck!`
-          : `We'll keep ${job.title} in your list so you can follow up and track replies.`}
+        {job.emailApply && !job.easyApply
+          ? `We emailed ${job.company} for you with your CV and letter. Replies come to your inbox.`
+          : job.easyApply
+            ? `${job.company} has your CV. We emailed you a copy. Good luck!`
+            : `We'll keep ${job.title} in your list so you can follow up and track replies.`}
       </p>
       <div className="mt-5 flex flex-wrap justify-center gap-2">
         {me ? (
@@ -357,12 +377,12 @@ export function ApplyModal({
     <FormModal
       open={open}
       onClose={onClose}
-      icon={job.easyApply ? Zap : ArrowUpRight}
-      title={job.easyApply ? 'Easy apply' : `Apply on ${job.source.name}`}
+      icon={onDealo ? Zap : ArrowUpRight}
+      title={job.easyApply ? 'Easy apply' : job.emailApply ? 'Email apply' : `Apply on ${job.source.name}`}
       description={`${job.title} · ${job.company}`}
       size="md"
       footer={
-        done ? undefined : job.easyApply ? (
+        done ? undefined : onDealo ? (
           <button type="button" className="btn-primary w-full" disabled={busy !== null} onClick={() => void sendEasyApply()}>
             {busy === 'send' ? (
               <>
@@ -396,8 +416,13 @@ export function ApplyModal({
               </p>
             ) : null}
 
-            {job.easyApply ? (
+            {onDealo ? (
               <>
+                {job.emailApply && !job.easyApply ? (
+                  <p className="rounded-2xl border border-border bg-surface px-3 py-2.5 text-xs text-muted">
+                    We’ll email this employer for you. Their address stays private — you stay on Dealo.
+                  </p>
+                ) : null}
                 <FormField label="Your CV" error={errors.cv}>
                   {cvPicker}
                   <div className="mt-2">{uploadOption}</div>
@@ -412,31 +437,40 @@ export function ApplyModal({
                   <FormField label="Phone" optional error={errors.phone}>
                     <input className="input-field" type="tel" autoComplete="tel" maxLength={30} placeholder="0803 000 0000" {...bind('phone')} />
                   </FormField>
-                  <FormField label="Where you live" optional error={errors.location}>
-                    <input className="input-field" autoComplete="address-level2" maxLength={140} placeholder="Ikeja, Lagos" {...bind('location')} />
-                  </FormField>
+                  {!job.emailApply || job.easyApply ? (
+                    <FormField label="Where you live" optional error={errors.location}>
+                      <input className="input-field" autoComplete="address-level2" maxLength={140} placeholder="Ikeja, Lagos" {...bind('location')} />
+                    </FormField>
+                  ) : null}
                 </div>
-                <FormField label="Note to the employer" optional error={errors.coverNote} hint="Two or three lines on why you fit this job.">
-                  <textarea className="input-field min-h-[5rem]" maxLength={3000} {...bind('coverNote')} />
+                <FormField
+                  label={job.emailApply && !job.easyApply ? 'Short formal letter' : 'Note to the employer'}
+                  optional
+                  error={errors.coverNote}
+                  hint={job.emailApply && !job.easyApply ? 'We’ll send this with your CV. Keep it warm and specific.' : 'Two or three lines on why you fit this job.'}
+                >
+                  <textarea className="input-field min-h-[5rem]" maxLength={job.emailApply && !job.easyApply ? 1600 : 3000} {...bind('coverNote')} />
                 </FormField>
                 <p className="text-[11px] leading-relaxed text-muted">
-                  Your details go only to {job.company}. An AI helper may give their team a first summary of your CV; it never sees your name, age, gender or photo, and a person makes every decision.
+                  {job.emailApply && !job.easyApply
+                    ? `Your details go only to ${job.company}. Dealo sends the email on your behalf; replies come to your inbox.`
+                    : `Your details go only to ${job.company}. An AI helper may give their team a first summary of your CV; it never sees your name, age, gender or photo, and a person makes every decision.`}
                 </p>
               </>
             ) : (
               <ol className="space-y-4">
-                <Step n={1} title="Get your CV ready" done={busy === null && Boolean(selected)}>
+                <Step n={1} title="Prepare your pack" done={busy === null && Boolean(selected)}>
                   {cvPicker}
                   {selected ? (
                     <button type="button" className="btn-secondary mt-2 text-sm" disabled={busy !== null} onClick={() => void downloadPdf()}>
-                      {busy === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Download as PDF
+                      {busy === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Download CV + leave when ready
                     </button>
                   ) : null}
                 </Step>
-                <Step n={2} title={`Apply on ${job.source.name}`} done={opened}>
-                  <p className="text-xs text-muted">The application opens in a new tab. Attach your CV there.</p>
+                <Step n={2} title={`Continue on ${job.source.name}`} done={opened}>
+                  <p className="text-xs text-muted">This listing has no email apply path. Opening the source site is intentional — attach your pack there.</p>
                   <a href={job.applyUrl} target="_blank" rel="noopener noreferrer" onClick={() => setOpened(true)} className="btn-primary mt-2 inline-flex text-sm">
-                    Open application <ArrowUpRight className="h-4 w-4" />
+                    Continue on {job.source.name} <ArrowUpRight className="h-4 w-4" />
                   </a>
                 </Step>
                 <Step n={3} title="Track it on Dealo" done={false}>

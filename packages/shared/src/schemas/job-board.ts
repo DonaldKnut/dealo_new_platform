@@ -59,9 +59,20 @@ export type JobListing = {
   source: { id: JobBoardSource; name: string; url: string };
   /** Dealo jobs: apply on Dealo with a CV. External jobs: apply on `applyUrl`. */
   easyApply: boolean;
+  /** External jobs whose listing text names an apply inbox — send CV from Dealo (address never shown). */
+  emailApply: boolean;
   applyUrl: string;
   careers: { orgSlug: string; jobSlug: string } | null;
 };
+
+export const emailApplySchema = z.object({
+  name: z.string().trim().min(2, 'Enter your full name').max(140),
+  email: z.string().trim().email('Enter a valid email').max(255),
+  phone: z.string().trim().max(30).optional(),
+  coverNote: z.string().trim().max(1600).optional(),
+  resumeId: z.string().regex(/^[a-f0-9]{24}$/).optional(),
+});
+export type EmailApplyInput = z.infer<typeof emailApplySchema>;
 
 export type JobListingDetail = JobListing & {
   /** Sanitised HTML for external jobs; plain text with simple markdown for Dealo jobs. */

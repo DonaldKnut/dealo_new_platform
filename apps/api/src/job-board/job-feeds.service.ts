@@ -108,9 +108,25 @@ export class JobFeedsService implements OnModuleInit, OnModuleDestroy {
       const fresh = unique.filter((job) => !known.has(job.sourceId));
       if (fresh.length) await this.prisma.externalJob.createMany({ data: fresh.map((job) => ({ ...job, fetchedAt: now })) });
       if (known.size) await this.prisma.externalJob.updateMany({ where: { source, sourceId: { in: [...known] } }, data: { fetchedAt: now } });
-      const rawLocation = new Map(raw.map((job) => [job.sourceId, job.location]));
-      for (const job of unique.filter((j) => known.has(j.sourceId) && j.location !== rawLocation.get(j.sourceId))) {
-        await this.prisma.externalJob.updateMany({ where: { source, sourceId: job.sourceId }, data: { location: job.location, remote: job.remote } });
+      // Refresh description + apply email on known rows so formatting and Email Easy Apply backfill.
+      const refresh = unique.filter((j) => known.has(j.sourceId));
+      for (let i = 0; i < refresh.length; i += 40) {
+        const chunk = refresh.slice(i, i + 40);
+        await Promise.all(
+          chunk.map((job) =>
+            this.prisma.externalJob.updateMany({
+              where: { source, sourceId: job.sourceId },
+              data: {
+                location: job.location,
+                remote: job.remote,
+                description: job.description,
+                summary: job.summary,
+                applyEmail: job.applyEmail,
+                salaryText: job.salaryText,
+              },
+            }),
+          ),
+        );
       }
       await this.prisma.jobFeedSync.upsert({
         where: { source },

@@ -230,24 +230,7 @@ export function scoreJob(seeker: SeekerProfile, job: JobCandidate): MatchResult 
   return { score: Math.max(0, Math.min(100, total)), reasons: reasons.slice(0, 4), gaps: gaps.slice(0, 3) };
 }
 
-const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
-const APPLY_EMAIL_PATTERNS = [
-  /(send|forward|email|e-mail|mail|submit)[^.@\n]{0,80}?\b(cv|cvs|resume|résumé|resumes|application|applications)\b[^@\n]{0,60}?([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
-  /\b(cv|cvs|resume|résumé|applications?)\b[^@\n]{0,40}?\b(to|via|at)\b\s*:?\s*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
-  /\bhow to apply\b[^@]{0,160}?([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i,
-];
-const NOT_FOR_APPLYING = /^(no-?reply|donotreply|privacy|abuse|dpo|legal|support|info@example|test)@|@(example|test|domain)\./i;
-
-/** The address a listing explicitly asks applicants to send CVs to, if it names one. */
-export function findApplyEmail(text: string): string | null {
-  const plain = text.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ');
-  for (const pattern of APPLY_EMAIL_PATTERNS) {
-    const match = pattern.exec(plain);
-    const email = match?.[match.length - 1];
-    if (email && EMAIL.test(email) && !NOT_FOR_APPLYING.test(email)) return email.toLowerCase().replace(/\.$/, '');
-  }
-  return null;
-}
+export { findApplyEmail } from '../job-board/apply-email';
 
 export type ChannelDecision = {
   channel: Exclude<JobAgentChannel, 'site'>;

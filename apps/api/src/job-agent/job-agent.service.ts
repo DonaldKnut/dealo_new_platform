@@ -2126,18 +2126,13 @@ Reply as JSON: {"score": number, "reasons": string[], "gaps": string[], "scam": 
   }
 
   private async sendEmailApplication(match: JobAgentMatch, who: { name: string; email: string; phone?: string }, file: { buffer: Buffer; originalname: string }) {
-    const note = match.coverNote ?? `I would like to apply for the ${match.title} role at ${match.company}. My CV is attached, and I would welcome the chance to talk.`;
-    const html = `<p>Dear Hiring Team,</p>
-<p>${escapeHtml(note).replace(/\n+/g, '</p><p>')}</p>
-<p>Kind regards,<br/>${escapeHtml(who.name)}<br/>${escapeHtml(who.email)}${who.phone ? `<br/>${escapeHtml(who.phone)}` : ''}</p>
-<p style="color:#6b7280;font-size:12px">Sent through Dealo on behalf of ${escapeHtml(who.name)}, who asked us to apply for this role. Reply to this email to reach them directly.</p>`;
-    await this.email.send({
+    const { sendFormalApplicationEmail } = await import('../job-board/apply-email');
+    await sendFormalApplicationEmail(this.email, {
       to: match.applyEmail!,
-      subject: `Application: ${match.title} — ${who.name}`.slice(0, 180),
-      html,
-      text: `Dear Hiring Team,\n\n${note}\n\nKind regards,\n${who.name}\n${who.email}${who.phone ? `\n${who.phone}` : ''}\n\nSent through Dealo on behalf of ${who.name}. Reply to reach them directly.`,
-      headers: { 'Reply-To': who.email },
-      attachments: [{ filename: file.originalname, content: file.buffer, contentType: 'application/pdf' }],
+      title: match.title,
+      who,
+      note: match.coverNote ?? `I would like to apply for the ${match.title} role at ${match.company}. My CV is attached, and I would welcome the chance to talk.`,
+      file,
     });
   }
 

@@ -1,6 +1,6 @@
 import type { JobApplicationStatus, JobBoardType, JobListing, JobListingDetail, JobSearchResult } from '@dealo/shared';
 
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiUpload } from '@/lib/api';
 
 export type JobFilters = {
   q?: string;
@@ -39,7 +39,19 @@ function query(filters: JobFilters & { page?: number; pageSize?: number }) {
 
 export const jobsApi = {
   search: (filters: JobFilters, page = 1) => apiFetch<JobSearchResult>(`/jobs${query({ ...filters, page })}`),
-  featured: () => apiFetch<{ dealo: JobListing[]; latest: JobListing[]; counts: { dealo: number; external: number; total: number } }>('/jobs/featured'),
+  featured: () =>
+    apiFetch<{
+      dealo: JobListing[];
+      latest: JobListing[];
+      counts: {
+        dealo: number;
+        external: number;
+        total: number;
+        emailApply?: number;
+        stayOnDealo?: number;
+        stayOnDealoShare?: number;
+      };
+    }>('/jobs/featured'),
   detail: (listingId: string) => apiFetch<JobListingDetail>(`/jobs/listing/${listingId}`),
 
   saved: () => apiFetch<SavedJob[]>('/jobs/me/saved'),
@@ -52,6 +64,18 @@ export const jobsApi = {
   updateApplication: (id: string, body: { status?: JobApplicationStatus; note?: string | null }) =>
     apiFetch<TrackedApplication>(`/jobs/me/applications/${id}`, { method: 'PATCH', json: body }),
   removeApplication: (id: string) => apiFetch(`/jobs/me/applications/${id}`, { method: 'DELETE' }),
+
+  /** Email Easy Apply — CV PDF + formal letter; employer address stays on the server. */
+  applyEmail: (listingId: string, fields: { name: string; email: string; phone?: string; coverNote?: string; resumeId?: string }, cv: File) => {
+    const form = new FormData();
+    form.append('name', fields.name);
+    form.append('email', fields.email);
+    if (fields.phone) form.append('phone', fields.phone);
+    if (fields.coverNote) form.append('coverNote', fields.coverNote);
+    if (fields.resumeId) form.append('resumeId', fields.resumeId);
+    form.append('cv', cv);
+    return apiUpload<TrackedApplication>(`/jobs/listing/${listingId}/apply-email`, form);
+  },
 };
 
 export const JOB_TYPE_LABEL: Record<JobBoardType, string> = {

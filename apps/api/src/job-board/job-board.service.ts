@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   JOB_BOARD_TYPES,
+  type EmailApplyInput,
   type JobBoardType,
   type JobListing,
   type JobListingDetail,
@@ -14,7 +15,9 @@ import { JobStatus, Prisma, RoleFamily, WorkArrangement, type ExternalJob, type 
 
 import type { AuthUser } from '../auth/auth.types';
 import type { AppEnv } from '../config/env.validation';
+import { EmailService } from '../email/email.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { findApplyEmail, sendFormalApplicationEmail } from './apply-email';
 import { FEED_INFO, isNigeria, NIGERIA_PLACES, type FeedSource, salaryRange } from './job-feeds';
 
 const ROLE_FAMILY_LABEL: Record<RoleFamily, string> = {
@@ -58,11 +61,29 @@ const EXTERNAL_LIST_SELECT = {
   tags: true,
   salaryText: true,
   summary: true,
+  applyEmail: true,
   url: true,
   publishedAt: true,
 } satisfies Prisma.ExternalJobSelect;
 
-type ExternalRow = Omit<ExternalJob, 'description' | 'sourceId' | 'fetchedAt'>;
+type ExternalRow = Pick<
+  ExternalJob,
+  | 'id'
+  | 'source'
+  | 'title'
+  | 'company'
+  | 'companyLogo'
+  | 'location'
+  | 'remote'
+  | 'employmentType'
+  | 'category'
+  | 'tags'
+  | 'salaryText'
+  | 'summary'
+  | 'applyEmail'
+  | 'url'
+  | 'publishedAt'
+>;
 
 const ci = (value: string) => ({ contains: value, mode: 'insensitive' as const });
 const asType = (value: string): JobBoardType => ((JOB_BOARD_TYPES as readonly string[]).includes(value) ? (value as JobBoardType) : 'OTHER');
@@ -74,10 +95,12 @@ function plainSummary(text: string, max = 240) {
 
 @Injectable()
 export class JobBoardService {
+  private readonly logger = new Logger(JobBoardService.name);
   private readonly appUrl: string;
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly email: EmailService,
     config: ConfigService<AppEnv, true>,
   ) {
     this.appUrl = config.get('APP_URL', { infer: true }).replace(/\/$/, '');
@@ -108,6 +131,7 @@ export class JobBoardService {
       postedAt: (job.publishedAt ?? job.createdAt).toISOString(),
       source: { id: 'dealo', name: 'Dealo', url: `${this.appUrl}/careers/${careers.orgSlug}` },
       easyApply: true,
+      emailApply: false,
       applyUrl: `${this.appUrl}/careers/${careers.orgSlug}/${careers.jobSlug}`,
       careers,
     };
@@ -131,6 +155,7 @@ export class JobBoardService {
       postedAt: job.publishedAt.toISOString(),
       source: { id: job.source as FeedSource, name: info?.name ?? job.source, url: info?.url ?? job.url },
       easyApply: false,
+      emailApply: Boolean(job.applyEmail),
       applyUrl: job.url,
       careers: null,
     };
@@ -205,11 +230,24 @@ export class JobBoardService {
       this.facets(input, wantDealo, wantExternal),
     ]);
 
-    const byDate = (a: JobListing, b: JobListing) => Date.parse(b.postedAt) - Date.parse(a.postedAt);
+    /** Prefer stay-on-Dealo paths: Dealo Easy Apply → Email apply → full-text feeds → aggregator snippets. */
+    const FULL_TEXT = new Set(['remotive', 'jobicy', 'arbeitnow']);
+    const byRetentionThenDate = (a: JobListing, b: JobListing) => {
+      const rank = (j: JobListing) => {
+        if (j.kind === 'dealo' || j.easyApply) return 0;
+        if (j.emailApply) return 1;
+        if (FULL_TEXT.has(j.source.id)) return 2;
+        return 3;
+      };
+      const diff = rank(a) - rank(b);
+      return diff !== 0 ? diff : Date.parse(b.postedAt) - Date.parse(a.postedAt);
+    };
     const dealo = dealoRows.map((j) => this.fromDealo(j));
     const local = localRows.map((j) => this.fromExternal(j));
     const rest = restRows.map((j) => this.fromExternal(j));
-    const merged = localFirst ? [...[...dealo, ...local].sort(byDate), ...rest.sort(byDate)] : [...dealo, ...rest].sort(byDate);
+    const merged = localFirst
+      ? [...[...dealo, ...local].sort(byRetentionThenDate), ...rest.sort(byRetentionThenDate)]
+      : [...dealo, ...rest].sort(byRetentionThenDate);
     const start = (input.page - 1) * input.pageSize;
     const total = dealoTotal + localTotal + restTotal;
     return {
@@ -252,16 +290,26 @@ export class JobBoardService {
 
   async featured() {
     const where = this.dealoWhere({ scope: 'dealo', page: 1, pageSize: 8 });
-    const [jobs, dealo, external, latest] = await Promise.all([
+    const [jobs, dealo, external, emailApply, latest] = await Promise.all([
       this.prisma.job.findMany({ where, orderBy: { publishedAt: 'desc' }, take: 8, select: DEALO_JOB_SELECT }),
       this.prisma.job.count({ where }),
       this.prisma.externalJob.count(),
+      this.prisma.externalJob.count({ where: { applyEmail: { not: null } } }),
       this.prisma.externalJob.findMany({ orderBy: { publishedAt: 'desc' }, take: 6, select: EXTERNAL_LIST_SELECT }),
     ]);
+    const stayOnDealo = dealo + emailApply;
     return {
       dealo: jobs.map((j) => this.fromDealo(j)),
       latest: latest.map((j) => this.fromExternal(j)),
-      counts: { dealo, external, total: dealo + external },
+      counts: {
+        dealo,
+        external,
+        total: dealo + external,
+        emailApply,
+        /** Listings where the seeker can finish apply without leaving Dealo. */
+        stayOnDealo,
+        stayOnDealoShare: dealo + external > 0 ? Math.round((stayOnDealo / (dealo + external)) * 1000) / 10 : 0,
+      },
     };
   }
 
@@ -284,6 +332,20 @@ export class JobBoardService {
       return { ...this.fromExternal(job), description: job.description, descriptionFormat: 'html', mustHaves: [] };
     }
     throw new NotFoundException('This job is no longer listed');
+  }
+
+  async recordListingDetailView() {
+    const now = new Date();
+    const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    try {
+      await this.prisma.jobBoardViewDay.upsert({
+        where: { day },
+        create: { day, views: 1 },
+        update: { views: { increment: 1 } },
+      });
+    } catch (error) {
+      this.logger.warn(`Could not record job detail view: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   // ------------------------------------------------------------ saved & applied
@@ -345,5 +407,124 @@ export class JobBoardService {
     if (!/^[a-f0-9]{24}$/.test(id)) throw new NotFoundException('Application not found');
     await this.prisma.jobApplicationLog.deleteMany({ where: { id, userId: user.id } });
     return { ok: true };
+  }
+
+  /** Email Easy Apply: send formal CV + letter via the shared Job Agent mailer; stay on Dealo. */
+  async applyByEmail(listingId: string, input: EmailApplyInput, file: Express.Multer.File | undefined, user: AuthUser) {
+    if (!file?.buffer?.length) throw new BadRequestException('Attach your CV as a PDF');
+    if (!/^application\/pdf$/i.test(file.mimetype) && !/\.pdf$/i.test(file.originalname)) {
+      throw new BadRequestException('CV must be a PDF');
+    }
+    const [kind, id] = listingId.split('_');
+    if (kind !== 'ext' || !id || !/^[a-f0-9]{24}$/.test(id)) {
+      throw new BadRequestException('Email apply is only for partner board jobs that name an inbox');
+    }
+    const job = await this.prisma.externalJob.findUnique({ where: { id } });
+    if (!job) throw new NotFoundException('This job is no longer listed');
+    const to = job.applyEmail || findApplyEmail(job.description);
+    if (!to) throw new BadRequestException('This listing does not include an apply email');
+    if (!job.applyEmail) {
+      await this.prisma.externalJob.update({ where: { id }, data: { applyEmail: to } }).catch(() => undefined);
+    }
+
+    if (input.resumeId) {
+      const owned = await this.prisma.resume.count({ where: { id: input.resumeId, userId: user.id } });
+      if (!owned) input = { ...input, resumeId: undefined };
+    }
+
+    await sendFormalApplicationEmail(this.email, {
+      to,
+      title: job.title,
+      who: { name: input.name, email: input.email, phone: input.phone },
+      note: input.coverNote,
+      file: { buffer: file.buffer, originalname: file.originalname || 'cv.pdf' },
+    });
+
+    return this.prisma.jobApplicationLog.upsert({
+      where: { userId_listingId: { userId: user.id, listingId } },
+      create: {
+        userId: user.id,
+        listingId,
+        title: job.title,
+        company: job.company,
+        url: job.url,
+        source: job.source,
+        resumeId: input.resumeId,
+        note: 'email_apply',
+        status: 'APPLIED',
+      },
+      update: {
+        resumeId: input.resumeId,
+        status: 'APPLIED',
+        appliedAt: new Date(),
+        note: 'email_apply',
+      },
+    });
+  }
+
+  /** Retention metrics for ops: share of board inventory / tracked applies that keep seekers on Dealo. */
+  async retentionStats() {
+    const now = new Date();
+    const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - 29 * 86_400_000);
+    const FULL_TEXT = ['remotive', 'jobicy', 'arbeitnow'] as const;
+    const [
+      dealo,
+      external,
+      emailApply,
+      fullText,
+      fullTextWithEmail,
+      emailAppliedLogs,
+      dealoAppliedLogs,
+      dealoAtsApplications,
+      totalAppliedLogs,
+      bySource,
+      detailViews,
+    ] = await Promise.all([
+      this.prisma.job.count({ where: this.dealoWhere({ scope: 'dealo', page: 1, pageSize: 8 }) }),
+      this.prisma.externalJob.count(),
+      this.prisma.externalJob.count({ where: { applyEmail: { not: null } } }),
+      this.prisma.externalJob.count({ where: { source: { in: [...FULL_TEXT] } } }),
+      this.prisma.externalJob.count({ where: { source: { in: [...FULL_TEXT] }, applyEmail: { not: null } } }),
+      this.prisma.jobApplicationLog.count({ where: { note: 'email_apply', appliedAt: { gte: since } } }),
+      this.prisma.jobApplicationLog.count({ where: { source: 'dealo', appliedAt: { gte: since } } }),
+      this.prisma.application.count({ where: { createdAt: { gte: since } } }),
+      this.prisma.jobApplicationLog.count({ where: { appliedAt: { gte: since } } }),
+      this.prisma.externalJob.groupBy({ by: ['source'], _count: { _all: true } }),
+      this.prisma.jobBoardViewDay.aggregate({ where: { day: { gte: since } }, _sum: { views: true } }),
+    ]);
+    const stayOnDealo = dealo + emailApply;
+    const inventory = dealo + external;
+    const completedOnDealo = emailAppliedLogs + dealoAtsApplications;
+    const completedTrackedOnDealo = emailAppliedLogs + dealoAppliedLogs;
+    return {
+      inventory: {
+        dealo,
+        external,
+        emailApply,
+        fullTextPartners: fullText,
+        fullTextWithEmailApply: fullTextWithEmail,
+        stayOnDealo,
+        stayOnDealoSharePct: inventory > 0 ? Math.round((stayOnDealo / inventory) * 1000) / 10 : 0,
+        bySource: Object.fromEntries(bySource.map((row) => [row.source, row._count._all])),
+      },
+      /** Aggregate detail-request conversion proxy; repeat requests are counted, not deduplicated visitors. */
+      applicationsLast30Days: {
+        total: totalAppliedLogs,
+        dealo: dealoAppliedLogs,
+        dealoAtsApplications,
+        emailApply: emailAppliedLogs,
+        completedOnDealo,
+        completedOnDealoSharePct:
+          totalAppliedLogs > 0 ? Math.round((completedTrackedOnDealo / totalAppliedLogs) * 1000) / 10 : 0,
+        detailViews: detailViews._sum.views ?? 0,
+        completedOnDealoPer100DetailViews:
+          (detailViews._sum.views ?? 0) > 0 ? Math.round((completedOnDealo / (detailViews._sum.views ?? 1)) * 100_000) / 1000 : 0,
+      },
+      deferred: ['email bounce/complaint rates', 'reply tracking'],
+      guidance: {
+        prefer: ['Remotive', 'Jobicy', 'Arbeitnow', 'partner ATS sync (PUT /ats-api/jobs/sync)', 'Dealo ATS posts'],
+        avoid: ['Scraping Jooble/Indeed/LinkedIn for HR emails', 'Auto-submit third-party forms without Assist pause rules'],
+      },
+    };
   }
 }

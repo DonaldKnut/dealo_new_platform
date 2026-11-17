@@ -445,6 +445,9 @@ export function JobBoard({ variant = 'public' }: { variant?: 'public' | 'dashboa
               <Zap className="h-3.5 w-3.5 text-brand" /> Easy apply on Dealo jobs
             </span>
             <span className="inline-flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-brand" /> Email apply when the listing names an inbox
+            </span>
+            <span className="inline-flex items-center gap-1.5">
               <Globe2 className="h-3.5 w-3.5 text-brand" /> Also from trusted job sites in Nigeria and worldwide
             </span>
           </div>

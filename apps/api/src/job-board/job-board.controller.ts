@@ -1,16 +1,33 @@
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiCookieAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import {
+  emailApplySchema,
   jobSearchSchema,
   saveJobSchema,
   trackApplicationSchema,
   updateApplicationLogSchema,
+  type EmailApplyInput,
   type JobSearchInput,
   type TrackApplicationInput,
   type UpdateApplicationLogInput,
 } from '@dealo/shared';
 import { UserRole } from '@prisma/client';
+import { memoryStorage } from 'multer';
 
 import type { AuthUser } from '../auth/auth.types';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -20,6 +37,9 @@ import { Roles } from '../common/roles.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { JobBoardService } from './job-board.service';
 import { JobFeedsService } from './job-feeds.service';
+
+const CV_MAX_BYTES = 8 * 1024 * 1024;
+const cvUpload = FileInterceptor('cv', { storage: memoryStorage(), limits: { fileSize: CV_MAX_BYTES } });
 
 @ApiTags('jobs')
 @Controller('jobs')
@@ -47,9 +67,12 @@ export class JobBoardController {
 
   @Public()
   @Get('listing/:listingId')
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
   @ApiOperation({ summary: 'One job with its full description' })
-  detail(@Param('listingId') listingId: string) {
-    return this.board.detail(listingId);
+  async detail(@Param('listingId') listingId: string) {
+    const listing = await this.board.detail(listingId);
+    await this.board.recordListingDetailView();
+    return listing;
   }
 
   // ------------------------------------------------------------- signed in
@@ -101,6 +124,28 @@ export class JobBoardController {
     return this.board.removeApplication(id, user);
   }
 
+  @Post('listing/:listingId/apply-email')
+  @ApiCookieAuth()
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(cvUpload)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Email Easy Apply: send CV + formal letter from Dealo (inbox never shown)' })
+  applyEmail(
+    @CurrentUser() user: AuthUser,
+    @Param('listingId') listingId: string,
+    @Body() body: Record<string, string>,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const input = emailApplySchema.parse({
+      name: body.name,
+      email: body.email,
+      phone: body.phone || undefined,
+      coverNote: body.coverNote || undefined,
+      resumeId: body.resumeId || undefined,
+    });
+    return this.board.applyByEmail(listingId, input as EmailApplyInput, file, user);
+  }
+
   // ------------------------------------------------------------------ admin
 
   @Get('admin/feeds')
@@ -108,6 +153,14 @@ export class JobBoardController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   feedStatus() {
     return this.feeds.status();
+  }
+
+  @Get('admin/retention')
+  @ApiCookieAuth()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Share of board inventory / applies that stay on Dealo (Email Easy Apply + Dealo ATS)' })
+  retention() {
+    return this.board.retentionStats();
   }
 
   @Post('admin/sync')

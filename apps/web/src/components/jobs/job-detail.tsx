@@ -70,6 +70,10 @@ export function JobDetail({
           <>
             <Zap className="h-4 w-4" /> Easy apply
           </>
+        ) : job.emailApply ? (
+          <>
+            <Zap className="h-4 w-4" /> Email apply
+          </>
         ) : (
           <>
             Apply on {job.source.name} <ArrowUpRight className="h-4 w-4" />
@@ -134,6 +138,14 @@ export function JobDetail({
             <Zap className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
             <p className="text-foreground">
               <span className="font-semibold">Apply in one tap.</span> <span className="text-muted">Send the CV you built on Dealo. No new account or forms on another site.</span>
+            </p>
+          </div>
+        ) : job.emailApply ? (
+          <div className="mb-5 flex items-start gap-3 rounded-2xl border border-brand/30 bg-brand-soft/60 p-3 text-sm">
+            <Zap className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+            <p className="text-foreground">
+              <span className="font-semibold">Email apply on Dealo.</span>{' '}
+              <span className="text-muted">We’ll email this employer for you with your CV and a short formal letter. Their address stays private.</span>
             </p>
           </div>
         ) : null}

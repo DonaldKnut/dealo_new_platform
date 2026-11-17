@@ -64,6 +64,11 @@ export function JobCard({
                 <Zap className="h-3 w-3" /> Easy apply
               </span>
             ) : null}
+            {job.emailApply ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand">
+                Email apply
+              </span>
+            ) : null}
             {fresh ? <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">New</span> : null}
           </div>
           <h3 className="mt-1 line-clamp-2 break-words pr-8 text-[15px] font-semibold leading-snug text-foreground transition-colors group-hover:text-brand">

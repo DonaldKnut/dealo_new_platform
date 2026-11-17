@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { JobDescription } from '@/components/ats/job-description';
 import { safeJsonLd } from '@/components/ats/careers-shell';
 import { BreadcrumbsJsonLd } from '@/components/seo/breadcrumbs-json-ld';
 import { JOB_TYPE_LABEL, postedAgo } from '@/lib/jobs-api';
@@ -80,15 +81,16 @@ export default async function JobListingPage({ params }: Props) {
     ...(job.remote
       ? { jobLocationType: 'TELECOMMUTE', applicantLocationRequirements: { '@type': 'Country', name: 'Nigeria' } }
       : {}),
-    directApply: job.easyApply,
+    directApply: job.easyApply || job.emailApply,
     url: `${APP_URL}/jobs/${job.id}`,
   };
 
   const applyHref = job.careers
     ? `/careers/${job.careers.orgSlug}/${job.careers.jobSlug}`
-    : job.easyApply
+    : job.easyApply || job.emailApply
       ? `/jobs?job=${encodeURIComponent(job.id)}&apply=1`
       : job.applyUrl;
+  const stayOnDealo = Boolean(job.easyApply || job.emailApply || job.careers);
 
   return (
     <article className="pb-20 pt-24 min-[340px]:pt-28">
@@ -110,6 +112,11 @@ export default async function JobListingPage({ params }: Props) {
             {job.easyApply ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white dark:text-[#071f14]">
                 <Zap className="h-3 w-3" /> Easy apply
+              </span>
+            ) : null}
+            {job.emailApply ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-brand/40 bg-brand-soft px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand">
+                Email apply
               </span>
             ) : null}
             <span className="rounded-full border border-border px-2.5 py-0.5 text-[11px] text-muted">{job.source.name}</span>
@@ -134,9 +141,9 @@ export default async function JobListingPage({ params }: Props) {
         </header>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          {job.easyApply || job.careers ? (
+          {stayOnDealo ? (
             <Link href={applyHref} className="btn-primary">
-              Apply on Dealo
+              {job.emailApply && !job.easyApply ? 'Email apply on Dealo' : 'Apply on Dealo'}
             </Link>
           ) : (
             <a href={applyHref} target="_blank" rel="noopener noreferrer" className="btn-primary inline-flex items-center gap-1.5">
@@ -153,11 +160,7 @@ export default async function JobListingPage({ params }: Props) {
 
         <section className="prose-dealo mt-10 max-w-none">
           <h2 className="font-display text-xl text-foreground">About the role</h2>
-          {job.descriptionFormat === 'html' ? (
-            <div className="mt-4 text-sm leading-relaxed text-muted" dangerouslySetInnerHTML={{ __html: sanitizeBasicHtml(job.description) }} />
-          ) : (
-            <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-muted">{job.description || job.summary}</div>
-          )}
+          <JobDescription className="mt-4" text={job.description || job.summary} />
           {job.mustHaves?.length ? (
             <div className="mt-8">
               <h3 className="font-display text-lg text-foreground">Must-haves</h3>
@@ -199,13 +202,4 @@ export default async function JobListingPage({ params }: Props) {
 
 function escapeHtml(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-/** Minimal sanitiser for trusted feed HTML — strips scripts/handlers. */
-function sanitizeBasicHtml(html: string) {
-  return html
-    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
-    .replace(/\son\w+="[^"]*"/gi, '')
-    .replace(/\son\w+='[^']*'/gi, '')
-    .replace(/javascript:/gi, '');
 }

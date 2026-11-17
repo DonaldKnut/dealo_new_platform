@@ -930,7 +930,8 @@ model PaymentEvent {
   @@index([receivedAt])
 }
 
-/// Job pulled from a public job feed (Remotive, Jobicy, Arbeitnow, Jooble, Careerjet). Applying always happens on `url`.
+/// Job pulled from a public job feed (Remotive, Jobicy, Arbeitnow, Jooble, Careerjet).
+/// Prefer Email Easy Apply when `applyEmail` is set; otherwise seekers open `url`.
 model ExternalJob {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
   source         String
@@ -947,12 +948,15 @@ model ExternalJob {
   /// Sanitised HTML from the feed.
   description    String
   summary        String
+  /// Apply inbox extracted from listing text. Never exposed raw on the public board.
+  applyEmail     String?
   url            String
   publishedAt    DateTime
   fetchedAt      DateTime @default(now())
 
   @@unique([source, sourceId])
   @@index([publishedAt])
+  @@index([applyEmail])
 }
 
 model JobFeedSync {
@@ -962,6 +966,13 @@ model JobFeedSync {
   lastOkAt  DateTime?
   lastCount Int       @default(0)
   lastError String?
+}
+
+/// Privacy-minimal aggregate of successful job detail requests, bucketed by UTC day.
+model JobBoardViewDay {
+  id    String   @id @default(auto()) @map("_id") @db.ObjectId
+  day   DateTime @unique
+  views Int      @default(0)
 }
 
 /// A job seeker's background Job Agent: what it hunts for and how freely it may apply.
