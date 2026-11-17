@@ -466,36 +466,21 @@ export function JobBoard({ variant = 'public' }: { variant?: 'public' | 'dashboa
             </button>
           </div>
           <div className="scrollbar-none -mx-2 mt-4 flex snap-x gap-3 overflow-x-auto px-2 pb-2">
-            {featured.map((job) =>
-              embedded ? (
-                <button
-                  key={job.id}
-                  type="button"
-                  onClick={() => openJob(job.id)}
-                  className="group w-[min(17rem,80vw)] shrink-0 snap-start rounded-2xl border border-brand/25 bg-gradient-to-br from-brand-soft/70 to-surface-elevated p-4 text-left transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg"
-                >
-                  <p className="truncate text-xs font-semibold text-brand">{job.company}</p>
-                  <p className="mt-1 line-clamp-2 font-semibold text-foreground group-hover:text-brand">{job.title}</p>
-                  <p className="mt-2 flex items-center gap-1 truncate text-xs text-muted">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" /> {job.location}
-                  </p>
-                  {job.salary ? <p className="mt-1 text-xs font-semibold text-foreground">{job.salary}</p> : null}
-                </button>
-              ) : (
-                <Link
-                  key={job.id}
-                  href={`/jobs/${job.id}`}
-                  className="group w-[min(17rem,80vw)] shrink-0 snap-start rounded-2xl border border-brand/25 bg-gradient-to-br from-brand-soft/70 to-surface-elevated p-4 text-left transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg"
-                >
-                  <p className="truncate text-xs font-semibold text-brand">{job.company}</p>
-                  <p className="mt-1 line-clamp-2 font-semibold text-foreground group-hover:text-brand">{job.title}</p>
-                  <p className="mt-2 flex items-center gap-1 truncate text-xs text-muted">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" /> {job.location}
-                  </p>
-                  {job.salary ? <p className="mt-1 text-xs font-semibold text-foreground">{job.salary}</p> : null}
-                </Link>
-              ),
-            )}
+            {featured.map((job) => (
+              <button
+                key={job.id}
+                type="button"
+                onClick={() => openJob(job.id)}
+                className="group w-[min(17rem,80vw)] shrink-0 snap-start rounded-2xl border border-brand/25 bg-gradient-to-br from-brand-soft/70 to-surface-elevated p-4 text-left transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg"
+              >
+                <p className="truncate text-xs font-semibold text-brand">{job.company}</p>
+                <p className="mt-1 line-clamp-2 font-semibold text-foreground group-hover:text-brand">{job.title}</p>
+                <p className="mt-2 flex items-center gap-1 truncate text-xs text-muted">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" /> {job.location}
+                </p>
+                {job.salary ? <p className="mt-1 text-xs font-semibold text-foreground">{job.salary}</p> : null}
+              </button>
+            ))}
           </div>
         </section>
       ) : null}
@@ -540,7 +525,7 @@ export function JobBoard({ variant = 'public' }: { variant?: 'public' | 'dashboa
                       index={index}
                       active={desktop && job.id === activeId}
                       saved={saved.has(job.id)}
-                      onSelect={embedded ? () => openJob(job.id) : undefined}
+                      onSelect={() => openJob(job.id)}
                       onToggleSave={() => void toggleSave(job)}
                     />
                     {index === 4 ? <CvPromo href={embedded ? '/dashboard/resumes' : '/resume-builder'} /> : null}
@@ -592,8 +577,13 @@ export function JobBoard({ variant = 'public' }: { variant?: 'public' | 'dashboa
         </div>
       </section>
 
-      {/* ------------------------------------------------------ phone sheets */}
-      <FormModal open={!desktop && Boolean(selectedId)} onClose={closeJob} size="lg" bodyClassName="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      {/* ------------------------------------------------------ job detail modal (all sizes; desktop also keeps the split pane) */}
+      <FormModal
+        open={!desktop && Boolean(selectedId)}
+        onClose={closeJob}
+        size="lg"
+        bodyClassName="relative flex min-h-0 flex-1 flex-col overflow-hidden"
+      >
         {detail && detail.id === selectedId ? (
           <JobDetail
             job={detail}
@@ -700,7 +690,7 @@ function EmployerPromo() {
       <Building2 className="h-5 w-5 shrink-0 text-brand" />
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold text-foreground">Hiring? Post jobs here for free</span>
-        <span className="block text-xs text-muted">Dealo ATS puts your jobs on this board with Easy apply, plus AI screening.</span>
+        <span className="block text-xs text-muted">Dealo ATS puts your jobs on this board with Easy apply for verified candidates.</span>
       </span>
       <ArrowRight className="h-4 w-4 shrink-0 text-muted" />
     </Link>

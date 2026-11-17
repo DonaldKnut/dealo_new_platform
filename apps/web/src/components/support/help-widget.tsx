@@ -361,7 +361,10 @@ export function HelpWidget() {
   useEffect(() => {
     if (!open) return;
     let active = true;
-    apiFetch<AssistantWelcome>(`/assistant/welcome?page=${encodeURIComponent(pathname)}`)
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos';
+    apiFetch<AssistantWelcome>(
+      `/assistant/welcome?page=${encodeURIComponent(pathname)}&tz=${encodeURIComponent(tz)}`,
+    )
       .then((w) => active && setWelcome(w))
       .catch(() => active && setWelcome(null));
     return () => {

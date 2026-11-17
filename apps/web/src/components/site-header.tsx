@@ -252,37 +252,49 @@ export function SiteHeader() {
         </div>
       </div>
 
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {mobileOpen ? (
           <motion.div
             key="mobile-nav"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="border-t border-border bg-surface-elevated/95 backdrop-blur-md lg:hidden"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden border-t border-border bg-surface-elevated/95 backdrop-blur-md lg:hidden"
           >
-            <div className="flex max-h-[calc(100svh-3.5rem)] flex-col gap-1 overflow-y-auto overscroll-contain px-3 py-3 min-[340px]:px-4 min-[340px]:py-4">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.28, delay: 0.04, ease: [0.22, 1, 0.36, 1] }}
+              className="flex max-h-[calc(100svh-3.5rem)] flex-col gap-1 overflow-y-auto overscroll-contain px-3 py-3 min-[340px]:px-4 min-[340px]:py-4"
+            >
               <LanguageSwitcher variant="row" />
 
               <p className="px-2.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand min-[340px]:px-3">
                 {t('nav.startHere')}
               </p>
               <div className="mb-1 grid gap-1">
-                {MOBILE_FRONTIERS.map((item) => {
+                {MOBILE_FRONTIERS.map((item, index) => {
                   const Icon = item.icon;
                   return (
-                    <Link
+                    <motion.div
                       key={item.href}
-                      href={item.href}
-                      className="group flex items-center gap-2.5 rounded-xl border border-brand/20 bg-brand-soft/40 px-2.5 py-2.5 text-sm font-semibold text-foreground transition hover:border-brand/40 hover:bg-brand-soft min-[340px]:gap-3 min-[340px]:px-3 min-[340px]:py-3"
-                      onClick={() => setMobileOpen(false)}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.06 + index * 0.045, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
                     >
-                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-white dark:text-[#071f14]">
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0">{t(item.titleKey)}</span>
-                    </Link>
+                      <Link
+                        href={item.href}
+                        className="group flex items-center gap-2.5 rounded-xl border border-brand/20 bg-brand-soft/40 px-2.5 py-2.5 text-sm font-semibold text-foreground transition hover:border-brand/40 hover:bg-brand-soft min-[340px]:gap-3 min-[340px]:px-3 min-[340px]:py-3"
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-white dark:text-[#071f14]">
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0">{t(item.titleKey)}</span>
+                      </Link>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -373,7 +385,7 @@ export function SiteHeader() {
                   {t('nav.signIn')}
                 </Link>
               )}
-            </div>
+            </motion.div>
           </motion.div>
         ) : null}
       </AnimatePresence>

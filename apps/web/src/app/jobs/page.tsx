@@ -45,26 +45,32 @@ export default async function JobsPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(itemList) }} />
       <BreadcrumbsJsonLd items={[{ name: 'Jobs', path: '/jobs' }]} />
 
-      {/* Crawlable hub links (visible, above the client board). */}
-      <nav className="container-page flex flex-wrap justify-center gap-2 pt-24 min-[340px]:pt-28" aria-label="Jobs by city and role">
-        {JOB_CITY_HUBS.map((c) => (
-          <Link
-            key={c.slug}
-            href={`/jobs/in/${c.slug}`}
-            className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted transition hover:border-brand hover:text-brand"
-          >
-            {c.name}
-          </Link>
-        ))}
-        {JOB_ROLE_HUBS.slice(0, 5).map((r) => (
-          <Link
-            key={r.slug}
-            href={`/jobs/role/${r.slug}`}
-            className="rounded-full border border-dashed border-border px-3 py-1.5 text-xs font-medium text-muted transition hover:border-brand/40 hover:text-brand"
-          >
-            {r.name}
-          </Link>
-        ))}
+      {/* Crawlable hub links — slim, responsive strip above the board. */}
+      <nav
+        className="container-page border-b border-border/70 pt-[calc(3.5rem+var(--safe-top)+0.75rem)] min-[340px]:pt-[calc(4.25rem+var(--safe-top)+0.85rem)] sm:pt-[calc(5rem+var(--safe-top)+1rem)]"
+        aria-label="Jobs by city and role"
+      >
+        <div className="scrollbar-none -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-3 min-[340px]:gap-2 min-[340px]:pb-3.5">
+          {JOB_CITY_HUBS.map((c) => (
+            <Link
+              key={c.slug}
+              href={`/jobs/in/${c.slug}`}
+              className="inline-flex shrink-0 items-center rounded-full border border-border/80 bg-surface-elevated/80 px-3 py-1.5 text-[11px] font-semibold text-foreground transition hover:border-brand hover:text-brand min-[340px]:text-xs"
+            >
+              {c.name}
+            </Link>
+          ))}
+          <span aria-hidden className="mx-0.5 hidden h-6 w-px shrink-0 self-center bg-border sm:block" />
+          {JOB_ROLE_HUBS.slice(0, 5).map((r) => (
+            <Link
+              key={r.slug}
+              href={`/jobs/role/${r.slug}`}
+              className="inline-flex shrink-0 items-center rounded-full border border-transparent bg-transparent px-2.5 py-1.5 text-[11px] font-medium text-muted transition hover:bg-surface hover:text-brand min-[340px]:text-xs"
+            >
+              {r.name}
+            </Link>
+          ))}
+        </div>
       </nav>
 
       {teaser.length ? (

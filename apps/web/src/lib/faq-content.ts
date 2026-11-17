@@ -46,9 +46,9 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
       {
         q: 'Why should I trust Dealo?',
         a: [
-          'Every person is checked before you see them: skills, past work and references.',
+          'Every person is manually verified before you see them: identity, in-person address visit, background checks, and medical or training where the role needs it.',
           'If a hire leaves early, we replace them free within 90 days.',
-          'You see prices before you agree to anything.',
+          'Processing fees are published up front. Full staffing quotes come after we understand the job.',
         ],
       },
     ],
@@ -77,11 +77,19 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
       {
         q: 'What is the difference between “direct hire” and “managed staffing”?',
         a: [
-          'Direct hire: we find the person and they join your company payroll.',
-          'Managed staffing: we find the people and Dealo manages them for you, including contracts and pay.',
-          'Managed staffing works well for site crews and short projects.',
+          'Direct hire: we find and verify the person; they join your company payroll. Processing fee: ₦70,000 per role.',
+          'Managed staffing: we find and verify people, then Dealo manages contracts, pay admin, and cover. Processing fee: ₦50,000 per placement.',
+          'Monthly staffing rates and large crews are quoted after the brief. Managed staffing works well for site crews and ongoing cover.',
         ],
         link: { label: 'Compare services', href: '/services' },
+      },
+      {
+        q: 'How do you verify candidates?',
+        a: [
+          'Verification is manual, not an automated AI screen.',
+          'We confirm identity, visit or confirm the address in person, run background checks, and arrange medical checks and role training when the job requires it.',
+          'Only people who pass those steps reach your shortlist.',
+        ],
       },
       {
         q: 'How many candidates will I see?',
@@ -155,41 +163,29 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
   },
   {
     id: 'ai',
-    title: 'How our AI works',
-    blurb: 'AI helps. People decide.',
+    title: 'AI tools & Job Agent',
+    blurb: 'Staffing verification is manual. AI helps products like Job Agent and chat.',
     items: [
       {
-        q: 'Do you use AI?',
+        q: 'Do you use AI to screen staffing candidates?',
         a: [
-          'Yes. We use AI “agents” to do slow, repetitive work, like reading CVs and checking dates.',
-          'This makes us faster, so you get a shortlist sooner.',
+          'No. For managed staffing and direct hire, verification is done by people: identity, in-person address checks, background checks, medical clearance, and training where needed.',
+          'That manual work is what the processing fee covers.',
         ],
-        link: { label: 'See the agents', href: '/#ai-agents' },
       },
       {
-        q: 'What do the AI agents do?',
+        q: 'Where does AI show up on Dealo?',
         a: [
-          'Sourcing agent: finds people who match the job.',
-          'Screening agent: scores each CV against your must-haves.',
-          'Verification agent: checks documents and spots things that do not add up.',
-          'Matching agent: ranks the shortlist and explains why.',
-          'Placement agent: helps track attendance and cover after someone starts.',
+          'Optional tools such as the Dealo chat assistant, CV writing help, and Job Agent (finding and applying to public jobs).',
+          'Those products speed up busywork. They do not replace our in-person verification for placements we send to employers.',
         ],
+        link: { label: 'See Job Agent', href: '/job-agent' },
       },
       {
         q: 'Does AI decide who gets hired?',
         a: [
-          'No. AI never hires or rejects anyone on its own.',
-          'A Dealo recruiter checks every AI suggestion before you see it.',
-          'The final choice is always yours.',
-        ],
-      },
-      {
-        q: 'Is AI fair?',
-        a: [
-          'We tell the AI to look only at skills, experience and the job needs.',
-          'It does not use things like tribe, religion, gender or age.',
-          'Every score comes with reasons a person can read and disagree with.',
+          'No. Dealo recruiters and you make hiring decisions.',
+          'Job Agent and Assist never bypass CAPTCHA, employer sign-in, or fee fields — you stay in control of the final submit.',
         ],
       },
       {
@@ -264,7 +260,7 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
         q: 'What is Dealo ATS?',
         a: [
           'ATS means “applicant tracking system”. It is software to manage hiring.',
-          'Post jobs, see every candidate on one board, and let AI do the first screen.',
+          'Post jobs, see every candidate on one board, and keep hiring steps in one place.',
           'We built it for our own recruiters first. Now businesses can use it too.',
         ],
         link: { label: 'About Dealo ATS', href: '/ats' },
@@ -354,11 +350,11 @@ export const FAQ_CATEGORIES: FaqCategory[] = [
       {
         q: 'How much does hiring cost?',
         a: [
-          'Direct hire: a fee per role, paid when the person is hired.',
-          'Managed staffing: a monthly fee per worker.',
-          'You get an exact quote after we understand the job. No hidden fees.',
+          'Processing fees (manual verification): ₦70,000 per direct-hire role, ₦50,000 per managed-staffing placement.',
+          'Monthly managed rates, crew size, and ongoing cover are quoted after we understand the job.',
+          'You see the processing fee before you start. No hidden verification charges.',
         ],
-        link: { label: 'Ask for a quote', href: '/hire' },
+        link: { label: 'Request talent', href: '/hire' },
       },
       {
         q: 'How do I pay?',

@@ -339,9 +339,33 @@ export class AssistantService {
     return (safe.length ? safe : fallback).slice(0, 3);
   }
 
-  async welcome(page: string | undefined, user?: AuthUser): Promise<AssistantWelcome> {
-    const hour = Number(new Date().toLocaleString('en-NG', { hour: 'numeric', hour12: false, timeZone: 'Africa/Lagos' }));
-    const part = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  private resolveTimeZone(tz?: string) {
+    const fallback = 'Africa/Lagos';
+    if (!tz || !/^[A-Za-z0-9_+\-/]+$/.test(tz)) return fallback;
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: tz });
+      return tz;
+    } catch {
+      return fallback;
+    }
+  }
+
+  private greetingForHour(hour: number) {
+    if (hour >= 5 && hour < 12) return 'Good morning';
+    if (hour >= 12 && hour < 17) return 'Good afternoon';
+    if (hour >= 17 && hour < 22) return 'Good evening';
+    return 'Hello';
+  }
+
+  async welcome(page: string | undefined, user?: AuthUser, tz?: string): Promise<AssistantWelcome> {
+    const zone = this.resolveTimeZone(tz);
+    const hourPart = new Intl.DateTimeFormat('en-GB', {
+      hour: 'numeric',
+      hour12: false,
+      timeZone: zone,
+    }).formatToParts(new Date()).find((p) => p.type === 'hour')?.value;
+    const hour = Number(hourPart ?? 12) % 24;
+    const part = this.greetingForHour(hour);
     const name =
       user && user.authType !== 'api_key'
         ? ((await this.prisma.user.findUnique({ where: { id: user.id }, select: { firstName: true } }).catch(() => null))?.firstName ?? '')

@@ -27,8 +27,12 @@ export class AssistantController {
   @Get('welcome')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiOperation({ summary: 'Dealo AI Assistant: personalised greeting and starter questions for a page' })
-  welcome(@Query('page') page: string | undefined, @CurrentUser() user: AuthUser | undefined) {
-    return this.assistant.welcome(page?.slice(0, 200), user);
+  welcome(
+    @Query('page') page: string | undefined,
+    @Query('tz') tz: string | undefined,
+    @CurrentUser() user: AuthUser | undefined,
+  ) {
+    return this.assistant.welcome(page?.slice(0, 200), user, tz?.slice(0, 64));
   }
 
   @Public()

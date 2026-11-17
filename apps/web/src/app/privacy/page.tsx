@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/privacy' },
 };
 
-const updated = '16 November 2026';
+const updated = '17 November 2026';
 
 export default function PrivacyPage() {
   return (
@@ -53,6 +53,11 @@ export default function PrivacyPage() {
             skills, documents you upload, availability, and application activity.
           </li>
           <li>
+            <strong className="text-foreground">Verification data:</strong> identity documents,
+            address confirmation from in-person visits, background-check results, and medical or
+            training records when a role requires them for placement.
+          </li>
+          <li>
             <strong className="text-foreground">Job Agent &amp; Assist data:</strong> target titles
             and locations, match scores, apply channels, CVs you link or upload for the agent, Apply
             vault contents (identity, work/education history, Q&amp;A), Assist device tokens, fill
@@ -75,7 +80,10 @@ export default function PrivacyPage() {
         <p>We use personal data to:</p>
         <ul className="mt-3 list-disc space-y-2 pl-5">
           <li>create and manage accounts, authenticate users, and secure the Services;</li>
-          <li>process hiring requests, sourcing, screening, shortlisting, interviews, and placement workflows;</li>
+          <li>
+            process hiring requests, manual verification (identity, address, background, medical/training
+            where required), shortlisting, interviews, and placement workflows;
+          </li>
           <li>operate managed staffing arrangements and related commercial follow-through;</li>
           <li>
             run Job Agent matching, auto-send on supported channels you enable, Assist/prep-pack

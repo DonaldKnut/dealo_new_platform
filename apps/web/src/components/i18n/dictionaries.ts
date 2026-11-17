@@ -29,7 +29,7 @@ const enCore = {
   'nav.dashboard': 'Dashboard',
   'nav.settings': 'Settings',
   'nav.language': 'Language',
-  'nav.hireTalent': 'Hire workers',
+  'nav.hireTalent': 'Request talent',
   'nav.account': 'Account',
 
   'chat.open': 'Chat with Dealo',
@@ -85,7 +85,7 @@ const enCore = {
   'hero.titleAccent': 'keep them',
   'hero.titleAfter': '.',
   'hero.subtitle':
-    'Dealo helps Nigerian companies hire checked office workers and skilled trades, like bricklayers and electricians. Get them in under 48 hours.',
+    'Dealo helps Nigerian companies hire office workers and skilled trades after manual verification — identity, address, background, and training where needed. Shortlists in under 48 hours.',
 
   'footer.blurb':
     'Dealo helps Nigerian companies hire checked office workers and skilled trades. Our steps are clear, and we stand behind every hire.',
@@ -234,7 +234,7 @@ const frCore: Record<keyof typeof enCore, string> = {
   'chat.tickets': 'Voir mes tickets',
   'nav.settings': 'Paramètres',
   'nav.language': 'Langue',
-  'nav.hireTalent': 'Recruter',
+  'nav.hireTalent': 'Demander des talents',
   'nav.account': 'Compte',
 
   'mega.direct.title': 'Recrutement direct',
@@ -397,7 +397,7 @@ const zhCore: Record<keyof typeof enCore, string> = {
   'nav.dashboard': '控制台',
   'nav.settings': '设置',
   'nav.language': '语言',
-  'nav.hireTalent': '招聘人才',
+  'nav.hireTalent': '申请人才',
   'nav.account': '账户',
   'chat.open': '与 Dealo 聊天',
   'chat.close': '关闭聊天',
@@ -573,7 +573,7 @@ const koCore: Record<keyof typeof enCore, string> = {
   'nav.dashboard': '대시보드',
   'nav.settings': '설정',
   'nav.language': '언어',
-  'nav.hireTalent': '인재 채용',
+  'nav.hireTalent': '인재 요청',
   'nav.account': '계정',
   'chat.open': 'Dealo와 채팅',
   'chat.close': '채팅 닫기',

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/terms' },
 };
 
-const updated = '16 November 2026';
+const updated = '17 November 2026';
 
 export default function TermsPage() {
   return (
@@ -38,9 +38,11 @@ export default function TermsPage() {
       <Section title="2. Nature of the Services">
         <p>
           Dealo provides technology and operational workflows for recruitment and managed staffing,
-          which may include role intake, sourcing, screening, shortlisting, interview coordination,
-          placement support, and related communications. Dealo is not a traditional job board
-          guarantee of employment. Unless a separate written agreement expressly states otherwise:
+          which may include role intake, sourcing, manual candidate verification (identity, in-person
+          address confirmation, background checks, and medical or training clearance where required),
+          shortlisting, interview coordination, placement support, and related communications. Dealo
+          is not a traditional job board guarantee of employment. Unless a separate written agreement
+          expressly states otherwise:
         </p>
         <ul className="mt-3 list-disc space-y-2 pl-5">
           <li>Dealo does not guarantee that any employer will hire any candidate;</li>
@@ -105,11 +107,16 @@ export default function TermsPage() {
       <Section title="6. Fees and taxes">
         <p>
           Paid Services are billed according to the applicable order form, invoice, subscription, or
-          in-product credit pack terms. Fees are generally non-refundable except where required by
-          law or expressly stated in writing. You are responsible for applicable taxes. Late amounts
-          may incur suspension of access and recovery costs where permitted. Optional Job Agent
-          apply credits and Premium plans are pay-as-you-go or subscription features for talent
-          users; unused prepaid credits may expire as shown in the product at purchase time.
+          in-product credit pack terms. Standard processing fees for manual candidate verification
+          (identity, address confirmation, background checks, and medical/training where required)
+          are currently ₦70,000 per direct-hire role and ₦50,000 per managed-staffing placement,
+          unless a written quote or order form states otherwise. Monthly managed rates, crew size,
+          and ongoing cover are quoted separately after the brief. Fees are generally non-refundable
+          except where required by law or expressly stated in writing. You are responsible for
+          applicable taxes. Late amounts may incur suspension of access and recovery costs where
+          permitted. Optional Job Agent apply credits and Premium plans are pay-as-you-go or
+          subscription features for talent users; unused prepaid credits may expire as shown in the
+          product at purchase time.
         </p>
       </Section>
 
