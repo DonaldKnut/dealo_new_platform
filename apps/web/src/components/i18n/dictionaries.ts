@@ -17,8 +17,10 @@ export const LOCALE_META: Record<
 };
 
 const enCore = {
-  'nav.offer': 'What we offer',
-  'nav.resources': 'Resources',
+  'nav.offer': 'Services',
+  'nav.jobs': 'Jobs',
+  'nav.browseJobs': 'Browse jobs',
+  'nav.resources': 'Guides',
   'nav.contact': 'Contact',
   'nav.signIn': 'Sign in',
   'nav.signOut': 'Sign out',
@@ -200,8 +202,10 @@ export type TranslationKey = keyof typeof en;
 type Dictionary = Record<TranslationKey, string>;
 
 const frCore: Record<keyof typeof enCore, string> = {
-  'nav.offer': 'Nos offres',
-  'nav.resources': 'Ressources',
+  'nav.offer': 'Services',
+  'nav.jobs': 'Emplois',
+  'nav.browseJobs': 'Voir les emplois',
+  'nav.resources': 'Guides',
   'nav.contact': 'Contact',
   'nav.signIn': 'Connexion',
   'nav.signOut': 'Déconnexion',
@@ -379,8 +383,10 @@ const frCore: Record<keyof typeof enCore, string> = {
 const fr: Dictionary = { ...frCore, ...homeFr, ...pagesFr, ...agentsFr, ...jobAgentFr };
 
 const zhCore: Record<keyof typeof enCore, string> = {
-  'nav.offer': '我们提供',
-  'nav.resources': '资源',
+  'nav.offer': '服务',
+  'nav.jobs': '职位',
+  'nav.browseJobs': '浏览职位',
+  'nav.resources': '指南',
   'nav.contact': '联系',
   'nav.signIn': '登录',
   'nav.signOut': '退出',
@@ -552,8 +558,10 @@ const zhCore: Record<keyof typeof enCore, string> = {
 const zh: Dictionary = { ...zhCore, ...homeZh, ...pagesZh, ...agentsZh, ...jobAgentZh };
 
 const koCore: Record<keyof typeof enCore, string> = {
-  'nav.offer': '제공 서비스',
-  'nav.resources': '리소스',
+  'nav.offer': '서비스',
+  'nav.jobs': '채용',
+  'nav.browseJobs': '채용 둘러보기',
+  'nav.resources': '가이드',
   'nav.contact': '문의',
   'nav.signIn': '로그인',
   'nav.signOut': '로그아웃',

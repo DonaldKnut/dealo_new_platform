@@ -128,6 +128,9 @@ export function SiteHeader() {
 
           <nav className={`hidden items-center gap-4 text-sm xl:gap-6 lg:flex ${onDark ? 'text-white/75' : 'text-muted'}`}>
             <HeaderMegaMenu label={t('nav.offer')} />
+            <Link href="/jobs" className="link-anim whitespace-nowrap py-1">
+              {t('nav.jobs')}
+            </Link>
             <AiMegaMenu label={t('nav.ai')} />
             <ApiMegaMenu label={t('nav.api')} />
             <ResourcesMegaMenu label={t('nav.resources')} />
@@ -296,11 +299,11 @@ export function SiteHeader() {
               ) : (
                 <div className="mt-2 grid gap-2">
                   <Link
-                    href="/auth/login"
+                    href="/jobs"
                     className="btn-secondary"
                     onClick={() => setMobileOpen(false)}
                   >
-                    {t('nav.signIn')}
+                    {t('nav.browseJobs')}
                   </Link>
                   <button
                     type="button"
@@ -312,6 +315,13 @@ export function SiteHeader() {
                   >
                     {t('nav.hireTalent')}
                   </button>
+                  <Link
+                    href="/auth/login"
+                    className="rounded-xl px-2.5 py-2.5 text-center text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground min-[340px]:px-3 min-[340px]:py-3"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {t('nav.signIn')}
+                  </Link>
                 </div>
               )}
             </div>

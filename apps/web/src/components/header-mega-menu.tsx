@@ -5,7 +5,6 @@ import {
   ArrowUpRight,
   BookOpen,
   Bot,
-  Briefcase,
   Building2,
   ChevronDown,
   Code2,
@@ -115,15 +114,8 @@ const offerDefs: MegaItemDef[] = [
   },
 ];
 
-/** Job-seeker tools + guides — no duplicate “for companies” / “how it works” (covered by Offer). */
+/** Job-seeker tools + guides — Jobs is a top-level nav link, not duplicated here. */
 const resourceDefs: MegaItemDef[] = [
-  {
-    href: '/jobs',
-    titleKey: 'mega.jobs.title',
-    descKey: 'mega.jobs.desc',
-    icon: Briefcase,
-    badge: 'New',
-  },
   {
     href: '/resume-builder',
     titleKey: 'mega.cv.title',
