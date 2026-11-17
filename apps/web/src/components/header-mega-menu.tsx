@@ -86,19 +86,19 @@ const apiDefs: MegaItemDef[] = [
   },
 ];
 
-/** Hiring services only. */
+/** Hiring services only — managed + direct first (core revenue). */
 const offerDefs: MegaItemDef[] = [
-  {
-    href: '/services/direct-recruitment',
-    titleKey: 'mega.direct.title',
-    descKey: 'mega.direct.desc',
-    icon: Building2,
-  },
   {
     href: '/services/managed-staffing',
     titleKey: 'mega.managed.title',
     descKey: 'mega.managed.desc',
     icon: Handshake,
+  },
+  {
+    href: '/services/direct-recruitment',
+    titleKey: 'mega.direct.title',
+    descKey: 'mega.direct.desc',
+    icon: Building2,
   },
   {
     href: '/services/contract-cover',

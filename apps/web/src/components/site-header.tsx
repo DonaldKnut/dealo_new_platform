@@ -2,9 +2,12 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  Building2,
   ChevronDown,
+  Handshake,
   LayoutDashboard,
   LogOut,
+  Radar,
   Settings,
   UserRound,
 } from 'lucide-react';
@@ -34,6 +37,24 @@ import {
 import { apiFetch } from '@/lib/api';
 
 import { ThemeToggle } from './theme-toggle';
+
+const MOBILE_FRONTIERS = [
+  {
+    href: '/services/managed-staffing',
+    titleKey: 'mega.managed.title' as const,
+    icon: Handshake,
+  },
+  {
+    href: '/services/direct-recruitment',
+    titleKey: 'mega.direct.title' as const,
+    icon: Building2,
+  },
+  {
+    href: '/job-agent',
+    titleKey: 'mega.ai.jobAgent.title' as const,
+    icon: Radar,
+  },
+];
 
 const DARK_HERO_PATHS = new Set(['/hiring-agents', '/for-professionals']);
 
@@ -243,6 +264,53 @@ export function SiteHeader() {
           >
             <div className="flex max-h-[calc(100svh-3.5rem)] flex-col gap-1 overflow-y-auto overscroll-contain px-3 py-3 min-[340px]:px-4 min-[340px]:py-4">
               <LanguageSwitcher variant="row" />
+
+              <p className="px-2.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand min-[340px]:px-3">
+                {t('nav.startHere')}
+              </p>
+              <div className="mb-1 grid gap-1">
+                {MOBILE_FRONTIERS.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="group flex items-center gap-2.5 rounded-xl border border-brand/20 bg-brand-soft/40 px-2.5 py-2.5 text-sm font-semibold text-foreground transition hover:border-brand/40 hover:bg-brand-soft min-[340px]:gap-3 min-[340px]:px-3 min-[340px]:py-3"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-white dark:text-[#071f14]">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">{t(item.titleKey)}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {!user ? (
+                <div className="mb-2 grid gap-2 px-0.5 pt-1">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      open('hire');
+                    }}
+                  >
+                    {t('nav.hireTalent')}
+                  </button>
+                  <Link
+                    href="/jobs"
+                    className="btn-secondary"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {t('nav.browseJobs')}
+                  </Link>
+                </div>
+              ) : null}
+
+              <div className="my-1 h-px bg-border" />
+
               {mobileSections.map((section) => (
                 <MobileSection
                   key={section.id}
@@ -297,32 +365,13 @@ export function SiteHeader() {
                   </button>
                 </div>
               ) : (
-                <div className="mt-2 grid gap-2">
-                  <Link
-                    href="/jobs"
-                    className="btn-secondary"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {t('nav.browseJobs')}
-                  </Link>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={() => {
-                      setMobileOpen(false);
-                      open('hire');
-                    }}
-                  >
-                    {t('nav.hireTalent')}
-                  </button>
-                  <Link
-                    href="/auth/login"
-                    className="rounded-xl px-2.5 py-2.5 text-center text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground min-[340px]:px-3 min-[340px]:py-3"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {t('nav.signIn')}
-                  </Link>
-                </div>
+                <Link
+                  href="/auth/login"
+                  className="rounded-xl px-2.5 py-2.5 text-center text-sm font-medium text-muted transition hover:bg-surface hover:text-foreground min-[340px]:px-3 min-[340px]:py-3"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {t('nav.signIn')}
+                </Link>
               )}
             </div>
           </motion.div>

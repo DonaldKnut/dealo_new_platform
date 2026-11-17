@@ -82,7 +82,7 @@ export function MyResumesPanel() {
         actions={
           <>
             {canAddResume || !resumes.length ? (
-              <Link href="/resume-builder/new" className="btn-primary text-sm">
+              <Link href="/dashboard/resumes/new" className="btn-primary text-sm">
                 <Plus className="h-4 w-4" /> New CV
               </Link>
             ) : (
@@ -91,7 +91,7 @@ export function MyResumesPanel() {
               </button>
             )}
             {plan?.premium ? (
-              <Link href="/resume-builder/cover-letter/new" className="btn-secondary text-sm">
+              <Link href="/dashboard/resumes/cover-letter/new" className="btn-secondary text-sm">
                 <Mail className="h-4 w-4" /> Cover letter
               </Link>
             ) : (
@@ -105,7 +105,7 @@ export function MyResumesPanel() {
 
       {hasDraft ? (
         <Link
-          href="/resume-builder/new"
+          href="/dashboard/resumes/new"
           className="flex items-center gap-3 rounded-2xl border border-brand/40 bg-brand-soft/60 p-3 text-sm transition hover:border-brand"
         >
           <Smartphone className="h-5 w-5 shrink-0 text-brand" />
@@ -143,7 +143,7 @@ export function MyResumesPanel() {
           <FileText className="mx-auto h-8 w-8 text-muted" />
           <p className="mt-3 font-display text-xl text-foreground">No CVs yet</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-muted">It takes about ten minutes, and you can do it all on your phone.</p>
-          <Link href="/resume-builder/new" className="btn-primary mt-4 inline-flex text-sm">
+          <Link href="/dashboard/resumes/new" className="btn-primary mt-4 inline-flex text-sm">
             <Plus className="h-4 w-4" /> Build my CV
           </Link>
         </div>
@@ -151,7 +151,7 @@ export function MyResumesPanel() {
         <div className="grid grid-cols-1 gap-4 min-[400px]:grid-cols-2 xl:grid-cols-4">
           {items.map((item, i) => (
             <motion.div key={item.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="group relative overflow-hidden rounded-2xl border border-border bg-surface-elevated shadow-sm transition hover:shadow-lg">
-              <Link href={`/resume-builder/${item.id}`} className="block">
+              <Link href={`/dashboard/resumes/${item.id}`} className="block">
                 <div className="max-h-72 overflow-hidden bg-slate-100/80 p-3 dark:bg-[#071f14]">
                   <div className="pointer-events-none overflow-hidden rounded-lg bg-white shadow-md ring-1 ring-slate-900/10">
                     <ResumePreview doc={toDoc(item)} branding={false} />
@@ -159,7 +159,7 @@ export function MyResumesPanel() {
                 </div>
               </Link>
               <div className="flex items-center gap-2 border-t border-border p-3">
-                <Link href={`/resume-builder/${item.id}`} className="min-w-0 flex-1">
+                <Link href={`/dashboard/resumes/${item.id}`} className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                     {item.kind === 'COVER_LETTER' ? <Mail className="h-3.5 w-3.5 shrink-0 text-brand" /> : <FileText className="h-3.5 w-3.5 shrink-0 text-brand" />}
                     <span className="truncate">{item.title}</span>
@@ -185,7 +185,7 @@ export function MyResumesPanel() {
       <BottomSheet open={Boolean(menu)} onClose={() => setMenu(null)} title={menu?.title}>
         {menu ? (
           <div className="grid gap-1 py-2">
-            <Link href={`/resume-builder/${menu.id}`} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium hover:bg-surface">
+            <Link href={`/dashboard/resumes/${menu.id}`} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium hover:bg-surface">
               <Pencil className="h-4 w-4 text-brand" /> Edit and download
             </Link>
             <button type="button" onClick={() => void run('Copy made', () => resumeApi.duplicate(menu.id))} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium hover:bg-surface">

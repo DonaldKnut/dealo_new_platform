@@ -72,13 +72,15 @@ function useDesktop() {
   return desktop;
 }
 
-export function JobBoard() {
+export function JobBoard({ variant = 'public' }: { variant?: 'public' | 'dashboard' }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const toast = useToast();
   const desktop = useDesktop();
   const { user: me } = useAuthSession();
+  const embedded = variant === 'dashboard';
+  const shell = embedded ? 'w-full' : 'container-page';
 
   const filters = useMemo(() => filtersFrom(new URLSearchParams(params.toString())), [params]);
   const selectedId = params.get('job');
@@ -328,28 +330,57 @@ export function JobBoard() {
   );
 
   return (
-    <div className="pb-16">
+    <div className={embedded ? 'pb-8' : 'pb-16'}>
       {/* ------------------------------------------------------------ hero */}
-      <section className="relative overflow-hidden border-b border-border bg-[radial-gradient(ellipse_at_top,var(--hero-glow),transparent_60%)] pb-8 pt-6 sm:pb-12 sm:pt-8">
-        <div aria-hidden className="pointer-events-none absolute -right-24 top-10 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-emerald-300/20 blur-3xl" />
-        <div className="container-page relative">
+      <section
+        className={cn(
+          'relative overflow-hidden',
+          embedded
+            ? 'rounded-[1.5rem] border border-border bg-surface-elevated/80 pb-5 pt-5 min-[340px]:pb-6 min-[340px]:pt-6'
+            : 'border-b border-border bg-[radial-gradient(ellipse_at_top,var(--hero-glow),transparent_60%)] pb-8 pt-6 sm:pb-12 sm:pt-8',
+        )}
+      >
+        {!embedded ? (
+          <>
+            <div aria-hidden className="pointer-events-none absolute -right-24 top-10 h-72 w-72 rounded-full bg-brand/20 blur-3xl" />
+            <div aria-hidden className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-emerald-300/20 blur-3xl" />
+          </>
+        ) : (
+          <div aria-hidden className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-brand/15 blur-3xl" />
+        )}
+        <div className={cn('relative', embedded ? 'px-3 min-[340px]:px-5 sm:px-6' : 'container-page')}>
           <p className="eyebrow inline-flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" /> Dealo job board · Nigeria
+            <Sparkles className="h-3.5 w-3.5" /> {embedded ? 'Dashboard · Job board' : 'Dealo job board · Nigeria'}
           </p>
-          <TypewriterHeadline
-            text="Jobs in Nigeria. Apply in one tap."
-            highlight="Apply in one tap."
-            className="display-title mt-3 max-w-3xl text-[1.9rem] leading-[1.05] text-foreground min-[340px]:text-4xl sm:text-5xl lg:text-6xl"
-            speedMs={24}
-          />
-          <p className="mt-4 max-w-2xl text-sm text-muted min-[340px]:text-base sm:text-lg">
-            Lagos, Abuja, Port Harcourt, Ibadan, and remote — Dealo Easy Apply plus trusted boards. Use your Dealo CV, track every send, or let Job Agent hunt overnight.
-          </p>
+          {embedded ? (
+            <>
+              <h1 className="display-title mt-2 max-w-3xl text-[1.55rem] leading-tight text-foreground min-[340px]:text-3xl sm:text-4xl">
+                Find a role. Apply with your CV.
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-muted min-[340px]:text-base">
+                Search Lagos, Abuja, remote and more. Easy Apply uses the CV you keep in My CVs.
+              </p>
+            </>
+          ) : (
+            <>
+              <TypewriterHeadline
+                text="Jobs in Nigeria. Apply in one tap."
+                highlight="Apply in one tap."
+                className="display-title mt-3 max-w-3xl text-[1.9rem] leading-[1.05] text-foreground min-[340px]:text-4xl sm:text-5xl lg:text-6xl"
+                speedMs={24}
+              />
+              <p className="mt-4 max-w-2xl text-sm text-muted min-[340px]:text-base sm:text-lg">
+                Lagos, Abuja, Port Harcourt, Ibadan, and remote — Dealo Easy Apply plus trusted boards. Use your Dealo CV, track every send, or let Job Agent hunt overnight.
+              </p>
+            </>
+          )}
 
           <form
             onSubmit={submitSearch}
-            className="mt-6 flex flex-col gap-2 rounded-[1.4rem] border border-border bg-surface-elevated/90 p-2 shadow-[0_24px_60px_-28px_rgba(4,47,46,0.45)] backdrop-blur sm:mt-8 md:flex-row md:items-center md:rounded-full md:p-2"
+            className={cn(
+              'mt-5 flex flex-col gap-2 rounded-[1.4rem] border border-border bg-surface-elevated/90 p-2 backdrop-blur md:flex-row md:items-center md:rounded-full md:p-2',
+              embedded ? 'mt-4 shadow-sm' : 'mt-6 shadow-[0_24px_60px_-28px_rgba(4,47,46,0.45)] sm:mt-8',
+            )}
           >
             <label className="flex min-w-0 flex-1 items-center gap-2 rounded-full px-3 py-2.5 focus-within:bg-surface">
               <Search className="h-4 w-4 shrink-0 text-brand" />
@@ -422,7 +453,7 @@ export function JobBoard() {
 
       {/* -------------------------------------------------------- featured */}
       {isDefault && featured.length ? (
-        <section className="container-page pt-8">
+        <section className={cn(shell, embedded ? 'pt-5' : 'pt-8')}>
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="eyebrow inline-flex items-center gap-1.5">
@@ -435,26 +466,42 @@ export function JobBoard() {
             </button>
           </div>
           <div className="scrollbar-none -mx-2 mt-4 flex snap-x gap-3 overflow-x-auto px-2 pb-2">
-            {featured.map((job) => (
-              <Link
-                key={job.id}
-                href={`/jobs/${job.id}`}
-                className="group w-[min(17rem,80vw)] shrink-0 snap-start rounded-2xl border border-brand/25 bg-gradient-to-br from-brand-soft/70 to-surface-elevated p-4 text-left transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg"
-              >
-                <p className="truncate text-xs font-semibold text-brand">{job.company}</p>
-                <p className="mt-1 line-clamp-2 font-semibold text-foreground group-hover:text-brand">{job.title}</p>
-                <p className="mt-2 flex items-center gap-1 truncate text-xs text-muted">
-                  <MapPin className="h-3.5 w-3.5 shrink-0" /> {job.location}
-                </p>
-                {job.salary ? <p className="mt-1 text-xs font-semibold text-foreground">{job.salary}</p> : null}
-              </Link>
-            ))}
+            {featured.map((job) =>
+              embedded ? (
+                <button
+                  key={job.id}
+                  type="button"
+                  onClick={() => openJob(job.id)}
+                  className="group w-[min(17rem,80vw)] shrink-0 snap-start rounded-2xl border border-brand/25 bg-gradient-to-br from-brand-soft/70 to-surface-elevated p-4 text-left transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg"
+                >
+                  <p className="truncate text-xs font-semibold text-brand">{job.company}</p>
+                  <p className="mt-1 line-clamp-2 font-semibold text-foreground group-hover:text-brand">{job.title}</p>
+                  <p className="mt-2 flex items-center gap-1 truncate text-xs text-muted">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" /> {job.location}
+                  </p>
+                  {job.salary ? <p className="mt-1 text-xs font-semibold text-foreground">{job.salary}</p> : null}
+                </button>
+              ) : (
+                <Link
+                  key={job.id}
+                  href={`/jobs/${job.id}`}
+                  className="group w-[min(17rem,80vw)] shrink-0 snap-start rounded-2xl border border-brand/25 bg-gradient-to-br from-brand-soft/70 to-surface-elevated p-4 text-left transition hover:-translate-y-0.5 hover:border-brand hover:shadow-lg"
+                >
+                  <p className="truncate text-xs font-semibold text-brand">{job.company}</p>
+                  <p className="mt-1 line-clamp-2 font-semibold text-foreground group-hover:text-brand">{job.title}</p>
+                  <p className="mt-2 flex items-center gap-1 truncate text-xs text-muted">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" /> {job.location}
+                  </p>
+                  {job.salary ? <p className="mt-1 text-xs font-semibold text-foreground">{job.salary}</p> : null}
+                </Link>
+              ),
+            )}
           </div>
         </section>
       ) : null}
 
       {/* --------------------------------------------------------- results */}
-      <section ref={listTop} className="container-page scroll-mt-24 pt-8">
+      <section ref={listTop} className={cn(shell, 'scroll-mt-24', embedded ? 'pt-5' : 'pt-8')}>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           {scopeTabs}
           <div className="hidden lg:block">{filterControls}</div>
@@ -493,9 +540,10 @@ export function JobBoard() {
                       index={index}
                       active={desktop && job.id === activeId}
                       saved={saved.has(job.id)}
+                      onSelect={embedded ? () => openJob(job.id) : undefined}
                       onToggleSave={() => void toggleSave(job)}
                     />
-                    {index === 4 ? <CvPromo /> : null}
+                    {index === 4 ? <CvPromo href={embedded ? '/dashboard/resumes' : '/resume-builder'} /> : null}
                   </div>
                 ))}
                 {result?.hasMore ? (
@@ -509,11 +557,18 @@ export function JobBoard() {
             ) : (
               <EmptyState onReset={() => router.replace(pathname, { scroll: false })} />
             )}
-            <EmployerPromo />
+            {!embedded ? <EmployerPromo /> : null}
           </div>
 
           <aside className="hidden min-w-0 lg:block">
-            <div className="sticky top-[calc(5.5rem+var(--safe-top))] h-[calc(100vh-7rem)] overflow-hidden rounded-[1.5rem] border border-border bg-surface-elevated shadow-sm">
+            <div
+              className={cn(
+                'overflow-hidden rounded-[1.5rem] border border-border bg-surface-elevated shadow-sm',
+                embedded
+                  ? 'sticky top-[calc(4.5rem+var(--safe-top))] h-[calc(100vh-6.5rem)]'
+                  : 'sticky top-[calc(5.5rem+var(--safe-top))] h-[calc(100vh-7rem)]',
+              )}
+            >
               <AnimatePresence mode="wait">
                 {detail ? (
                   <motion.div key={detail.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="h-full">
@@ -621,10 +676,10 @@ function EmptyState({ onReset }: { onReset: () => void }) {
   );
 }
 
-function CvPromo() {
+function CvPromo({ href }: { href: string }) {
   return (
     <Link
-      href="/resume-builder"
+      href={href}
       className="mt-3 flex items-center gap-3 overflow-hidden rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-300/20 via-brand-soft/60 to-surface-elevated p-4 transition hover:border-amber-400"
     >
       <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-lg shadow-amber-500/30">

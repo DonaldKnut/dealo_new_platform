@@ -278,6 +278,12 @@ const talentNav: NavItem[] = [
     help: 'Build, edit and download CVs and cover letters.',
   },
   {
+    href: '/dashboard/jobs',
+    labelKey: 'dash.nav.jobs',
+    icon: Briefcase,
+    help: 'Browse open roles and apply with your Dealo CV without leaving the dashboard.',
+  },
+  {
     href: '/dashboard/job-agent',
     labelKey: 'dash.nav.jobAgent',
     icon: Radar,
@@ -677,7 +683,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   >
                     <Menu className="h-4 w-4" />
                   </button>
-                  <div className="min-w-0 lg:hidden">
+                  <div className="hidden min-w-0 min-[400px]:block lg:hidden">
                     <BrandLogo href={homeHref} />
                   </div>
                   <div className="hidden items-center text-sm text-muted sm:flex">

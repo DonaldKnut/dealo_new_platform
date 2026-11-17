@@ -107,9 +107,25 @@ function StepArt({ icon: Icon }: { icon: typeof UserRound }) {
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'device' | 'error';
 
-export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: string; kind?: ResumeKind }) {
+export function ResumeBuilder({
+  id,
+  kind: initialKind = 'RESUME',
+  basePath = '/resume-builder',
+  embedded = false,
+}: {
+  id?: string;
+  kind?: ResumeKind;
+  /** URL prefix for create/edit routes (`/resume-builder` or `/dashboard/resumes`). */
+  basePath?: string;
+  /** Compact chrome when hosted inside the dashboard shell. */
+  embedded?: boolean;
+}) {
   const router = useRouter();
   const toast = useToast();
+  const inDashboard = embedded || basePath.startsWith('/dashboard');
+  const newResumeHref = `${basePath}/new`;
+  const newLetterHref =
+    basePath === '/resume-builder' ? '/resume-builder/cover-letter/new' : `${basePath}/cover-letter/new`;
   const [kind, setKind] = useState<ResumeKind>(initialKind);
   const [title, setTitle] = useState(initialKind === 'RESUME' ? 'My CV' : 'Cover letter');
   const [style, setStyle] = useState<ResumeStyle>(DEFAULT_STYLE);
@@ -174,7 +190,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
           setSaveState('saved');
         } catch {
           toast.error('Could not open this CV');
-          router.replace('/resume-builder/new');
+          router.replace(newResumeHref);
           return;
         }
       } else {
@@ -240,7 +256,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
       const created = await resumeApi.create(body());
       setSavedId(created.id);
       window.localStorage.removeItem(draftKey);
-      window.history.replaceState(null, '', `/resume-builder/${created.id}`);
+      window.history.replaceState(null, '', `${basePath}/${created.id}`);
       setSaveState('saved');
       setPlan((p) => (p ? { ...p, used: { ...p.used, [kind === 'RESUME' ? 'resumes' : 'coverLetters']: p.used[kind === 'RESUME' ? 'resumes' : 'coverLetters'] + 1 } } : p));
       return created.id;
@@ -253,7 +269,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
     } finally {
       savingRef.current = false;
     }
-  }, [me, savedId, body, draftKey, kind]);
+  }, [me, savedId, body, draftKey, kind, basePath]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -318,7 +334,7 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
 
   const goAuth = (to: 'register' | 'login') => {
     window.localStorage.setItem(draftKey, JSON.stringify({ title, style, data: kind === 'RESUME' ? data : letter, at: Date.now() }));
-    const back = `${kind === 'RESUME' ? '/resume-builder/new' : '/resume-builder/cover-letter/new'}?download=1`;
+    const back = `${kind === 'RESUME' ? newResumeHref : newLetterHref}?download=1`;
     rememberReturnTo(back);
     router.push(`/auth/${to}?next=${encodeURIComponent(back)}`);
   };
@@ -397,20 +413,29 @@ export function ResumeBuilder({ id, kind: initialKind = 'RESUME' }: { id?: strin
     error: 'Not saved',
   }[saveState];
 
+  const backHref = inDashboard || me ? '/dashboard/resumes' : '/resume-builder';
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/90 pt-[var(--safe-top)] backdrop-blur-md">
+    <div className={cn(embedded ? 'bg-transparent text-foreground' : 'min-h-screen bg-background text-foreground')}>
+      <header
+        className={cn(
+          'sticky z-40 border-b border-border bg-background/90 backdrop-blur-md',
+          embedded ? 'top-0 rounded-2xl border' : 'top-0 pt-[var(--safe-top)]',
+        )}
+      >
         <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-1.5 px-2 min-[340px]:gap-2 min-[340px]:px-4">
           <Link
-            href={me ? '/dashboard/resumes' : '/resume-builder'}
+            href={backHref}
             aria-label="Back"
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border text-muted hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div className="hidden shrink-0 sm:block">
-            <BrandLogo href="/" />
-          </div>
+          {!embedded ? (
+            <div className="hidden shrink-0 sm:block">
+              <BrandLogo href="/" />
+            </div>
+          ) : null}
           <div className="min-w-0 flex-1">
             <input
               aria-label="Name of this document"

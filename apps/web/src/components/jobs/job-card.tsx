@@ -14,18 +14,24 @@ export function JobCard({
   job,
   active,
   saved,
-  onOpen,
+  href,
+  onSelect,
   onToggleSave,
   index = 0,
 }: {
   job: JobListing;
   active?: boolean;
   saved?: boolean;
-  onOpen?: () => void;
+  /** Override destination. Defaults to the public listing page. */
+  href?: string;
+  /** When set, selects the job in-board instead of navigating away. */
+  onSelect?: () => void;
   onToggleSave: () => void;
   index?: number;
 }) {
   const fresh = Date.now() - Date.parse(job.postedAt) < 36 * 3_600_000;
+  const destination = href ?? `/jobs/${job.id}`;
+
   return (
     <motion.article
       layout="position"
@@ -39,7 +45,16 @@ export function JobCard({
           : 'border-border hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lg',
       )}
     >
-      <Link href={`/jobs/${job.id}`} className="absolute inset-0 z-0 rounded-2xl" aria-label={`${job.title} at ${job.company}`} />
+      {onSelect ? (
+        <button
+          type="button"
+          onClick={onSelect}
+          className="absolute inset-0 z-0 rounded-2xl"
+          aria-label={`${job.title} at ${job.company}`}
+        />
+      ) : (
+        <Link href={destination} className="absolute inset-0 z-0 rounded-2xl" aria-label={`${job.title} at ${job.company}`} />
+      )}
       <div className="pointer-events-none relative z-10 flex gap-3">
         <CompanyLogo name={job.company} src={job.companyLogo} className="h-10 w-10 min-[340px]:h-12 min-[340px]:w-12" />
         <div className="min-w-0 flex-1">
